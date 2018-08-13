@@ -2,11 +2,8 @@ import re
 import sys
 
 HELP_TEXT = """\
-NES Game Genie code decoder/encoder
-Developed by Kalle (http://qalle.net, http://github.com/qalle2)
-Sources used:
-    - "NES Game Genie Code Format DOC v0.71 by Benzene of Digital
-      Emutations" (http://nesdev.com/nesgg.txt)
+NES Game Genie code decoder/encoder by Kalle
+(http://qalle.net, http://github.com/qalle2)
 
 === Decoding ===
 
