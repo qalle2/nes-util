@@ -8,6 +8,14 @@ Developed with Python 3 under 64-bit Windows.
 
 * [*NES Game Genie Code Format DOC v0.71 by Benzene of Digital Emutations*](http://nesdev.com/nesgg.txt)
 
+## Structure of codes
+
+The codes consist of the following 16 letters (in alphabetical order):
+
+`A E G I K L N O P S T U V X Y Z`
+
+The codes are either six or eight letters long. Both of them encode a 15-bit address in NES CPU memory space (`0x8000`-`0xffff`) and an eight-bit "replace value" (`0x00`-`0xff`) to feed to the CPU when it attempts to read that address. In addition, eight-letter codes encode an eight-bit "compare value" (`0x00`-`0xff`); a value will only be "replaced" if its original value equals the compare value. (Due to bankswitching, multiple game cartridge ROM addresses may be mapped to the same NES CPU memory address at different times.)
+
 ## Examples
 
 ### Decoding a six-letter code
