@@ -16,6 +16,8 @@ The codes consist of the following 16 letters (in alphabetical order):
 
 The codes are either six or eight letters long. Both of them encode a 15-bit address in NES CPU memory space (`0x8000`-`0xffff`) and an eight-bit "replace value" (`0x00`-`0xff`) to feed to the CPU when it attempts to read that address. In addition, eight-letter codes encode an eight-bit "compare value" (`0x00`-`0xff`); a value will only be "replaced" if its original value equals the compare value. (Due to bankswitching, multiple game cartridge ROM addresses may be mapped to the same NES CPU memory address at different times.)
 
+In six-letter codes, the third letter should be one of `A G I L P T Y Z`. In eight-letter codes, it should be one of `E K N O S U V X`.
+
 ## Examples
 
 ### Decoding a six-letter code
