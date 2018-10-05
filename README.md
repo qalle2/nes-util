@@ -4,46 +4,67 @@ Encodes and decodes codes for the [Nintendo Entertainment System](http://en.wiki
 
 Developed with Python 3 under 64-bit Windows.
 
-## Resources used
+## The structure of Game Genie codes
+* The codes consist of the following 16 letters (in alphabetical order): **`A E G I K L N O P S T U V X Y Z`**.
+* There are two types of codes: **six-letter** and **eight-letter**.
+* In canonical codes, the **third letter** reflects the length of the code:
+  * In **six-letter** codes, the letter is one of **`A G I L P T Y Z`** (e.g. `SXIOPO`).
+  * In **eight-letter** codes, the letter is one of **`E K N O S U V X`** (e.g. `YEUZUGAA`).
 
-* [*NES Game Genie Code Format DOC v0.71 by Benzene of Digital Emutations*](http://nesdev.com/nesgg.txt)
+## The structure of unencoded codes
+  * **`AAAA:RR`** corresponds to a **six-letter** Game Genie code.
+  * **`AAAA?CC:RR`** corresponds to an **eight-letter** Game Genie code.
 
-## Structure of codes
+What the fields mean:
+  * **`AAAA`**: the CPU **address** in hexadecimal (`8000`&ndash;`ffff`)
+  * **`CC`**: the **compare** value in hexadecimal (`00`&ndash;`ff`)
+  * **`RR`**: the **replacement** value in hexadecimal (`00`&ndash;`ff`)
+  * **`?`**: a question mark
+  * **`:`**: a colon
 
-The codes consist of the following 16 letters (in alphabetical order):
+## How to decode a code
+The command line argument is a Game Genie code as described in the chapter *The structure of Game Genie codes*, with the following exceptions:
+  * **Non-canonical** codes are also accepted.
+  * The codes are **case insensitive**.
 
-`A E G I K L N O P S T U V X Y Z`
+The program will output:
+  * the Game Genie code in its canonical form
+  * the decoded code
 
-The codes are either six or eight letters long. Both of them encode a 15-bit address in NES CPU memory space (`0x8000`-`0xffff`) and an eight-bit "replace value" (`0x00`-`0xff`) to feed to the CPU when it attempts to read that address. In addition, eight-letter codes encode an eight-bit "compare value" (`0x00`-`0xff`); a value will only be "replaced" if its original value equals the compare value. (Due to bankswitching, multiple game cartridge ROM addresses may be mapped to the same NES CPU memory address at different times.)
+## How to encode a code
+The command line argument is an unencoded code as described in the chapter *The structure of unencoded codes*, with the following exceptions:
+  * As for the CPU address, `0000` will be accepted instead of `8000`, `0001` instead of `8001`, etc.
+  * The hexadecimal values are **case insensitive**.
 
-In six-letter codes, the third letter should be one of `A G I L P T Y Z`. In eight-letter codes, it should be one of `E K N O S U V X`.
+The output:
+  * the unencoded code in its canonical form
+  * the Game Genie code
 
 ## Examples
 
-### Decoding a six-letter code
-
+**Decode** a **six-letter** code:
 ```
-C:\>python nesgenie.py SXIOPO
+python nesgenie.py SXIOPO
 SXIOPO = 91D9:AD
 ```
 
-### Decoding an eight-letter code
-
+**Decode** an **eight-letter** code:
 ```
-C:\>python nesgenie.py YEUZUGAA
+python nesgenie.py YEUZUGAA
 YEUZUGAA = ACB3?00:07
 ```
 
-### Encoding a six-letter code
-
+**Encode** a **six-letter** code:
 ```
-C:\>python nesgenie.py 91D9:AD
+python nesgenie.py 91D9:AD
 91D9:AD = SXIOPO
 ```
 
-### Encoding an eight-letter code
-
+**Encode** an **eight-letter** code:
 ```
-C:\>python nesgenie.py ACB3?00:07
+python nesgenie.py ACB3?00:07
 ACB3?00:07 = YEUZUGAA
 ```
+
+## Resources used
+* [*NES Game Genie Code Format DOC v0.71 by Benzene of Digital Emutations*](http://nesdev.com/nesgg.txt)
