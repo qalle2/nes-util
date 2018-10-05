@@ -1,162 +1,72 @@
 import re
 import sys
 
-HELP_TEXT = """\
-NES Game Genie code decoder/encoder by Kalle
-(http://qalle.net, http://github.com/qalle2)
-
-=== Decoding ===
-
-The command line argument is a Game Genie code, i.e., six or eight of the
-following letters: A, P, Z, L, G, I, T, Y, E, O, X, U, K, S, V, N
-The argument is case insensitive.
-Examples: "IGZALP", "NVXEUOSK"
-
-The output:
-    - the code in its canonical form (for six-letter codes, the third
-      letter will be one of A, P, Z, L, G, I, T, Y; for eight-letter
-      codes, one of E, O, X, U, K, S, V, N)
-    - the decoded values in hexadecimal:
-        - for six-letter codes:
-            - the CPU address (8000-FFFF)
-            - a colon (":")
-            - the replacement value (00-FF)
-        - for eight-letter codes:
-            - the CPU address (8000-FFFF)
-            - a question mark ("?")
-            - the compare value (00-FF)
-            - a colon (":")
-            - the replacement value (00-FF)
-
-=== Encoding ===
-
-To create a six-letter code, the command line argument consists of:
-    - the CPU address in hexadecimal (8000-FFFF, but 0000 is equivalent
-      to 8000, 0001 to 8001, etc.)
-    - a colon (":")
-    - the replacement value in hexadecimal (00-FF)
-
-To create an eight-letter code, the command line argument consists of:
-    - the CPU address in hexadecimal (8000-FFFF, but 0000 is equivalent
-      to 8000, 0001 to 8001, etc.)
-    - a question mark ("?")
-    - the compare value in hexadecimal (00-FF)
-    - a colon (":")
-    - the replacement value in hexadecimal (00-FF)
-
-The argument is case insensitive.
-Examples: "8123:45", "89AB?CD:EF"
-
-The output:
-    - the hexadecimal values in their canonical forms
-    - the Game Genie code (six or eight letters)\
-"""
-
-GAME_GENIE_LETTERS = "APZLGITYEOXUKSVN"
-GAME_GENIE_DECODE_KEY = (3, 5, 2, 4, 1, 0, 7, 6)
+GENIE_LETTERS = "APZLGITYEOXUKSVN"
+GENIE_DECODE_KEY = (3, 5, 2, 4, 1, 0, 7, 6)
 
 def decode_main(code):
-    """Decode a Game Genie code to an integer (a six-letter code to a 24-bit
-    integer or an eight-letter code to a 32-bit integer)."""
+    """Decode a Game Genie code to an integer
+    (6 letters to 24 bits, 8 letters to 32 bits)."""
 
-    if not isinstance(code, str):
-        raise TypeError
-    if len(code) not in (6, 8):
-        raise ValueError
-
-    # convert each letter to a four-bit integer
-    letterValues = [
-        GAME_GENIE_LETTERS.index(letter) for letter in code.upper()
-    ]
-
-    # descramble the code
-    decodedNumber = 0x0
-    for pos in GAME_GENIE_DECODE_KEY[:len(code)]:
-        # get the three least-significant bits from a letter's value
-        valueLow = letterValues[pos] & 0b0111
-        # get the most significant bit from the previous letter's value
-        posHi = (pos + len(code) - 1) % len(code)
-        valueHigh = letterValues[posHi] & 0b1000
-        # append the decoded four-bit value to the decoded number
-        decodedNumber = (decodedNumber << 4) | (valueLow | valueHigh)
-
-    return decodedNumber
+    code = code.upper()
+    decoded = 0
+    for pos in GENIE_DECODE_KEY[:len(code)]:
+        decoded <<= 4
+        decoded |= GENIE_LETTERS.index(code[pos]) & 0b0111
+        prevPos = (pos - 1) % len(code)
+        decoded |= GENIE_LETTERS.index(code[prevPos]) & 0b1000
+    return decoded
 
 def decode_short(code):
     """Decode a six-letter Game Genie code."""
 
-    # decode to one 24-bit number
-    decodedNumber = decode_main(code)
-    # split to address and replacement value
-    address = decodedNumber >> 8
-    replacement = decodedNumber & 0xff
-    # set the most significant bit of the address
-    address |= 0x8000
-    # return the values in the AAAA:RR format
-    return "{:04X}:{:02X}".format(address, replacement)
+    n = decode_main(code)
+    address = n >> 8
+    address |= 0x8000  # set MSB (CPU ROM starts at 0x8000)
+    replacement = n & 0xff
+    return "{:04x}:{:02x}".format(address, replacement)
 
 def decode_long(code):
     """Decode an eight-letter Game Genie code."""
 
-    # decode to one 32-bit number
-    decodedNumber = decode_main(code)
-    # split decoded number to address, replacement value and compare value
-    address = decodedNumber >> 16
-    replacement = (decodedNumber >> 8) & 0xff
-    compare = decodedNumber & 0xff
-    # set the most significant bit of the address
-    address |= 0x8000
-    # return the values in the AAAA?CC:RR format
-    return "{:04X}?{:02X}:{:02X}".format(address, compare, replacement)
+    n = decode_main(code)
+    address = n >> 16
+    address |= 0x8000  # set MSB (CPU ROM starts at 0x8000)
+    replacement = (n >> 8) & 0xff
+    compare = n & 0xff
+    return "{:04x}?{:02x}:{:02x}".format(address, compare, replacement)
 
-def encode_main(number):
-    """Encode an integer to a Game Genie code (24 bits to six letters or
-    32 bits to eight letters)."""
+def encode_main(n):
+    """Encode an integer to a Game Genie code
+    (24 bits to 6 letters, 32 bits to 8 letters)."""
 
-    if not isinstance(number, int):
-        raise TypeError
-    if not 0 <= number < 1 << 32:
-        raise ValueError
-
-    # eight-letter codes have the most significant bit of the address set
-    codeLength = 8 if number & (1 << 31) else 6
-
-    # set up output (indexes to GAME_GENIE_LETTERS)
-    letterValues = codeLength * [0x0]
-    # use the same key as when decoding
-    for targetPosLow in GAME_GENIE_DECODE_KEY[codeLength-1::-1]:
-        # assign the three least significant bits to the current letter
-        letterValues[targetPosLow] |= number & 0b0111
-        # assign the fourth-least significant bit to the previous letter
-        targetPosHigh = (targetPosLow + codeLength - 1) % codeLength
-        letterValues[targetPosHigh] |= number & 0b1000
-        # move on to the next four least-significant input bits
-        number >>= 4
-    # convert output to Game Genie letters
-    return "".join(GAME_GENIE_LETTERS[value] for value in letterValues)
+    codeLength = 6 if n <= 0x7fff_ff else 8
+    letterValues = codeLength * [0]
+    for pos in GENIE_DECODE_KEY[codeLength-1::-1]:
+        letterValues[pos] |= n & 0b0111
+        prevPos = (pos - 1) % codeLength
+        letterValues[prevPos] |= n & 0b1000
+        n >>= 4
+    return "".join(GENIE_LETTERS[value] for value in letterValues)
 
 def encode_short(address, replacement):
     """Encode a six-letter Game Genie code."""
 
-    # convert the values from hexadecimal strings to integers;
-    # also clear the most significant bit of the address
-    # to make the third letter of the code be one of A/P/Z/L/G/I/T/Y
-    address = int(address, 16) & 0x7fff
+    address = int(address, 16)
+    address &= 0x7fff  # clear MSB to make 3rd letter A/P/Z/L/G/I/T/Y
     replacement = int(replacement, 16)
-    # combine the numbers to one 24-bit number and encode it
-    return encode_main((address << 8) | replacement)
+    combined = (address << 8) | replacement
+    return encode_main(combined)
 
 def encode_long(address, replacement, compare):
     """Encode an eight-letter Game Genie code."""
 
-    # convert the values from hexadecimal strings to integers;
-    # also set the most significant bit of the address
-    # to make the third letter of the code be one of E/O/X/U/K/S/V/N
-    address = int(address, 16) | 0x8000
+    address = int(address, 16)
+    address |= 0x8000  # set MSB to make 3rd letter E/O/X/U/K/S/V/N
     replacement = int(replacement, 16)
     compare = int(compare, 16)
-    # combine the numbers to one 32-bit number and encode it
-    return encode_main((address << 16) | (replacement << 8) | compare)
+    combined = (address << 16) | (replacement << 8) | compare
+    return encode_main(combined)
 
 def convert_input(argument):
     """Detect the type of the argument and convert it."""
@@ -172,20 +82,25 @@ def convert_input(argument):
         return decode_long(match.group(1))
 
     # address and replace value?
-    match = re.search(r"^([0-9A-F]{1,4}):([0-9A-F]{1,2})$", argument, re.IGNORECASE)
+    match = re.search(
+        r"^([0-9A-F]{1,4}):([0-9A-F]{1,2})$", argument, re.IGNORECASE
+    )
     if match is not None:
         return encode_short(match.group(1), match.group(2))
 
     # address, compare value and replacement value?
-    match = re.search(r"^([0-9A-F]{1,4})\?([0-9A-F]{1,2}):([0-9A-F]{1,2})$", argument, re.IGNORECASE)
+    match = re.search(
+        r"^([0-9A-F]{1,4})\?([0-9A-F]{1,2}):([0-9A-F]{1,2})$",
+        argument, re.IGNORECASE
+    )
     if match is not None:
         return encode_long(match.group(1), match.group(3), match.group(2))
 
-    exit("Error: invalid input.")
+    exit("Error: invalid input. See the readme file.")
 
 def main():
     if len(sys.argv) != 2:
-        exit(HELP_TEXT)
+        exit("Error: invalid number of arguments. See the readme file.")
 
     # print input in canonical format and output
     output = convert_input(sys.argv[1])
@@ -193,39 +108,39 @@ def main():
 
 # tests - decode six-letter code
 assert convert_input("aaaaaa") == "8000:00"
-assert convert_input("AAAAAA") == "8000:00"
-assert convert_input("AAEAAA") == "8000:00"
-assert convert_input("NNYNNN") == "FFFF:FF"
-assert convert_input("NAAAAA") == "8000:87"
-assert convert_input("ANAAAA") == "8080:70"
-assert convert_input("AAYAAA") == "8070:00"
-assert convert_input("AAANAA") == "F008:00"
-assert convert_input("AAAANA") == "8807:00"
-assert convert_input("AAAAAN") == "8700:08"
+assert convert_input("aaaaaa") == "8000:00"
+assert convert_input("aaeaaa") == "8000:00"
+assert convert_input("nnynnn") == "ffff:ff"
+assert convert_input("naaaaa") == "8000:87"
+assert convert_input("anaaaa") == "8080:70"
+assert convert_input("aayaaa") == "8070:00"
+assert convert_input("aaanaa") == "f008:00"
+assert convert_input("aaaana") == "8807:00"
+assert convert_input("aaaaan") == "8700:08"
 
 # tests - decode eight-letter code
 assert convert_input("aaaaaaaa") == "8000?00:00"
-assert convert_input("AAAAAAAA") == "8000?00:00"
-assert convert_input("AAEAAAAA") == "8000?00:00"
-assert convert_input("NNNNNNNN") == "FFFF?FF:FF"
-assert convert_input("NAEAAAAA") == "8000?00:87"
-assert convert_input("ANEAAAAA") == "8080?00:70"
-assert convert_input("AANAAAAA") == "8070?00:00"
-assert convert_input("AAENAAAA") == "F008?00:00"
-assert convert_input("AAEANAAA") == "8807?00:00"
-assert convert_input("AAEAANAA") == "8700?08:00"
-assert convert_input("AAEAAANA") == "8000?87:00"
-assert convert_input("AAEAAAAN") == "8000?70:08"
+assert convert_input("aaaaaaaa") == "8000?00:00"
+assert convert_input("aaeaaaaa") == "8000?00:00"
+assert convert_input("nnnnnnnn") == "ffff?ff:ff"
+assert convert_input("naeaaaaa") == "8000?00:87"
+assert convert_input("aneaaaaa") == "8080?00:70"
+assert convert_input("aanaaaaa") == "8070?00:00"
+assert convert_input("aaenaaaa") == "f008?00:00"
+assert convert_input("aaeanaaa") == "8807?00:00"
+assert convert_input("aaeaanaa") == "8700?08:00"
+assert convert_input("aaeaaana") == "8000?87:00"
+assert convert_input("aaeaaaan") == "8000?70:08"
 
 # tests - encode six-letter code
 assert convert_input("0000:00") == "AAAAAA"
 assert convert_input("8000:00") == "AAAAAA"
 assert convert_input("ffff:ff") == "NNYNNN"
-assert convert_input("FFFF:FF") == "NNYNNN"
+assert convert_input("ffff:ff") == "NNYNNN"
 assert convert_input("8000:87") == "NAAAAA"
 assert convert_input("8080:70") == "ANAAAA"
 assert convert_input("8070:00") == "AAYAAA"
-assert convert_input("F008:00") == "AAANAA"
+assert convert_input("f008:00") == "AAANAA"
 assert convert_input("8807:00") == "AAAANA"
 assert convert_input("8700:08") == "AAAAAN"
 
@@ -233,11 +148,11 @@ assert convert_input("8700:08") == "AAAAAN"
 assert convert_input("0000?00:00") == "AAEAAAAA"
 assert convert_input("8000?00:00") == "AAEAAAAA"
 assert convert_input("ffff?ff:ff") == "NNNNNNNN"
-assert convert_input("FFFF?FF:FF") == "NNNNNNNN"
+assert convert_input("ffff?ff:ff") == "NNNNNNNN"
 assert convert_input("8000?00:87") == "NAEAAAAA"
 assert convert_input("8080?00:70") == "ANEAAAAA"
 assert convert_input("8070?00:00") == "AANAAAAA"
-assert convert_input("F008?00:00") == "AAENAAAA"
+assert convert_input("f008?00:00") == "AAENAAAA"
 assert convert_input("8807?00:00") == "AAEANAAA"
 assert convert_input("8700?08:00") == "AAEAANAA"
 assert convert_input("8000?87:00") == "AAEAAANA"
