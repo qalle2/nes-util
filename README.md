@@ -44,27 +44,27 @@ The output:
 
 **Decode** a **six-letter** code:
 ```
-python nesgenie.py SXIOPO
-SXIOPO = 91D9:AD
+python nesgenie.py sxiopo
+SXIOPO = 91d9:ad
 ```
 
 **Decode** an **eight-letter** code:
 ```
-python nesgenie.py YEUZUGAA
-YEUZUGAA = ACB3?00:07
+python nesgenie.py yeuzugaa
+YEUZUGAA = acb3?00:07
 ```
 
 **Encode** a **six-letter** code:
 ```
-python nesgenie.py 91D9:AD
-91D9:AD = SXIOPO
+python nesgenie.py 91d9:ad
+91d9:ad = SXIOPO
 ```
 
 **Encode** an **eight-letter** code:
 ```
-python nesgenie.py ACB3?00:07
-ACB3?00:07 = YEUZUGAA
+python nesgenie.py acb3?00:07
+acb3?00:07 = YEUZUGAA
 ```
 
-## Resources used
+## References
 * [*NES Game Genie Code Format DOC v0.71 by Benzene of Digital Emutations*](http://nesdev.com/nesgg.txt)
