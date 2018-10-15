@@ -66,5 +66,8 @@ python nesgenie.py acb3?00:07
 acb3?00:07 = YEUZUGAA
 ```
 
+## A drawing
+![NES Game Genie encoding](encoding.png)
+
 ## References
 * [*NES Game Genie Code Format DOC v0.71 by Benzene of Digital Emutations*](http://nesdev.com/nesgg.txt)
