@@ -1,3 +1,5 @@
+"""Encodes and decodes NES Game Genie codes."""
+
 import re
 import sys
 
@@ -108,14 +110,18 @@ def convert_input(arg):
     if match is not None:
         if match.group(2) is None:
             return encode_6letter(match.group(1, 4))
-        else:
-            return encode_8letter(match.group(1, 4, 3))
+        return encode_8letter(match.group(1, 4, 3))
 
-    exit("Invalid argument. See the readme file.")
+    sys.exit("Invalid command line argument.")
 
 def main():
+    """The main function."""
+
+    if sys.version_info[0] != 3:
+        print("Warning: possibly incompatible Python version.", file=sys.stderr)
+
     if len(sys.argv) != 2:
-        exit("Invalid number of arguments. See the readme file.")
+        sys.exit("Invalid number of command line arguments.")
 
     # print input in canonical format and output
     output = convert_input(sys.argv[1])
