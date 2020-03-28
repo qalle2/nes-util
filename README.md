@@ -48,6 +48,17 @@ The structure of NES Game Genie codes:
 * All codes encode a 15-bit address (NES CPU ROM `0x8000-0xffff`) and a "replacement value" (`0x00-0xff`).
 * Eight-letter codes also contain a "compare value" (`0x00-0xff`).
 
+## ines_info.py
+```
+Print information of an iNES ROM file (.nes) in CSV format. Argument: file. Output fields: file, size, PRG ROM size, CHR ROM size, mapper, name table mirroring, does the game have save RAM, trainer size, file MD5 hash, PRG ROM MD5 hash, CHR ROM MD5 hash.
+```
+
+### Example
+```
+python ines_info.py castlevania3.nes
+"castlevania3.nes",393232,262144,131072,5,"horizontal","no",0,"d16a502d0125f23cc3d980ddc6b6f2e8","2edebd9db94111b100ed2c618f372b93","67fc7f8f590fed96c750b8e80df28460"
+```
+
 ## nesgenie.py
 ```
 Encode and decode NES Game Genie codes. Argument: six-letter code, eight-letter code, aaaa:rr or aaaa?cc:rr (aaaa = address in hexadecimal, rr = replacement value in hexadecimal, cc = compare value in hexadecimal).
