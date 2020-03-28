@@ -2,7 +2,7 @@
 
 def parse_iNES_header(handle):
     """Parse an iNES header. See http://wiki.nesdev.com/w/index.php/INES
-    Raise an exception on error."""
+    Return a dict. On error, raise an exception with an error message."""
 
     if handle.seek(0, 2) < 16:
         raise Exception("file_smaller_than_ines_header")
