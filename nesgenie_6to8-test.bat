@@ -57,3 +57,4 @@ echo === test.bat: these should cause errors ===
 python nesgenie_6to8.py
 python nesgenie_6to8.py nonexistent aaaaaa
 python nesgenie_6to8.py nesgenie_6to8-test\smb1.nes dddddd
+python nesgenie_6to8.py nesgenie_6to8-test\invalid-id.nes aaaaaa
