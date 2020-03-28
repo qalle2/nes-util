@@ -1,8 +1,8 @@
 # nesgenie
 
-Programs that decode and encode [Nintendo Entertainment System](http://en.wikipedia.org/wiki/Nintendo_Entertainment_System) (NES) cheat cartridge [Game Genie](http://en.wikipedia.org/wiki/Game_Genie) codes.
+Programs that decode and encode codes for the [Nintendo Entertainment System](http://en.wikipedia.org/wiki/Nintendo_Entertainment_System) (NES) cheat cartridge [Game Genie](http://en.wikipedia.org/wiki/Game_Genie).
 
-## The structure of Game Genie codes
+## The structure of NES Game Genie codes
 * The codes consist of the following 16 letters: `A P Z L G I T Y E O X U K S V N`
 * The codes are six or eight letters long (e.g. `SXIOPO`, `YEUZUGAA`).
 * In canonical codes, the third letter reflects the length of the code:
@@ -12,7 +12,7 @@ Programs that decode and encode [Nintendo Entertainment System](http://en.wikipe
 * All codes encode a 15-bit address (NES CPU ROM `0x8000-0xffff`) and a "replacement value" (`0x00-0xff`).
 * Eight-letter codes also contain a "compare value" (`0x00-0xff`).
 
-## `nesgenielib.py`
+## nesgenielib.py
 ```
 NAME
     nesgenielib - A library for decoding and encoding NES Game Genie codes.
@@ -38,18 +38,18 @@ FUNCTIONS
         ('aaaa:rr' or 'aaaa?cc:rr').
 ```
 
-## `nesgenie.py`
+## nesgenie.py
 ```
 Encodes and decodes NES Game Genie codes. Argument: six-letter code, eight-letter code, aaaa:rr or aaaa?cc:rr (aaaa = address in hexadecimal, rr = replacement value in hexadecimal, cc = compare value in hexadecimal).
 ```
 
 ## Examples
 
-`nesgenie.py`:
+nesgenie.py:
 ```
-python nesgenie.py sxiopo
+python nesgenie.py sxsopo
 SXIOPO = 91d9:ad
 
-python nesgenie.py 91d9:ad
+python nesgenie.py 11d9:ad
 91d9:ad = SXIOPO
 ```
