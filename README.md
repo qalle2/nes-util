@@ -51,7 +51,7 @@ python nesgenie.py 11d9:ad
 91d9:ad = SXIOPO
 ```
 
-## nesgenie-6to8
+## nesgenie_6to8.py
 ```
 Convert a 6-letter NES Game Genie code into 8 letters using the iNES ROM file (.nes). Args: file code
 ```
