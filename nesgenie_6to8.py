@@ -110,7 +110,10 @@ def main():
 
     try:
         with open(file, "rb") as handle:
-            fileInfo = ineslib.parse_iNES_header(handle)
+            try:
+                fileInfo = ineslib.parse_iNES_header(handle)
+            except Exception as e:
+                sys.exit("Error: " + str(e))
             PRGBankSize = get_PRG_bank_size(fileInfo["mapper"], fileInfo["PRGSize"])
             compareValues = set(get_compare_values(
                 handle, fileInfo["PRGSize"], PRGBankSize, address
