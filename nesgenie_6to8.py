@@ -2,9 +2,13 @@
 
 import sys
 try:
+    import ineslib
     import nesgenielib
 except ImportError:
-    sys.exit("Module nesgenielib not found. Get it from https://github.com/qalle2/nesgenie")
+    sys.exit(
+        "Module ineslib and/or nesgenielib not found. Get them from "
+        "https://github.com/qalle2/nes-util"
+    )
 
 # smallest possible PRG ROM bank sizes for mappers in KiB (32 = no bankswitching);
 # http://wiki.nesdev.com/w/index.php/List_of_mappers
@@ -62,28 +66,6 @@ MIN_PRG_BANK_SIZES_KIB = {
     243: 32,  # Sachen SA-020A
 }
 
-def read_iNES_header(handle):
-    """Read the header of an iNES ROM file. Return (PRG_ROM_size, mapper)."""
-
-    fileSize = handle.seek(0, 2)
-    if fileSize < 16:
-        sys.exit("The file is smaller than an iNES header.")
-
-    # read the header, split to fields
-    handle.seek(0)
-    header = handle.read(16)
-    (id_, PRGSize16KiB, flags6, flags7) = (header[0:4], header[4], header[6], header[7])
-
-    # validate and decode fields
-    if id_ != b"NES\x1a":
-        sys.exit("Not an iNES ROM file (.nes).")
-    PRGSize = (PRGSize16KiB if PRGSize16KiB else 256) * 16 * 1024
-    if fileSize < 16 + PRGSize:
-        sys.exit("The file is smaller than header plus PRG ROM.")
-    mapper = (flags7 & 0xf0) | (flags6 >> 4)
-
-    return (PRGSize, mapper)
-
 def get_PRG_bank_size(mapper, PRGSize):
     """Get the smallest PRG ROM bank size this mapper supports."""
 
@@ -128,9 +110,11 @@ def main():
 
     try:
         with open(file, "rb") as handle:
-            (PRGSize, mapper) = read_iNES_header(handle)
-            PRGBankSize = get_PRG_bank_size(mapper, PRGSize)
-            compareValues = set(get_compare_values(handle, PRGSize, PRGBankSize, address))
+            fileInfo = ineslib.parse_iNES_header(handle)
+            PRGBankSize = get_PRG_bank_size(fileInfo["mapper"], fileInfo["PRGSize"])
+            compareValues = set(get_compare_values(
+                handle, fileInfo["PRGSize"], PRGBankSize, address
+            ))
     except OSError:
         sys.exit("Error reading the file.")
 
