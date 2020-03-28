@@ -1,4 +1,4 @@
-"""A library for decoding and encoding NES Game Genie codes."""
+"""A library for decoding and encoding NES Game Genie codes. See http://nesdev.com/nesgg.txt"""
 
 import re
 import sys
@@ -50,7 +50,7 @@ def stringify_values(address, replacement, compare=None):
 
     return f"{address:04x}" + ("" if compare is None else f"?{compare:02x}") + f":{replacement:02x}"
 
-# --- encode section -------------------------------------------------------------------------------
+# --- encoding -------------------------------------------------------------------------------------
 
 def parse_values(input_):
     """Parse 'aaaa:rr' or 'aaaa?cc:rr' where aaaa = address in hexadecimal, rr = replacement value
