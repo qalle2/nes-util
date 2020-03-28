@@ -1,70 +1,55 @@
 # nesgenie
 
-Encodes and decodes codes for the [Nintendo Entertainment System](http://en.wikipedia.org/wiki/Nintendo_Entertainment_System) (NES) cheat cartridge [Game Genie](http://en.wikipedia.org/wiki/Game_Genie).
-
-Developed with Python 3 under 64-bit Windows.
+Programs that decode and encode [Nintendo Entertainment System](http://en.wikipedia.org/wiki/Nintendo_Entertainment_System) (NES) cheat cartridge [Game Genie](http://en.wikipedia.org/wiki/Game_Genie) codes.
 
 ## The structure of Game Genie codes
-* The codes consist of the following 16 letters (in alphabetical order): **`A E G I K L N O P S T U V X Y Z`**.
-* There are two types of codes: **six-letter** and **eight-letter**.
-* In canonical codes, the **third letter** reflects the length of the code:
-  * In **six-letter** codes, the letter is one of **`A G I L P T Y Z`** (e.g. `SXIOPO`).
-  * In **eight-letter** codes, the letter is one of **`E K N O S U V X`** (e.g. `YEUZUGAA`).
+* The codes consist of the following 16 letters: `A P Z L G I T Y E O X U K S V N`
+* The codes are six or eight letters long (e.g. `SXIOPO`, `YEUZUGAA`).
+* In canonical codes, the third letter reflects the length of the code:
+  * In six-letter codes, the letter is one of `A P Z L G I T Y`
+  * In eight-letter codes, the letter is one of `E O X U K S V N`
+* The Game Genie and my programs accept non-canonical codes too.
+* All codes encode a 15-bit address (NES CPU ROM `0x8000-0xffff`) and a "replacement value" (`0x00-0xff`).
+* Eight-letter codes also contain a "compare value" (`0x00-0xff`).
 
-## The structure of unencoded codes
-  * **`AAAA:RR`** corresponds to a **six-letter** Game Genie code.
-  * **`AAAA?CC:RR`** corresponds to an **eight-letter** Game Genie code.
+## `nesgenielib.py`
+```
+NAME
+    nesgenielib - A library for decoding and encoding NES Game Genie codes.
 
-What the fields mean:
-  * **`AAAA`**: the CPU **address** in hexadecimal (`8000`&ndash;`ffff`)
-  * **`CC`**: the **compare** value in hexadecimal (`00`&ndash;`ff`)
-  * **`RR`**: the **replacement** value in hexadecimal (`00`&ndash;`ff`)
-  * **`?`**: a question mark
-  * **`:`**: a colon
+FUNCTIONS
+    decode_code(code)
+        Decode a Game Genie code.
+        If an eight-letter code, return (address, replacement_value, compare_value).
+        If a six-letter code, return (address, replacement_value).
+        If an invalid code, return None.
 
-## How to decode a code
-The command line argument is a Game Genie code as described in the chapter *The structure of Game Genie codes*, with the following exceptions:
-  * **Non-canonical** codes are also accepted.
-  * The codes are **case insensitive**.
+    encode_code(address, replacement, compare=None)
+        Encode a Game Genie code.
+        address: 16-bit int, replacement/compare: replacement value and compare value (8-bit ints)
 
-The program will output:
-  * the Game Genie code in its canonical form
-  * the decoded code
+    parse_values(input_)
+        Parse 'aaaa:rr' or 'aaaa?cc:rr' where aaaa = address in hexadecimal, rr = replacement value
+        in hexadecimal, cc = compare value in hexadecimal. Return the values as a tuple of integers,
+        with the replacement value before the compare value, or None if the input matches neither.
 
-## How to encode a code
-The command line argument is an unencoded code as described in the chapter *The structure of unencoded codes*, with the following exceptions:
-  * As for the CPU address, `0000` will be accepted instead of `8000`, `0001` instead of `8001`, etc.
-  * The hexadecimal values are **case insensitive**.
+    stringify_values(address, replacement, compare=None)
+        Convert the address, replacement value and compare value into a hexadecimal representation
+        ('aaaa:rr' or 'aaaa?cc:rr').
+```
 
-The output:
-  * the unencoded code in its canonical form
-  * the Game Genie code
+## `nesgenie.py`
+```
+Encodes and decodes NES Game Genie codes. Argument: six-letter code, eight-letter code, aaaa:rr or aaaa?cc:rr (aaaa = address in hexadecimal, rr = replacement value in hexadecimal, cc = compare value in hexadecimal).
+```
 
 ## Examples
 
-**Decode** a **six-letter** code:
+`nesgenie.py`:
 ```
 python nesgenie.py sxiopo
 SXIOPO = 91d9:ad
-```
 
-**Decode** an **eight-letter** code:
-```
-python nesgenie.py yeuzugaa
-YEUZUGAA = acb3?00:07
-```
-
-**Encode** a **six-letter** code:
-```
 python nesgenie.py 91d9:ad
 91d9:ad = SXIOPO
 ```
-
-**Encode** an **eight-letter** code:
-```
-python nesgenie.py acb3?00:07
-acb3?00:07 = YEUZUGAA
-```
-
-## References
-* [*NES Game Genie Code Format DOC v0.71*](http://nesdev.com/nesgg.txt) by Benzene of Digital Emutations
