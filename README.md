@@ -40,16 +40,30 @@ FUNCTIONS
 
 ## nesgenie.py
 ```
-Encodes and decodes NES Game Genie codes. Argument: six-letter code, eight-letter code, aaaa:rr or aaaa?cc:rr (aaaa = address in hexadecimal, rr = replacement value in hexadecimal, cc = compare value in hexadecimal).
+Encode and decode NES Game Genie codes. Argument: six-letter code, eight-letter code, aaaa:rr or aaaa?cc:rr (aaaa = address in hexadecimal, rr = replacement value in hexadecimal, cc = compare value in hexadecimal).
 ```
-
-## Examples
-
-nesgenie.py:
+### Examples
 ```
 python nesgenie.py sxsopo
 SXIOPO = 91d9:ad
 
 python nesgenie.py 11d9:ad
 91d9:ad = SXIOPO
+```
+
+## nesgenie-6to8
+```
+Convert a 6-letter NES Game Genie code into 8 letters using the iNES ROM file (.nes). Args: file code
+```
+### Example
+```
+C:\>python nesgenie_6to8.py megaman1.nes OZIKPX
+Try each of these eight-letter codes instead of your six-letter code:
+OZSKPXYX
+OZSKPZAV
+OZSKPZSK
+OZSKPZVK
+OZSKPZXX
+OZSKPZZS
+OZSKPZZU
 ```
