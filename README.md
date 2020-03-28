@@ -1,6 +1,17 @@
 # nes-util
 Various utilities related to the [Nintendo Entertainment System](http://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
 
+## ineslib.py
+```
+NAME
+    ineslib - A library for parsing iNES ROM files (.nes).
+
+FUNCTIONS
+    parse_iNES_header(handle)
+        Parse an iNES header. See http://wiki.nesdev.com/w/index.php/INES
+        Return a dict. On error, raise an exception with an error message.
+```
+
 ## nesgenielib.py
 ```
 NAME
