@@ -1,16 +1,5 @@
-# nesgenie
-
-Programs that decode and encode codes for the [Nintendo Entertainment System](http://en.wikipedia.org/wiki/Nintendo_Entertainment_System) (NES) cheat cartridge [Game Genie](http://en.wikipedia.org/wiki/Game_Genie).
-
-## The structure of NES Game Genie codes
-* The codes consist of the following 16 letters: `A P Z L G I T Y E O X U K S V N`
-* The codes are six or eight letters long (e.g. `SXIOPO`, `YEUZUGAA`).
-* In canonical codes, the third letter reflects the length of the code:
-  * In six-letter codes, the letter is one of `A P Z L G I T Y`
-  * In eight-letter codes, the letter is one of `E O X U K S V N`
-* The Game Genie and my programs accept non-canonical codes too.
-* All codes encode a 15-bit address (NES CPU ROM `0x8000-0xffff`) and a "replacement value" (`0x00-0xff`).
-* Eight-letter codes also contain a "compare value" (`0x00-0xff`).
+# nes-util
+Various utilities related to the [Nintendo Entertainment System](http://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
 
 ## nesgenielib.py
 ```
@@ -37,6 +26,16 @@ FUNCTIONS
         Convert the address, replacement value and compare value into a hexadecimal representation
         ('aaaa:rr' or 'aaaa?cc:rr').
 ```
+
+The structure of NES Game Genie codes:
+* The codes consist of the following 16 letters: `A P Z L G I T Y E O X U K S V N`
+* The codes are six or eight letters long (e.g. `SXIOPO`, `YEUZUGAA`).
+* In canonical codes, the third letter reflects the length of the code:
+  * In six-letter codes, the letter is one of `A P Z L G I T Y`
+  * In eight-letter codes, the letter is one of `E O X U K S V N`
+* The Game Genie and my programs accept non-canonical codes too.
+* All codes encode a 15-bit address (NES CPU ROM `0x8000-0xffff`) and a "replacement value" (`0x00-0xff`).
+* Eight-letter codes also contain a "compare value" (`0x00-0xff`).
 
 ## nesgenie.py
 ```
