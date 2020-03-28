@@ -4,8 +4,7 @@ import sys
 try:
     import nesgenielib
 except ImportError:
-    # ModuleNotFoundError requires Python 3.6 or later
-    sys.exit("Module nesgenielib not found. Get it from https://github.com/qalle2/nesgenie")
+    sys.exit("Module nesgenielib not found. Get it from https://github.com/qalle2/nes-util")
 
 def main():
     """The main function."""
