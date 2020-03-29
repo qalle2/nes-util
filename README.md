@@ -108,10 +108,11 @@ Requires the [PyPNG module](http://github.com/drj11/pypng). TODO: switch to Pill
 ```
 usage: nes_chr_decode.py [-h] [-p PALETTE PALETTE PALETTE PALETTE] input_file output_file
 
-Convert an NES CHR (graphics) data file into a PNG file.
+Convert NES CHR (graphics) data into a PNG file.
 
 positional arguments:
-  input_file            The NES CHR data file to read. The size must be a multiple of 256 bytes.
+  input_file            The file to read. Either a raw NES CHR data file (the size must be a multiple of 256 bytes) or
+                        an iNES ROM file (.nes) to read CHR ROM data from.
   output_file           The PNG image file to write. Its width will be 128 pixels, height a multiple of 8 pixels. It
                         will have 1-4 unique colors.
 
