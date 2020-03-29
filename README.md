@@ -103,6 +103,28 @@ optional arguments:
 Specify at least one output file.
 ```
 
+## nes_chr_conv.py
+Requires the [PyPNG module](http://github.com/drj11/pypng). TODO: switch to Pillow (more file formats).
+```
+usage: conv.py [-h] [-p PALETTE PALETTE PALETTE PALETTE] {e,d} input_file output_file
+
+Convert an NES CHR (graphics) data file to a PNG file or vice versa. File restrictions (input&output): PNG: width 128
+pixels, height a multiple of 8 pixels, 4 unique colors or less, all colors specified by --palette; CHR: file size a
+multiple of 256 bytes.
+
+positional arguments:
+  {e,d}                 What to do: e=encode (PNG to CHR), d=decode (CHR to PNG).
+  input_file            The file to read (PNG if encoding, CHR if decoding).
+  output_file           The file to write (CHR if encoding, PNG if decoding).
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -p PALETTE PALETTE PALETTE PALETTE, --palette PALETTE PALETTE PALETTE PALETTE
+                        PNG palette (which colors correspond to CHR colors 0-3). Four 6-digit hexadecimal RRGGBB color
+                        codes ("000000"-"ffffff") separated by spaces. Must be all distinct when encoding (reading a
+                        PNG). (default: ('000000', '555555', 'aaaaaa', 'ffffff'))
+```
+
 ## nesgenie.py
 Encode and decode NES Game Genie codes. Argument: six-letter code, eight-letter code, aaaa:rr or aaaa?cc:rr (aaaa = address in hexadecimal, rr = replacement value in hexadecimal, cc = compare value in hexadecimal).
 
