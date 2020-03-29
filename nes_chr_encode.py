@@ -1,35 +1,33 @@
-"""Convert an NES CHR data file to/from a PNG file."""
+"""Convert a PNG image into an NES CHR data file."""
 
 import argparse
 import os
 import sys
 import png  # PyPNG
 
-# UI section ---------------------------------------------------------------------------------------
-
 def parse_arguments():
     """Parse and validate command line arguments using argparse."""
 
     parser = argparse.ArgumentParser(
-        description="Convert an NES CHR (graphics) data file to a PNG file or vice versa. File "
-        "restrictions (input&output): PNG: width 128 pixels, height a multiple of 8 pixels, 4 "
-        "unique colors or less, all colors specified by --palette; CHR: file size a multiple of "
-        "256 bytes.",
+        description="Convert a PNG image into an NES CHR (graphics) data file.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
     parser.add_argument(
         "-p", "--palette", nargs=4, default=("000000", "555555", "aaaaaa", "ffffff"),
         help="PNG palette (which colors correspond to CHR colors 0-3). Four 6-digit hexadecimal "
-        "RRGGBB color codes (\"000000\"-\"ffffff\") separated by spaces. Must be all distinct when "
-        "encoding (reading a PNG)."
+        "RRGGBB color codes (\"000000\"-\"ffffff\") separated by spaces. Must be all distinct."
     )
     parser.add_argument(
-        "operation", choices=("e", "d"),
-        help="What to do: e=encode (PNG to CHR), d=decode (CHR to PNG)."
+        "input_file",
+        help="The PNG image to read. The width must be 128 pixels. The height must be a multiple "
+        "of 8 pixels. There must be four unique colors or less. --palette must contain all the "
+        "colors in the image, but the image need not contain all the colors in --palette."
     )
-    parser.add_argument("input_file", help="The file to read (PNG if encoding, CHR if decoding).")
-    parser.add_argument("output_file", help="The file to write (CHR if encoding, PNG if decoding).")
+    parser.add_argument(
+        "output_file",
+        help="The NES CHR data file to write. The size will be a multiple of 256 bytes."
+    )
 
     args = parser.parse_args()
 
@@ -37,8 +35,8 @@ def parse_arguments():
         sys.exit("Input file not found.")
     if os.path.exists(args.output_file):
         sys.exit("Output file already exists.")
-    if args.operation == "e" and len(set(args.palette)) < 4:
-        sys.exit("All colors in --palette must be distinct when encoding.")
+    if len(set(args.palette)) < 4:
+        sys.exit("All colors in --palette must be distinct.")
 
     return args
 
@@ -52,8 +50,6 @@ def decode_color_code(color):
     except ValueError:
         sys.exit("Invalid command line color argument.")
     return (color >> 16, (color >> 8) & 0xff, color & 0xff)
-
-# encode section -----------------------------------------------------------------------------------
 
 def palettize_pixel_rows(RGBRows, palette):
     """In: RGB pixel rows (each RGBRGB...), yield: one indexed pixel row per call"""
@@ -107,57 +103,6 @@ def encode_file(source, target, palette):
     for chrDataRow in encode_pixel_rows(RGBPixelRows, palette):
         target.write(chrDataRow)
 
-# decode section -----------------------------------------------------------------------------------
-
-def read_character_data_rows(source):
-    """in: NES character data file
-    yield: one character data row per call (16*1 characters, 128*8 px, 256 bytes)"""
-
-    fileSize = source.seek(0, 2)
-    source.seek(0)
-    while source.tell() < fileSize:
-        yield source.read(256)
-
-def decode_character_slice(LSBs, MSBs):
-    """Decode 8*1 pixels of one character.
-    LSBs: integer with 8 less significant bits
-    MSBs: integer with 8 more significant bits
-    return: iterable with 8 2-bit big-endian integers"""
-
-    MSBs <<= 1
-    return (((LSBs >> shift) & 1) | ((MSBs >> shift) & 2) for shift in range(7, -1, -1))
-
-def decode_pixel_rows(source):
-    """in: NES character data file
-    yield: one pixel row per call (128*1 px, 2-bit values)"""
-
-    indexedPixelRow = []
-    for charDataRow in read_character_data_rows(source):
-        for pxY in range(8):
-            indexedPixelRow.clear()
-            for charX in range(16):
-                i = charX * 16 + pxY
-                indexedPixelRow.extend(decode_character_slice(charDataRow[i], charDataRow[i+8]))
-            yield indexedPixelRow
-
-def decode_file(source, target, palette):
-    """Convert an NES CHR data file to a PNG file."""
-
-    fileSize = source.seek(0, 2)
-    (charRowCount, remainder) = divmod(fileSize, 256)  # 16 NES characters/row
-    if charRowCount == 0 or remainder:
-        sys.exit("Invalid input file size.")
-
-    source.seek(0)
-    target.seek(0)
-    targetImage = png.Writer(
-        width=128,  # 16 NES characters
-        height=charRowCount * 8,
-        bitdepth=2,  # 4 colors
-        palette=palette,
-    )
-    targetImage.write(target, decode_pixel_rows(source))
-
 def main():
     """The main function."""
 
@@ -165,8 +110,7 @@ def main():
     palette = tuple(decode_color_code(color) for color in settings.palette)
     try:
         with open(settings.input_file, "rb") as source, open(settings.output_file, "wb") as target:
-            function = encode_file if settings.operation == "e" else decode_file
-            function(source, target, palette)
+            encode_file(source, target, palette)
     except OSError:
         sys.exit("Error reading/writing files.")
 
