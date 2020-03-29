@@ -1,30 +1,32 @@
 @echo off
 rem WARNING: This batch file will DELETE some files. Run at your own risk.
 
-if not exist ines_split-test\*.* goto error
-
 cls
-if exist ines_split-test\*.prg del ines_split-test\*.prg
-if exist ines_split-test\*.chr del ines_split-test\*.chr
+if exist test-out\*.prg del test-out\*.prg
+if exist test-out\*.chr del test-out\*.chr
 
-echo === test.bat: splitting ===
-python ines_split.py --prg ines_split-test\genie.prg --chr ines_split-test\genie.chr ines_split-test\genie.nes
-python ines_split.py --prg ines_split-test\smb.prg --chr ines_split-test\smb.chr ines_split-test\smb.nes
-python ines_split.py --prg ines_split-test\blaster.prg ines_split-test\blaster.nes
-python ines_split.py --chr ines_split-test\blaster.chr ines_split-test\blaster.nes
+echo === Help ===
+python ines_split.py --help
 echo.
 
-echo === test.bat: validating output files ===
-fc /b ines_split-test\genie.correct-prg ines_split-test\genie.prg
-fc /b ines_split-test\genie.correct-chr ines_split-test\genie.chr
-fc /b ines_split-test\smb.correct-prg ines_split-test\smb.prg
-fc /b ines_split-test\smb.correct-chr ines_split-test\smb.chr
-fc /b ines_split-test\blaster.correct-prg ines_split-test\blaster.prg
-fc /b ines_split-test\blaster.correct-chr ines_split-test\blaster.chr
+echo === Splitting ===
+python ines_split.py --prg test-out\smb1.prg --chr test-out\smb1.chr test-in\smb1.nes
+python ines_split.py --prg test-out\blastermaster.prg test-in\blastermaster.nes
+python ines_split.py --chr test-out\blastermaster.chr test-in\blastermaster.nes
+echo.
 
-echo === test.bat: all of these should cause an error ===
+echo === Validating output files ===
+fc /b test-in\smb1.prg test-out\smb1.prg
+fc /b test-in\smb1.chr test-out\smb1.chr
+fc /b test-in\blastermaster.prg test-out\blastermaster.prg
+fc /b test-in\blastermaster.chr test-out\blastermaster.chr
+
+if exist test-out\*.prg del test-out\*.prg
+if exist test-out\*.chr del test-out\*.chr
+
+echo === All of these should cause an error ===
 python ines_split.py
-python ines_split.py --nonexistent ines_split-test\smb.nes
-python ines_split.py ines_split-test\smb.nes
-python ines_split.py --prg ines_split-test\smb.nes ines_split-test\smb.nes
-python ines_split.py --chr ines_split-test\smb.nes ines_split-test\smb.nes
+python ines_split.py --nonexistent test-in\smb1.nes
+python ines_split.py test-in\smb1.nes
+python ines_split.py --prg test-in\smb1.nes test-in\smb1.nes
+python ines_split.py --chr test-in\smb1.nes test-in\smb1.nes

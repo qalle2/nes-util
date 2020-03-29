@@ -1,13 +1,12 @@
 @echo off
 cls
 
-echo === test.bat: help ===
+echo === Help ===
 python ines_info.py
 echo.
 
-echo === test.bat: normal output ===
-for %%f in (ines_info-test\*.nes) do python ines_info.py "%%f" & echo.
+echo === Printing info ===
+for %%f in (test-in\*.nes) do python ines_info.py "%%f" & echo.
 
-echo === test.bat: these should cause errors ===
+echo === This should cause an error ===
 python ines_info.py nonexistent
-python ines_info.py file1 file2
