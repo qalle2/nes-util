@@ -49,28 +49,10 @@ The structure of NES Game Genie codes:
 * Eight-letter codes also contain a "compare value" (`0x00-0xff`).
 
 ## ines_info.py
-```
 Print information of an iNES ROM file (.nes) in CSV format. Argument: file. Output fields: file, size, PRG ROM size, CHR ROM size, mapper, name table mirroring, does the game have save RAM, trainer size, file MD5 hash, PRG ROM MD5 hash, CHR ROM MD5 hash.
-```
-
-### Example
-```
-python ines_info.py castlevania3.nes
-"castlevania3.nes",393232,262144,131072,5,"horizontal","no",0,"d16a502d0125f23cc3d980ddc6b6f2e8","2edebd9db94111b100ed2c618f372b93","67fc7f8f590fed96c750b8e80df28460"
-```
 
 ## nesgenie.py
-```
 Encode and decode NES Game Genie codes. Argument: six-letter code, eight-letter code, aaaa:rr or aaaa?cc:rr (aaaa = address in hexadecimal, rr = replacement value in hexadecimal, cc = compare value in hexadecimal).
-```
-### Examples
-```
-python nesgenie.py sxsopo
-SXIOPO = 91d9:ad
-
-python nesgenie.py 11d9:ad
-91d9:ad = SXIOPO
-```
 
 ## ines-split
 ```
@@ -90,18 +72,4 @@ Specify at least one output file.
 ```
 
 ## nesgenie_6to8.py
-```
 Convert a 6-letter NES Game Genie code into 8 letters using the iNES ROM file (.nes). Args: file code
-```
-### Example
-```
-C:\>python nesgenie_6to8.py megaman1.nes OZIKPX
-Try each of these eight-letter codes instead of your six-letter code:
-OZSKPXYX
-OZSKPZAV
-OZSKPZSK
-OZSKPZVK
-OZSKPZXX
-OZSKPZZS
-OZSKPZZU
-```
