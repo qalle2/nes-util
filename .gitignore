@@ -1,2 +1,6 @@
+*.chr
+*.correct-chr
+*.correct-prg
 *.nes
+*.prg
 *.pyc
