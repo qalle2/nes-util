@@ -18,17 +18,17 @@ if exist test-out\*.nes del test-out\*.nes
 echo === Swapping colors ===
 python nes_color_swap.py test-in\smb1.nes test-out\smb-default_settings.nes
 
-python nes_color_swap.py --color0 0 --color1 1 --color2 2 --color3 3 test-in\smb1.nes test-out\smb1-colors0123.nes
-python nes_color_swap.py --color0 0 --color1 2 --color2 3 --color3 1 test-in\smb1.nes test-out\smb1-colors0231.nes
-python nes_color_swap.py --color0 0 --color1 3 --color2 1 --color3 2 test-in\smb1.nes test-out\smb1-colors0312.nes
-python nes_color_swap.py --color0 1 --color1 2 --color2 3 --color3 2 test-in\smb1.nes test-out\smb1-colors1232.nes
+python nes_color_swap.py --colors 0 1 2 3 test-in\smb1.nes test-out\smb1-colors0123.nes
+python nes_color_swap.py --colors 0 2 3 1 test-in\smb1.nes test-out\smb1-colors0231.nes
+python nes_color_swap.py --colors 0 3 1 2 test-in\smb1.nes test-out\smb1-colors0312.nes
+python nes_color_swap.py --colors 1 2 3 2 test-in\smb1.nes test-out\smb1-colors1232.nes
 
-python nes_color_swap.py -0 1 -1 2 -2 3 -3 0 --tile-count 1 test-in\smb1.nes test-out\smb1-tile_0_only.nes
-python nes_color_swap.py -0 1 -1 2 -2 3 -3 0 --first-tile 1 --tile-count 1 test-in\smb1.nes test-out\smb1-tile_1_only.nes
-python nes_color_swap.py -0 1 -1 2 -2 3 -3 0 --first-tile 511 test-in\smb1.nes test-out\smb1-tile_511_only.nes
+python nes_color_swap.py -l 1 2 3 0 --tile-count 1 test-in\smb1.nes test-out\smb1-tile_0_only.nes
+python nes_color_swap.py -l 1 2 3 0 --first-tile 1 --tile-count 1 test-in\smb1.nes test-out\smb1-tile_1_only.nes
+python nes_color_swap.py -l 1 2 3 0 --first-tile 511 test-in\smb1.nes test-out\smb1-tile_511_only.nes
 
 python nes_color_swap.py test-in\blastermaster.nes test-out\blastermaster-colors0231.nes
-python nes_color_swap.py -0 0 -1 1 -2 2 -3 3 test-in\blastermaster.nes test-out\blastermaster-colors0123.nes
+python nes_color_swap.py -l 0 1 2 3 test-in\blastermaster.nes test-out\blastermaster-colors0123.nes
 echo.
 
 echo === Comparing (should be identical) ===

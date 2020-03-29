@@ -145,31 +145,25 @@ optional arguments:
                         '555555', 'aaaaaa', 'ffffff'))
 ```
 
-## nes-color-swap
+## nes_color_swap.py
 ```
-usage: nes_color_swap.py [-h] [-0 COLOR0] [-1 COLOR1] [-2 COLOR2] [-3 COLOR3] [-f FIRST_TILE] [-c TILE_COUNT]
+usage: nes_color_swap.py [-h] [-l {0,1,2,3} {0,1,2,3} {0,1,2,3} {0,1,2,3}] [-f FIRST_TILE] [-c TILE_COUNT]
                          input_file output_file
 
 Swap colors in the graphics data (CHR ROM) of an iNES ROM file (.nes).
 
 positional arguments:
-  input_file            the iNES ROM file (.nes) to read
-  output_file           the iNES ROM file (.nes) to write
+  input_file            The iNES ROM file (.nes) to read.
+  output_file           The iNES ROM file (.nes) to write.
 
 optional arguments:
   -h, --help            show this help message and exit
-  -0 COLOR0, --color0 COLOR0
-                        change original color 0 to this color (0-3) (default: 0)
-  -1 COLOR1, --color1 COLOR1
-                        change original color 1 to this color (0-3) (default: 2)
-  -2 COLOR2, --color2 COLOR2
-                        change original color 2 to this color (0-3) (default: 3)
-  -3 COLOR3, --color3 COLOR3
-                        change original color 3 to this color (0-3) (default: 1)
+  -l {0,1,2,3} {0,1,2,3} {0,1,2,3} {0,1,2,3}, --colors {0,1,2,3} {0,1,2,3} {0,1,2,3} {0,1,2,3}
+                        Change original colors 0-3 to these colors. (default: (0, 2, 3, 1))
   -f FIRST_TILE, --first-tile FIRST_TILE
-                        first tile to change (0 = first tile in CHR ROM data) (default: 0)
+                        The first tile to change (0 or greater). (default: 0)
   -c TILE_COUNT, --tile-count TILE_COUNT
-                        number of tiles to change (0 = all tiles starting from --first-tile) (default: 0)
+                        The number of tiles to change (0 = all starting from --first-tile). (default: 0)
 ```
 
 ## nesgenie.py

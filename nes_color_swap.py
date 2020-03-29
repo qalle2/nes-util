@@ -14,38 +14,21 @@ def parse_arguments():
     )
 
     parser.add_argument(
-        "-0", "--color0", type=int, default=0, help="change original color 0 to this color (0-3)"
+        "-l", "--colors", nargs=4, type=int, choices=range(4), default=(0, 2, 3, 1),
+        help="Change original colors 0-3 to these colors."
     )
     parser.add_argument(
-        "-1", "--color1", type=int, default=2, help="change original color 1 to this color (0-3)"
-    )
-    parser.add_argument(
-        "-2", "--color2", type=int, default=3, help="change original color 2 to this color (0-3)"
-    )
-    parser.add_argument(
-        "-3", "--color3", type=int, default=1, help="change original color 3 to this color (0-3)"
-    )
-    parser.add_argument(
-        "-f", "--first-tile", type=int, default=0,
-        help="first tile to change (0 = first tile in CHR ROM data)"
+        "-f", "--first-tile", type=int, default=0, help="The first tile to change (0 or greater)."
     )
     parser.add_argument(
         "-c", "--tile-count", type=int, default=0,
-        help="number of tiles to change (0 = all tiles starting from --first-tile)"
+        help="The number of tiles to change (0 = all starting from --first-tile)."
     )
-    parser.add_argument(
-        "input_file", help="the iNES ROM file (.nes) to read"
-    )
-    parser.add_argument(
-        "output_file", help="the iNES ROM file (.nes) to write"
-    )
+    parser.add_argument("input_file", help="The iNES ROM file (.nes) to read.")
+    parser.add_argument("output_file", help="The iNES ROM file (.nes) to write.")
 
     args = parser.parse_args()
 
-    # additional validation
-    colors = (args.color0, args.color1, args.color2, args.color3)
-    if not all(0 <= color <= 3 for color in colors):
-        sys.exit("Colors must be 0-3.")
     if args.first_tile < 0:
         sys.exit("The first tile to change must be 0 or greater.")
     if args.tile_count < 0:
@@ -99,7 +82,7 @@ def swap_colors(chunk, outputColors):
             (chunk[LSBytePos], chunk[MSBytePos]) = encode_character_slice(slice_)
     return chunk
 
-def process_file(source, target, settings):
+def process_file(source, target, args):
     """Make a copy of an iNES ROM file with modified CHR data."""
 
     inputFileSize = source.seek(0, 2)
@@ -117,26 +100,25 @@ def process_file(source, target, settings):
 
     # validate the range of tiles to modify
     totalTileCount = CHRSize // 16
-    if settings.first_tile > totalTileCount - 1:
+    if args.first_tile > totalTileCount - 1:
         sys.exit('The "first tile" argument is too large.')
-    if settings.tile_count == 0:
-        tileCount = totalTileCount - settings.first_tile
+    if args.tile_count == 0:
+        tileCount = totalTileCount - args.first_tile
     else:
-        tileCount = settings.tile_count
-        if settings.first_tile + tileCount > totalTileCount:
+        tileCount = args.tile_count
+        if args.first_tile + tileCount > totalTileCount:
             sys.exit('The sum of "first tile" and "tile count" arguments is too large.')
 
     # copy header, PRG ROM and possibly start of CHR ROM verbatim
     source.seek(0)
     target.seek(0)
-    for chunk in read_file(source, 16 + PRGSize + settings.first_tile * 16):
+    for chunk in read_file(source, 16 + PRGSize + args.first_tile * 16):
         target.write(chunk)
     # copy and modify some or all of CHR ROM data
-    outputColors = (settings.color0, settings.color1, settings.color2, settings.color3)
     for chunk in read_file(source, tileCount * 16):
-        target.write(swap_colors(chunk, outputColors))
+        target.write(swap_colors(chunk, args.colors))
     # possibly copy the rest of CHR ROM verbatim
-    for chunk in read_file(source, (totalTileCount - settings.first_tile - tileCount) * 16):
+    for chunk in read_file(source, (totalTileCount - args.first_tile - tileCount) * 16):
         target.write(chunk)
 
 def main():
@@ -145,11 +127,11 @@ def main():
     if sys.version_info[0] != 3:
         print("Warning: possibly incompatible Python version.", file=sys.stderr)
 
-    settings = parse_arguments()
+    args = parse_arguments()
 
     try:
-        with open(settings.input_file, "rb") as source, open(settings.output_file, "wb") as target:
-            process_file(source, target, settings)
+        with open(args.input_file, "rb") as source, open(args.output_file, "wb") as target:
+            process_file(source, target, args)
     except OSError:
         sys.exit("Error reading/writing files.")
 
