@@ -4,12 +4,23 @@ Various utilities related to the [Nintendo Entertainment System](http://en.wikip
 ## ineslib.py
 ```
 NAME
-    ineslib - A library for parsing iNES ROM files (.nes).
+    ineslib
+
+DESCRIPTION
+    A library for parsing/encoding iNES ROM files (.nes).
+    See http://wiki.nesdev.com/w/index.php/INES
 
 FUNCTIONS
+    create_iNES_header(PRGSize, CHRSize, mapper=0, mirroring='h', saveRAM=False)
+        Return a 16-byte iNES header as bytes. On error, raise an exception with an error message.
+        PRGSize: PRG ROM size (16 * 1024 to 4096 * 1024 and a multiple of 16 * 1024)
+        CHRSize: CHR ROM size (0 to 2040 * 1024 and a multiple of 8 * 1024)
+        mapper: mapper number (0-255)
+        mirroring: name table mirroring ('h'=horizontal, 'v'=vertical, 'f'=four-screen)
+        saveRAM: does the game have save RAM
+
     parse_iNES_header(handle)
-        Parse an iNES header. See http://wiki.nesdev.com/w/index.php/INES
-        Return a dict. On error, raise an exception with an error message.
+        Parse an iNES header. Return a dict. On error, raise an exception with an error message.
 ```
 
 ## nesgenielib.py
@@ -48,7 +59,7 @@ The structure of NES Game Genie codes:
 * All codes encode a 15-bit address (NES CPU ROM `0x8000-0xffff`) and a "replacement value" (`0x00-0xff`).
 * Eight-letter codes also contain a "compare value" (`0x00-0xff`).
 
-## ines-combine
+## ines_combine.py
 ```
 usage: ines_combine.py [-h] -p PRG_ROM [-c CHR_ROM] [-m MAPPER] [-n {h,v,f}] [-s] outputFile
 
@@ -75,10 +86,7 @@ optional arguments:
 ## ines_info.py
 Print information of an iNES ROM file (.nes) in CSV format. Argument: file. Output fields: file, size, PRG ROM size, CHR ROM size, mapper, name table mirroring, does the game have save RAM, trainer size, file MD5 hash, PRG ROM MD5 hash, CHR ROM MD5 hash.
 
-## nesgenie.py
-Encode and decode NES Game Genie codes. Argument: six-letter code, eight-letter code, aaaa:rr or aaaa?cc:rr (aaaa = address in hexadecimal, rr = replacement value in hexadecimal, cc = compare value in hexadecimal).
-
-## ines-split
+## ines_split.py
 ```
 usage: ines_split.py [-h] [-p PRG] [-c CHR] input_file
 
@@ -94,6 +102,9 @@ optional arguments:
 
 Specify at least one output file.
 ```
+
+## nesgenie.py
+Encode and decode NES Game Genie codes. Argument: six-letter code, eight-letter code, aaaa:rr or aaaa?cc:rr (aaaa = address in hexadecimal, rr = replacement value in hexadecimal, cc = compare value in hexadecimal).
 
 ## nesgenie_6to8.py
 Convert a 6-letter NES Game Genie code into 8 letters using the iNES ROM file (.nes). Args: file code
