@@ -3,20 +3,12 @@
 import hashlib
 import os
 import sys
-try:
-    import ineslib
-except ImportError:
-    sys.exit("Module ineslib not found. Get it from https://github.com/qalle2/nes-util")
+import ineslib
 
 def to_ASCII(string_):
-    """Convert non-ASCII characters into backslash codes."""
+    """Replace non-ASCII characters with backslash codes."""
 
     return string_.encode("ascii", errors="backslashreplace").decode("ascii")
-
-def file_error(message, name):
-    """Exit with an error message regarding a file."""
-
-    sys.exit("{:s}: {:s}".format(to_ASCII(os.path.basename(name)), message))
 
 def hash_file_slice(handle, bytesLeft):
     """Compute the MD5 hash of a slice of the file, starting from current position."""
@@ -35,7 +27,7 @@ def get_iNES_info(handle):
     try:
         fileInfo = ineslib.parse_iNES_header(handle)
     except Exception as e:
-        file_error(str(e), handle.name)
+        sys.exit(to_ASCII(os.path.basename(handle.name)) + ": error: " + str(e))
 
     handle.seek(0)
     fileHash = hash_file_slice(handle, fileSize)
