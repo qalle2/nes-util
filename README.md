@@ -103,26 +103,45 @@ optional arguments:
 Specify at least one output file.
 ```
 
-## nes_chr_conv.py
+## nes_chr_decode.py
 Requires the [PyPNG module](http://github.com/drj11/pypng). TODO: switch to Pillow (more file formats).
 ```
-usage: conv.py [-h] [-p PALETTE PALETTE PALETTE PALETTE] {e,d} input_file output_file
+usage: nes_chr_decode.py [-h] [-p PALETTE PALETTE PALETTE PALETTE] input_file output_file
 
-Convert an NES CHR (graphics) data file to a PNG file or vice versa. File restrictions (input&output): PNG: width 128
-pixels, height a multiple of 8 pixels, 4 unique colors or less, all colors specified by --palette; CHR: file size a
-multiple of 256 bytes.
+Convert an NES CHR (graphics) data file into a PNG file.
 
 positional arguments:
-  {e,d}                 What to do: e=encode (PNG to CHR), d=decode (CHR to PNG).
-  input_file            The file to read (PNG if encoding, CHR if decoding).
-  output_file           The file to write (CHR if encoding, PNG if decoding).
+  input_file            The NES CHR data file to read. The size must be a multiple of 256 bytes.
+  output_file           The PNG image file to write. Its width will be 128 pixels, height a multiple of 8 pixels. It
+                        will have 1-4 unique colors.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -p PALETTE PALETTE PALETTE PALETTE, --palette PALETTE PALETTE PALETTE PALETTE
+                        Output palette (which colors correspond to CHR colors 0-3). Four 6-digit hexadecimal RRGGBB
+                        color codes ("000000"-"ffffff") separated by spaces. (default: ('000000', '555555', 'aaaaaa',
+                        'ffffff'))
+```
+
+## nes_chr_encode.py
+Requires the [PyPNG module](http://github.com/drj11/pypng). TODO: switch to Pillow (more file formats).
+```
+usage: nes_chr_encode.py [-h] [-p PALETTE PALETTE PALETTE PALETTE] input_file output_file
+
+Convert a PNG image into an NES CHR (graphics) data file.
+
+positional arguments:
+  input_file            The PNG image to read. The width must be 128 pixels. The height must be a multiple of 8
+                        pixels. There must be four unique colors or less. --palette must contain all the colors in the
+                        image, but the image need not contain all the colors in --palette.
+  output_file           The NES CHR data file to write. The size will be a multiple of 256 bytes.
 
 optional arguments:
   -h, --help            show this help message and exit
   -p PALETTE PALETTE PALETTE PALETTE, --palette PALETTE PALETTE PALETTE PALETTE
                         PNG palette (which colors correspond to CHR colors 0-3). Four 6-digit hexadecimal RRGGBB color
-                        codes ("000000"-"ffffff") separated by spaces. Must be all distinct when encoding (reading a
-                        PNG). (default: ('000000', '555555', 'aaaaaa', 'ffffff'))
+                        codes ("000000"-"ffffff") separated by spaces. Must be all distinct. (default: ('000000',
+                        '555555', 'aaaaaa', 'ffffff'))
 ```
 
 ## nesgenie.py
