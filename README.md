@@ -72,6 +72,23 @@ python nesgenie.py 11d9:ad
 91d9:ad = SXIOPO
 ```
 
+## ines-split
+```
+usage: ines_split.py [-h] [-p PRG] [-c CHR] input_file
+
+Extract PRG ROM and/or CHR ROM data from an iNES ROM file (.nes).
+
+positional arguments:
+  input_file         The iNES ROM file (.nes) to read.
+
+optional arguments:
+  -h, --help         show this help message and exit
+  -p PRG, --prg PRG  The file to extract PRG ROM data to (16-4096 KiB).
+  -c CHR, --chr CHR  The file to extract CHR ROM data to (8-2040 KiB).
+
+Specify at least one output file.
+```
+
 ## nesgenie_6to8.py
 ```
 Convert a 6-letter NES Game Genie code into 8 letters using the iNES ROM file (.nes). Args: file code
