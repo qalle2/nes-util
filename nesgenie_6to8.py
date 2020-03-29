@@ -1,14 +1,8 @@
 """Converts a 6-letter NES Game Genie code into 8 letters using the iNES ROM file (.nes)."""
 
 import sys
-try:
-    import ineslib
-    import nesgenielib
-except ImportError:
-    sys.exit(
-        "Module ineslib and/or nesgenielib not found. Get them from "
-        "https://github.com/qalle2/nes-util"
-    )
+import ineslib
+import nesgenielib
 
 # smallest possible PRG ROM bank sizes for mappers in KiB (32 = no bankswitching);
 # http://wiki.nesdev.com/w/index.php/List_of_mappers
