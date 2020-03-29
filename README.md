@@ -48,6 +48,30 @@ The structure of NES Game Genie codes:
 * All codes encode a 15-bit address (NES CPU ROM `0x8000-0xffff`) and a "replacement value" (`0x00-0xff`).
 * Eight-letter codes also contain a "compare value" (`0x00-0xff`).
 
+## ines-combine
+```
+usage: ines_combine.py [-h] -p PRG_ROM [-c CHR_ROM] [-m MAPPER] [-n {h,v,f}] [-s] outputFile
+
+Create an iNES ROM file (.nes) from PRG ROM and CHR ROM data files.
+
+positional arguments:
+  outputFile            The iNES ROM file (.nes) to write.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -p PRG_ROM, --prg-rom PRG_ROM
+                        PRG ROM data file; required; the size must be 16-4096 KiB and a multiple of 16 KiB. (default:
+                        None)
+  -c CHR_ROM, --chr-rom CHR_ROM
+                        CHR ROM data file; the size must be 0-2040 KiB and a multiple of 8 KiB. If the file is empty
+                        or the argument is omitted, the game uses CHR RAM. (default: None)
+  -m MAPPER, --mapper MAPPER
+                        Mapper number (0-255). (default: 0)
+  -n {h,v,f}, --mirroring {h,v,f}
+                        Type of name table mirroring: h=horizontal, v=vertical, f=four-screen. (default: h)
+  -s, --save-ram        The game contains battery-backed PRG RAM at $6000-$7fff. (default: False)
+```
+
 ## ines_info.py
 Print information of an iNES ROM file (.nes) in CSV format. Argument: file. Output fields: file, size, PRG ROM size, CHR ROM size, mapper, name table mirroring, does the game have save RAM, trainer size, file MD5 hash, PRG ROM MD5 hash, CHR ROM MD5 hash.
 
