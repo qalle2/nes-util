@@ -3,6 +3,7 @@
 import argparse
 import os
 import sys
+import ineslib
 
 def parse_arguments():
     """Parse command line arguments using argparse."""
@@ -32,23 +33,6 @@ def parse_arguments():
 
     return args
 
-def get_PRG_and_CHR_size(handle):
-    """Parse the iNES header in a file. Return (PRG_ROM_size, CHR_ROM_size).
-    http://wiki.nesdev.com/w/index.php/INES"""
-
-    if handle.seek(0, 2) < 16:
-        sys.exit("The input file is smaller than an iNES header.")
-
-    handle.seek(0)
-    header = handle.read(16)
-    (id_, PRGSize16KiB, CHRSize8KiB) = (header[0:4], header[4], header[5])
-
-    if id_ != b"NES\x1a":
-        sys.exit("The input file is not an iNES ROM file.")
-    PRGSize16KiB = PRGSize16KiB if PRGSize16KiB else 256  # 0 = 256
-
-    return (PRGSize16KiB * 16 * 1024, CHRSize8KiB * 8 * 1024)
-
 def read_file_slice(inputHandle, bytesLeft):
     """Read bytesLeft bytes from current position in inputHandle. Yield one chunk per call."""
 
@@ -63,26 +47,27 @@ def main():
     args = parse_arguments()
     try:
         with open(args.input_file, "rb") as source:
-            # get PRG ROM and CHR ROM size
-            (PRGSize, CHRSize) = get_PRG_and_CHR_size(source)
-            if source.seek(0, 2) < 16 + PRGSize + CHRSize:
-                sys.exit("The input file is smaller than specified by the iNES header.")
+            # get file info
+            try:
+                fileInfo = ineslib.parse_iNES_header(source)
+            except Exception as e:
+                sys.exit("Error: " + str(e))
             if args.prg is not None:
                 # extract PRG ROM
-                source.seek(16)
+                source.seek(16 + fileInfo["trainerSize"])
                 with open(args.prg, "wb") as target:
                     target.seek(0)
-                    for chunk in read_file_slice(source, PRGSize):
+                    for chunk in read_file_slice(source, fileInfo["PRGSize"]):
                         target.write(chunk)
             if args.chr is not None:
                 # extract CHR ROM
-                if CHRSize == 0:
+                if fileInfo["CHRSize"] == 0:
                     print("Warning: the input file has no CHR ROM.", file=sys.stderr)
                 else:
-                    source.seek(16 + PRGSize)
+                    source.seek(16 + fileInfo["trainerSize"] + fileInfo["PRGSize"])
                     with open(args.chr, "wb") as target:
                         target.seek(0)
-                        for chunk in read_file_slice(source, CHRSize):
+                        for chunk in read_file_slice(source, fileInfo["CHRSize"]):
                             target.write(chunk)
     except OSError:
         sys.exit("Error reading/writing files.")
