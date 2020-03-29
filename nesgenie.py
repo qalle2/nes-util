@@ -1,10 +1,7 @@
 """Encodes and decodes NES Game Genie codes."""
 
 import sys
-try:
-    import nesgenielib
-except ImportError:
-    sys.exit("Module nesgenielib not found. Get it from https://github.com/qalle2/nes-util")
+import nesgenielib
 
 def main():
     """The main function."""
