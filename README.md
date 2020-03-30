@@ -104,7 +104,7 @@ Specify at least one output file.
 ```
 
 ## nes_chr_decode.py
-Requires the [PyPNG module](http://github.com/drj11/pypng). TODO: switch to Pillow (more file formats).
+Requires the [Pillow](https://python-pillow.org) module.
 ```
 usage: nes_chr_decode.py [-h] [-p PALETTE PALETTE PALETTE PALETTE] input_file output_file
 
@@ -125,16 +125,16 @@ optional arguments:
 ```
 
 ## nes_chr_encode.py
-Requires the [PyPNG module](http://github.com/drj11/pypng). TODO: switch to Pillow (more file formats).
+Requires the [Pillow](https://python-pillow.org) module.
 ```
 usage: nes_chr_encode.py [-h] [-p PALETTE PALETTE PALETTE PALETTE] input_file output_file
 
 Convert a PNG image into an NES CHR (graphics) data file.
 
 positional arguments:
-  input_file            The PNG image to read. The width must be 128 pixels. The height must be a multiple of 8
-                        pixels. There must be four unique colors or less. --palette must contain all the colors in the
-                        image, but the image need not contain all the colors in --palette.
+  input_file            The image file to read (e.g. PNG). The width must be 128 pixels. The height must be a multiple
+                        of 8 pixels. There must be four unique colors or less. --palette must contain all the colors
+                        in the image, but the image need not contain all the colors in --palette.
   output_file           The NES CHR data file to write. The size will be a multiple of 256 bytes.
 
 optional arguments:
