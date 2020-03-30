@@ -1,12 +1,11 @@
-"""Convert an NES CHR data file to a PNG file."""
+"""Convert NES CHR data into a PNG file."""
 
 import argparse
+import itertools
 import os
 import sys
-import png  # PyPNG
+from PIL import Image  # Pillow
 import ineslib
-
-# UI section ---------------------------------------------------------------------------------------
 
 def parse_arguments():
     """Parse and validate command line arguments using argparse."""
@@ -95,21 +94,21 @@ def get_CHR_data_position(handle):
         sys.exit("The iNES file has no CHR ROM.")
     return (16 + iNESInfo["trainerSize"] + iNESInfo["PRGSize"], iNESInfo["CHRSize"])
 
-def decode_file(source, target, palette):
-    """Convert NES CHR data into a PNG file."""
+def decode_file(source, palette):
+    """Convert NES CHR data into a Pillow image."""
 
     (CHRStart, CHRSize) = get_CHR_data_position(source)
-    source.seek(CHRStart)
-    target.seek(0)
     charRowCount = CHRSize // 256  # 16 characters/row
 
-    targetImage = png.Writer(
-        width=128,  # 16 NES characters
-        height=charRowCount * 8,
-        bitdepth=2,  # 4 colors
-        palette=palette,
-    )
-    targetImage.write(target, decode_pixel_rows(source, charRowCount))
+    img = Image.new("P", (128, charRowCount * 8), 0)
+    img.putpalette(itertools.chain.from_iterable(palette))
+
+    source.seek(CHRStart)
+    for (y, pixelRow) in enumerate(decode_pixel_rows(source, charRowCount)):
+        for (x, value) in enumerate(pixelRow):
+            img.putpixel((x, y), value)
+
+    return img
 
 def main():
     """The main function."""
@@ -117,8 +116,13 @@ def main():
     settings = parse_arguments()
     palette = tuple(decode_color_code(color) for color in settings.palette)
     try:
-        with open(settings.input_file, "rb") as source, open(settings.output_file, "wb") as target:
-            decode_file(source, target, palette)
+        # decode
+        with open(settings.input_file, "rb") as source:
+            img = decode_file(source, palette)
+        # save
+        with open(settings.output_file, "wb") as target:
+            target.seek(0)
+            img.save(target, "png")
     except OSError:
         sys.exit("Error reading/writing files.")
 
