@@ -1,4 +1,4 @@
-"""Convert a PNG image into an NES CHR data file."""
+"""Convert an image file into an NES CHR data file."""
 
 import argparse
 import os
@@ -31,9 +31,9 @@ def parse_arguments():
     )
     parser.add_argument(
         "input_file",
-        help="The PNG image to read. The width must be 128 pixels. The height must be a multiple "
-        "of 8 pixels. There must be four unique colors or less. --palette must contain all the "
-        "colors in the image, but the image need not contain all the colors in --palette."
+        help="The image file to read (e.g. PNG). The width must be 128 pixels. The height must be "
+        "a multiple of 8 pixels. There must be four unique colors or less. --palette must contain "
+        "all the colors in the image, but the image need not contain all the colors in --palette."
     )
     parser.add_argument(
         "output_file",
