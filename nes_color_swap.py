@@ -124,9 +124,6 @@ def process_file(source, target, args):
 def main():
     """The main function."""
 
-    if sys.version_info[0] != 3:
-        print("Warning: possibly incompatible Python version.", file=sys.stderr)
-
     args = parse_arguments()
 
     try:

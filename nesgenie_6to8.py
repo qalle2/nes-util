@@ -85,9 +85,6 @@ def get_compare_values(handle, PRGSize, PRGBankSize, address):
 def main():
     """The main function."""
 
-    if sys.version_info[0] != 3:
-        print("Warning: possibly incompatible Python version.", file=sys.stderr)
-
     # read args
     if len(sys.argv) != 3:
         sys.exit(
