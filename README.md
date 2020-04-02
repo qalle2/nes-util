@@ -26,27 +26,58 @@ FUNCTIONS
 ## nesgenielib.py
 ```
 NAME
-    nesgenielib - A library for decoding and encoding NES Game Genie codes.
+    nesgenielib - A library for decoding and encoding NES Game Genie codes. See http://nesdev.com/nesgg.txt
 
 FUNCTIONS
-    decode_code(code)
+    decode_code(code: str)
         Decode a Game Genie code.
-        If an eight-letter code, return (address, replacement_value, compare_value).
-        If a six-letter code, return (address, replacement_value).
-        If an invalid code, return None.
+        code: 6 or 8 letters from GENIE_LETTERS, case insensitive
+        Return:
+            if code is 6 letters: a tuple of ints: (address, replacement_value)
+            if code is 8 letters: a tuple of ints: (address, replacement_value, compare_value)
+            if code is invalid: None
 
-    encode_code(address, replacement, compare=None)
+    encode_code(address: int, replacement: int, compare=None)
         Encode a Game Genie code.
-        address: 16-bit int, replacement/compare: replacement value and compare value (8-bit ints)
+        address: NES CPU address (0x8000-0xffff or equivalently 0x0000-0x7fff)
+        replacement: replacement value (0x00-0xff)
+        compare: compare value (int, 0x00-0xff) or None
+        return:
+            if compare is None: a 6-letter code (str)
+            if compare is not None: an 8-letter code (str)
+            if the arguments are invalid: None
 
-    parse_values(input_)
-        Parse 'aaaa:rr' or 'aaaa?cc:rr' where aaaa = address in hexadecimal, rr = replacement value
-        in hexadecimal, cc = compare value in hexadecimal. Return the values as a tuple of integers,
-        with the replacement value before the compare value, or None if the input matches neither.
+    is_valid_code(code: str) -> bool
+        Validate a Game Genie code case-insensitively.
+        Return:
+            if code is valid: True
+            if code is invalid: False
 
-    stringify_values(address, replacement, compare=None)
-        Convert the address, replacement value and compare value into a hexadecimal representation
-        ('aaaa:rr' or 'aaaa?cc:rr').
+    parse_values(input_: str)
+        Parse a hexadecimal representation of the numbers regarding a Game Genie code.
+        input_: must match 'aaaa:rr' or 'aaaa?cc:rr', where:
+            aaaa = NES CPU address in hexadecimal
+            rr = replacement value in hexadecimal
+            cc = compare value in hexadecimal
+        Return:
+            if input_ matches 'aaaa:rr': tuple of ints: (address, replacement_value)
+            if input_ matches 'aaaa?cc:rr': tuple of ints: (address, replacement_value, compare_value)
+            if input_ matches neither: None
+
+    random_code() -> str
+        Create a random 6-letter Game Genie code.
+
+    stringify_values(address: int, replacement: int, compare=None) -> str
+        Convert the numbers regarding a Game Genie code into a hexadecimal representation.
+        address: NES CPU address (0x8000-0xffff)
+        replacement: replacement value (0x00-0xff)
+        compare: compare value (int, 0x00-0xff) or None
+        Return:
+            if compare is None: 'aaaa:rr'
+            if compare is not None: 'aaaa?cc:rr'
+
+DATA
+    GENIE_LETTERS = 'APZLGITYEOXUKSVN'
 ```
 
 The structure of NES Game Genie codes:
