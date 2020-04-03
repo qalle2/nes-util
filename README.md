@@ -202,3 +202,6 @@ Encode and decode NES Game Genie codes. Argument: six-letter code, eight-letter 
 
 ## nesgenie_6to8.py
 Convert a 6-letter NES Game Genie code into 8 letters using the iNES ROM file (.nes). Args: file code
+
+## nesgenie_prgaddr.py
+Find the PRG ROM addresses affected by an NES Game Genie code in an iNES ROM file (.nes). Args: file code
