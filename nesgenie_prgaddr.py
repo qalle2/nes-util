@@ -5,7 +5,7 @@ import sys
 import ineslib
 import nesgenielib
 
-def get_PRG_addresses(handle, fileInfo:dict, CPUAddress: int, compareValue):
+def get_PRG_addresses(handle, fileInfo: dict, CPUAddress: int, compareValue):
     """Generate PRG ROM addresses that contain compareValue at CPUAddress.
     fileInfo: from ineslib.parse_iNES_header()
     CPUAddress: NES CPU address (0x8000-0xffff)
