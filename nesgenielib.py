@@ -1,4 +1,5 @@
-"""A library for decoding and encoding NES Game Genie codes. See http://nesdev.com/nesgg.txt"""
+"""A library for decoding and encoding NES Game Genie codes.
+See http://nesdev.com/nesgg.txt"""
 
 import random
 import re
