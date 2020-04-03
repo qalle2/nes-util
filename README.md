@@ -19,6 +19,11 @@ FUNCTIONS
         mirroring: name table mirroring ('h'=horizontal, 'v'=vertical, 'f'=four-screen)
         saveRAM: does the game have save RAM
 
+    get_smallest_PRG_bank_size(mapper: int) -> int
+        Get the smallest PRG ROM bank size the mapper supports (8 KiB for unknown mappers).
+        mapper: iNES mapper number (0-255)
+        return: bank size in bytes (8/16/32 KiB)
+
     parse_iNES_header(handle)
         Parse an iNES header. Return a dict. On error, raise an exception with an error message.
 ```
@@ -26,7 +31,11 @@ FUNCTIONS
 ## nesgenielib.py
 ```
 NAME
-    nesgenielib - A library for decoding and encoding NES Game Genie codes. See http://nesdev.com/nesgg.txt
+    nesgenielib
+
+DESCRIPTION
+    A library for decoding and encoding NES Game Genie codes.
+    See http://nesdev.com/nesgg.txt
 
 FUNCTIONS
     decode_code(code: str)
