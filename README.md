@@ -214,3 +214,6 @@ Convert a 6-letter NES Game Genie code into 8 letters using the iNES ROM file (.
 
 ## nesgenie_prgaddr.py
 Find the PRG ROM addresses affected by an NES Game Genie code in an iNES ROM file (.nes). Args: file code
+
+## nesgenie_verconv.py
+Convert an eight-letter NES Game Genie code from one version of a game to another using both iNES ROM files (.nes). Args: code_for_file1 file1 file2
