@@ -9,11 +9,8 @@ _GENIE_DECODE_KEY = (3, 5, 2, 4, 1, 0, 7, 6)
 
 # --- decoding -------------------------------------------------------------------------------------
 
-def is_valid_code(code: str) -> bool:
-    """Validate a Game Genie code case-insensitively.
-    Return:
-        if code is valid: True
-        if code is invalid: False"""
+def is_valid_code(code):
+    """Validate a Game Genie code case-insensitively. Return True if valid, False if invalid."""
 
     return len(code) in (6, 8) and not set(code.upper()) - set(GENIE_LETTERS)
 
@@ -23,7 +20,7 @@ assert not is_valid_code("dapapa")
 assert not is_valid_code("papapap")
 assert not is_valid_code("dananana")
 
-def _decode_lowlevel(code: str) -> int:
+def _decode_lowlevel(code):
     """Decode a Game Genie code (the low-level stuff).
     code: a valid code, 6 or 8 letters, case insensitive
     Return:
@@ -42,7 +39,7 @@ def _decode_lowlevel(code: str) -> int:
         decoded |= code[highBitLetterPos] & 0b1000
     return decoded
 
-def decode_code(code: str):
+def decode_code(code):
     """Decode a Game Genie code.
     code: 6 or 8 letters from GENIE_LETTERS, case insensitive
     Return:
@@ -90,11 +87,11 @@ assert decode_code("naeaaaaa") == (0x8000, 0x87, 0x00)
 assert decode_code("nnnnnnnn") == (0xffff, 0xff, 0xff)
 assert decode_code("nnynnnnn") == (0xffff, 0xff, 0xff)  # canonical: "nnnnnnnn"
 
-def stringify_values(address: int, replacement: int, compare=None) -> str:
+def stringify_values(address, replacement, compare=None):
     """Convert the numbers regarding a Game Genie code into a hexadecimal representation.
     address: NES CPU address (0x8000-0xffff)
     replacement: replacement value (0x00-0xff)
-    compare: compare value (int, 0x00-0xff) or None
+    compare: compare value (0x00-0xff) or None
     Return:
         if compare is None: 'aaaa:rr'
         if compare is not None: 'aaaa?cc:rr'"""
@@ -106,15 +103,15 @@ assert stringify_values(0x89ab, 0xcd, 0xef) == "89ab?ef:cd"
 
 # --- encoding -------------------------------------------------------------------------------------
 
-def parse_values(input_: str):
+def parse_values(input_):
     """Parse a hexadecimal representation of the numbers regarding a Game Genie code.
     input_: must match 'aaaa:rr' or 'aaaa?cc:rr', where:
         aaaa = NES CPU address in hexadecimal
         rr = replacement value in hexadecimal
         cc = compare value in hexadecimal
     Return:
-        if input_ matches 'aaaa:rr': tuple of ints: (address, replacement_value)
-        if input_ matches 'aaaa?cc:rr': tuple of ints: (address, replacement_value, compare_value)
+        if input_ matches 'aaaa:rr': (address, replacement_value)
+        if input_ matches 'aaaa?cc:rr': (address, replacement_value, compare_value)
         if input_ matches neither: None"""
 
     # try to match "aaaa:rr"
@@ -141,9 +138,9 @@ assert parse_values("abcd?fff:ff") is None
 assert parse_values("89ab:cd") == (0x89ab, 0xcd)
 assert parse_values("89ab?ef:cd") == (0x89ab, 0xcd, 0xef)
 
-def _encode_lowlevel(codeLen: int, n: int) -> str:
+def _encode_lowlevel(codeLen, n):
     """Encode a Game Genie code (the low-level stuff).
-    codeLen: length of code (6 or 8)
+    codeLen: length of code (6/8)
     n:
         if codeLen=6: 24 bits (16 for address, 8 for replacement value)
         if codeLen=8: 32 bits (16 for address, 8 for replacement value, 8 for compare value)
@@ -160,7 +157,7 @@ def _encode_lowlevel(codeLen: int, n: int) -> str:
     # encode code letters from indexes to letters
     return "".join(GENIE_LETTERS[i] for i in code)
 
-def encode_code(address: int, replacement: int, compare=None):
+def encode_code(address, replacement, compare=None):
     """Encode a Game Genie code.
     address: NES CPU address (0x8000-0xffff or equivalently 0x0000-0x7fff)
     replacement: replacement value (0x00-0xff)
@@ -217,7 +214,7 @@ assert encode_code(0xf008, 0x00, 0x00) == "AAENAAAA"
 assert encode_code(0xffff, 0xff, 0xff) == "NNNNNNNN"
 assert encode_code(0x7fff, 0xff, 0xff) == "NNNNNNNN"  # canonical: ffff?ff:ff
 
-def random_code() -> str:
+def random_code():
     """Create a random 6-letter Game Genie code."""
 
     return encode_code(random.randrange(0x8000), random.randrange(0x100))

@@ -59,7 +59,7 @@ _MIN_PRG_BANK_SIZES_KIB = {
     243: 32,  # Sachen SA-020A
 }
 
-def get_smallest_PRG_bank_size(mapper: int) -> int:
+def get_smallest_PRG_bank_size(mapper):
     """Get the smallest PRG ROM bank size the mapper supports (8 KiB for unknown mappers).
     mapper: iNES mapper number (0-255)
     return: bank size in bytes (8/16/32 KiB)"""

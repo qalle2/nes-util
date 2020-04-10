@@ -53,8 +53,8 @@ def decode_color_code(color):
 
 def decode_character_slice(LSBs, MSBs):
     """Decode 8*1 pixels of one character.
-    LSBs: integer with 8 less significant bits
-    MSBs: integer with 8 more significant bits
+    LSBs: int with 8 less significant bits
+    MSBs: int with 8 more significant bits
     return: iterable with 8 2-bit big-endian integers"""
 
     MSBs <<= 1

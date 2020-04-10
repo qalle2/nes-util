@@ -5,11 +5,11 @@ import sys
 import ineslib
 import nesgenielib
 
-def get_PRG_addresses(handle, fileInfo: dict, CPUAddress: int, compareValue):
+def get_PRG_addresses(handle, fileInfo, CPUAddress, compareValue):
     """Generate PRG ROM addresses that contain compareValue at CPUAddress.
     fileInfo: from ineslib.parse_iNES_header()
     CPUAddress: NES CPU address (0x8000-0xffff)
-    compareValue: int (0x00-0xff) or None"""
+    compareValue: 0x00-0xff or None"""
 
     PRGStart = 16 + fileInfo["trainerSize"]
     PRGBankSize = min(ineslib.get_smallest_PRG_bank_size(fileInfo["mapper"]), fileInfo["PRGSize"])

@@ -5,10 +5,10 @@ import os
 import sys
 import ineslib
 
-def to_ASCII(string_):
+def to_ASCII(text):
     """Replace non-ASCII characters with backslash codes."""
 
-    return string_.encode("ascii", errors="backslashreplace").decode("ascii")
+    return text.encode("ascii", errors="backslashreplace").decode("ascii")
 
 def hash_file_slice(handle, bytesLeft):
     """Compute the MD5 hash of a slice of the file, starting from current position."""
