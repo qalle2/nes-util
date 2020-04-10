@@ -11,3 +11,11 @@ echo.
 
 echo === Journey to Silius: EUR code TESSXTIA to US (should find TEXINTIA) ===
 python nesgenie_verconv.py tessxtia test-in\journey-e.nes test-in\journey.nes
+echo.
+
+echo === Help text ===
+python nesgenie_verconv.py
+echo.
+
+echo === These should cause errors ===
+python nesgenie_verconv.py aaaaaaaa nonexistent1 nonexistent2

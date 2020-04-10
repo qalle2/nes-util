@@ -4,7 +4,6 @@ TODO:
     - try to match slices only partially
     - handle addresses near the start/end of PRG ROM correctly
     - support six-letter codes
-    - make pylint happy
 """
 
 import os
@@ -14,48 +13,67 @@ import nesgenielib
 
 SLICE_LEN = 2  # length of slice before and after the address
 
+def decode_code(code):
+    """Parse a Game Genie code from the command line arguments.
+    return: (CPU address, replace value, compare value)"""
+
+    decoded = nesgenielib.decode_code(code)
+    if decoded is None:
+        sys.exit("Invalid Game Genie code.")
+    if len(decoded) == 2:
+        sys.exit("Only eight-letter codes are supported for now.")
+    canonicalCode = nesgenielib.encode_code(*decoded)
+    print(canonicalCode, "=", nesgenielib.stringify_values(*decoded))
+    return decoded
+
 def get_PRG_addresses(CPUAddress, compareValue, handle, fileInfo):
     """Generate PRG ROM addresses that match the CPU address and the compare value in the file."""
 
     # get offset within each bank by ignoring the most significant bits of the CPU address
     PRGBankSize = min(ineslib.get_smallest_PRG_bank_size(fileInfo["mapper"]), fileInfo["PRGSize"])
     offset = CPUAddress & (PRGBankSize - 1)
+
     # for each bank, if that offset matches the compare value, yield the PRG ROM address
+    PRGStart = 16 + fileInfo["trainerSize"]
     for PRGPos in range(offset, fileInfo["PRGSize"], PRGBankSize):
-        handle.seek(16 + fileInfo["trainerSize"] + PRGPos)
+        handle.seek(PRGStart + PRGPos)
         byte = handle.read(1)[0]
         if byte == compareValue:
             yield PRGPos
 
-def filter_PRG_addresses(addresses, PRGSize):
-    """Return PRG ROM addresses that aren't too close to the start or the end of the PRG ROM."""
+def get_slices_from_PRG(handle, address, compareValue):
+    """Generate the PRG ROM slices the address and compareValue may refer to."""
 
-    filtered = []
-    maxAddr = PRGSize - 1 - SLICE_LEN
-    for addr in addresses:
-        if SLICE_LEN <= addr <= maxAddr:
-            filtered.append(addr)
-        else:
-            print(
-                "Warning: skipping a PRG ROM address that's too close to the start or the "
-                "end of the PRG ROM (because this program is too stupid to handle that).",
-                file=sys.stderr
-            )
-    return filtered
+    try:
+        fileInfo = ineslib.parse_iNES_header(handle)
+    except ineslib.iNESError as e:
+        sys.exit("Error in file1: " + str(e))
 
-def get_PRG_slice(PRGAddr, PRGStart, handle):
-    """Get a slice of 2 * SLICE_LEN + 1 bytes from the PRG ROM. The addresses must not be too close
-    to the start or the end of the PRG ROM."""
+    # get PRG addresses; delete those too close to the start or the end of the PRG ROM (this
+    # program is too stupid to handle those)
+    PRGAddresses = get_PRG_addresses(address, compareValue, handle, fileInfo)
+    maxPRGAddr = fileInfo["PRGSize"] - 1 - SLICE_LEN
+    PRGAddresses = [addr for addr in PRGAddresses if SLICE_LEN <= addr <= maxPRGAddr]
+    if not PRGAddresses:
+        sys.exit("No possible PRG ROM addresses found in file1.")
 
-    handle.seek(PRGStart + PRGAddr - SLICE_LEN)
-    return handle.read(2 * SLICE_LEN + 1)
+    print(
+        "Corresponding PRG ROM address(es) in file1:",
+        " ".join("0x{:04x}".format(addr) for addr in PRGAddresses)
+    )
 
-def find_slices_in_PRG(slices, PRGStart, PRGSize, handle):
+    PRGStart = 16 + fileInfo["trainerSize"]
+    for addr in PRGAddresses:
+        handle.seek(PRGStart + addr - SLICE_LEN)
+        yield handle.read(2 * SLICE_LEN + 1)
+
+def find_slices_in_PRG(handle, fileInfo, slices):
     """Try to find each slice (bytes) in the PRG data. Yield one result per call."""
 
     # read PRG ROM data
-    handle.seek(PRGStart)
-    PRGData = handle.read(PRGSize)
+    handle.seek(16 + fileInfo["trainerSize"])
+    PRGData = handle.read(fileInfo["PRGSize"])
+
     # for each slice, find all occurrences and yield corresponding PRG ROM addresses
     for slice_ in slices:
         searchStart = 0
@@ -99,39 +117,14 @@ def main():
         )
     (code, file1, file2) = (sys.argv[1], sys.argv[2], sys.argv[3])
 
-    # validate and decode the code
-    decoded = nesgenielib.decode_code(code)
-    if decoded is None:
-        sys.exit("Invalid Game Genie code.")
-    if len(decoded) == 2:
-        sys.exit("Only eight-letter codes are supported for now.")
-    canonicalCode = nesgenielib.encode_code(*decoded)
-    print(canonicalCode, "=", nesgenielib.stringify_values(*decoded))
-
-    (address, replaceValue, compareValue) = (decoded[0], decoded[1], decoded[2])
-
-    if not os.path.isfile(file1):
-        sys.exit("file1 not found.")
-    if not os.path.isfile(file2):
-        sys.exit("file2 not found.")
+    (address, replaceValue, compareValue) = decode_code(code)
+    for file in (file1, file2):
+        if not os.path.isfile(file):
+            sys.exit("File not found: " + file)
 
     try:
         with open(file1, "rb") as handle:
-            try:
-                fileInfo1 = ineslib.parse_iNES_header(handle)
-            except ineslib.iNESError as e:
-                sys.exit("Error in file1: " + str(e))
-            PRGAddresses1 = list(get_PRG_addresses(address, compareValue, handle, fileInfo1))
-            PRGAddresses1 = filter_PRG_addresses(PRGAddresses1, fileInfo1["PRGSize"])
-            if not PRGAddresses1:
-                sys.exit("No possible PRG ROM addresses found in file1.")
-            print(
-                "Corresponding PRG ROM address(es) in file1:",
-                " ".join("0x{:04x}".format(addr) for addr in PRGAddresses1)
-            )
-            slices1 = set(
-                get_PRG_slice(addr, 16 + fileInfo1["trainerSize"], handle) for addr in PRGAddresses1
-            )
+            slices1 = set(get_slices_from_PRG(handle, address, compareValue))
     except OSError:
         sys.exit("Error reading file1.")
 
@@ -148,9 +141,7 @@ def main():
                 fileInfo2 = ineslib.parse_iNES_header(handle)
             except ineslib.iNESError as e:
                 sys.exit("Error in file2: " + str(e))
-            PRGAddresses2 = set(find_slices_in_PRG(
-                slices1, 16 + fileInfo2["trainerSize"], fileInfo2["PRGSize"], handle
-            ))
+            PRGAddresses2 = set(find_slices_in_PRG(handle, fileInfo2, slices1))
     except OSError:
         sys.exit("Error reading file2.")
 
