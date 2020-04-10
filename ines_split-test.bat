@@ -30,3 +30,4 @@ python ines_split.py --nonexistent test-in\smb1.nes
 python ines_split.py test-in\smb1.nes
 python ines_split.py --prg test-in\smb1.nes test-in\smb1.nes
 python ines_split.py --chr test-in\smb1.nes test-in\smb1.nes
+python ines_split.py --prg test-out\out.prg test-in\too-small.nes

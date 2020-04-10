@@ -119,7 +119,7 @@ def main():
         with open(file1, "rb") as handle:
             try:
                 fileInfo1 = ineslib.parse_iNES_header(handle)
-            except Exception as e:
+            except ineslib.iNESError as e:
                 sys.exit("Error in file1: " + str(e))
             PRGAddresses1 = list(get_PRG_addresses(address, compareValue, handle, fileInfo1))
             PRGAddresses1 = filter_PRG_addresses(PRGAddresses1, fileInfo1["PRGSize"])
@@ -146,7 +146,7 @@ def main():
         with open(file2, "rb") as handle:
             try:
                 fileInfo2 = ineslib.parse_iNES_header(handle)
-            except Exception as e:
+            except ineslib.iNESError as e:
                 sys.exit("Error in file2: " + str(e))
             PRGAddresses2 = set(find_slices_in_PRG(
                 slices1, 16 + fileInfo2["trainerSize"], fileInfo2["PRGSize"], handle

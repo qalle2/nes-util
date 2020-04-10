@@ -26,7 +26,7 @@ def get_iNES_info(handle):
     fileSize = handle.seek(0, 2)
     try:
         fileInfo = ineslib.parse_iNES_header(handle)
-    except Exception as e:
+    except ineslib.iNESError as e:
         sys.exit(to_ASCII(os.path.basename(handle.name)) + ": error: " + str(e))
 
     handle.seek(0)

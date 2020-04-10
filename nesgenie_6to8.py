@@ -35,7 +35,7 @@ def main():
         with open(file, "rb") as handle:
             try:
                 fileInfo = ineslib.parse_iNES_header(handle)
-            except Exception as e:
+            except ineslib.iNESError as e:
                 sys.exit("Error: " + str(e))
             PRGBankSize = ineslib.get_smallest_PRG_bank_size(fileInfo["mapper"])
             if PRGBankSize >= fileInfo["PRGSize"]:

@@ -47,7 +47,7 @@ def main():
         with open(file, "rb") as handle:
             try:
                 fileInfo = ineslib.parse_iNES_header(handle)
-            except Exception as e:
+            except ineslib.iNESError as e:
                 sys.exit("Error: " + str(e))
             PRGAddresses = list(get_PRG_addresses(handle, fileInfo, CPUAddress, compareValue))
     except OSError:

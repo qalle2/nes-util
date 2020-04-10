@@ -59,6 +59,9 @@ _MIN_PRG_BANK_SIZES_KIB = {
     243: 32,  # Sachen SA-020A
 }
 
+class iNESError(Exception):
+    """An exception for iNES file format related errors."""
+
 def get_smallest_PRG_bank_size(mapper):
     """Get the smallest PRG ROM bank size the mapper supports (8 KiB for unknown mappers).
     mapper: iNES mapper number (0-255)
@@ -70,7 +73,7 @@ def parse_iNES_header(handle):
     """Parse an iNES header. Return a dict. On error, raise an exception with an error message."""
 
     if handle.seek(0, 2) < 16:
-        raise Exception("file_smaller_than_ines_header")
+        raise iNESError("file_smaller_than_ines_header")
 
     # read the header, extract fields
     handle.seek(0)
@@ -80,7 +83,7 @@ def parse_iNES_header(handle):
 
     # validate id
     if id_ != _INES_ID:
-        raise Exception("invalid_id")
+        raise iNESError("invalid_id")
 
     # get the size of PRG ROM, CHR ROM and trainer
     PRGSize = (PRGSize16KiB if PRGSize16KiB else 256) * 16 * 1024
@@ -89,7 +92,7 @@ def parse_iNES_header(handle):
 
     # validate file size
     if handle.seek(0, 2) < 16 + trainerSize + PRGSize + CHRSize:
-        raise Exception("file_too_small")
+        raise iNESError("file_too_small")
 
     # get type of name table mirroring
     if flags6 & 0x08:
@@ -119,13 +122,13 @@ def create_iNES_header(PRGSize, CHRSize, mapper=0, mirroring="h", saveRAM=False)
     # get PRG ROM size in 16-KiB units; encode 256 as 0
     (PRGSize16KiB, remainder) = divmod(PRGSize, 16 * 1024)
     if not 1 <= PRGSize16KiB <= 256 or remainder:
-        raise Exception("invalid_prg_rom_size")
+        raise iNESError("invalid_prg_rom_size")
     PRGSize16KiB %= 256
 
     # get CHR ROM size in 8-KiB units
     (CHRSize8KiB, remainder) = divmod(CHRSize, 8 * 1024)
     if not 0 <= CHRSize8KiB <= 255 or remainder:
-        raise Exception("invalid_chr_rom_size")
+        raise iNESError("invalid_chr_rom_size")
 
     # encode flags
     flags6 = (mapper & 0x0f) << 4
@@ -134,7 +137,7 @@ def create_iNES_header(PRGSize, CHRSize, mapper=0, mirroring="h", saveRAM=False)
     elif mirroring == "f":
         flags6 |= 0x08
     elif mirroring != "h":
-        raise Exception("invalid_mirroring_type")
+        raise iNESError("invalid_mirroring_type")
     if saveRAM:
         flags6 |= 0x02
     flags7 = mapper & 0xf0

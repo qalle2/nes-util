@@ -50,7 +50,7 @@ def main():
             # get file info
             try:
                 fileInfo = ineslib.parse_iNES_header(source)
-            except Exception as e:
+            except ineslib.iNESError as e:
                 sys.exit("Error: " + str(e))
             if args.prg is not None:
                 # extract PRG ROM

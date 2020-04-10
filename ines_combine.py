@@ -83,7 +83,7 @@ def main():
             mirroring=args.mirroring,
             saveRAM=args.save_ram,
         )
-    except Exception as e:
+    except ineslib.iNESError as e:
         sys.exit("Error: " + str(e))
 
     # write output file

@@ -85,7 +85,7 @@ def get_CHR_data_position(handle):
     # iNES ROM file?
     try:
         iNESInfo = ineslib.parse_iNES_header(handle)
-    except Exception as e:
+    except ineslib.iNESError as e:
         sys.exit(
             "The input file is neither a valid iNES ROM file (error: {:s}) nor valid raw CHR data "
             "(invalid file size).".format(str(e))
