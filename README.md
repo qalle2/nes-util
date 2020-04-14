@@ -1,6 +1,8 @@
 # nes-util
 Various utilities related to the [Nintendo Entertainment System](http://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
 
+Note: you need ineslib.py and nesgenielib.py to run most of the other programs.
+
 ## ineslib.py
 ```
 NAME
