@@ -216,4 +216,24 @@ Convert a 6-letter NES Game Genie code into 8 letters using the iNES ROM file (.
 Find the PRG ROM addresses affected by an NES Game Genie code in an iNES ROM file (.nes). Args: file code
 
 ## nesgenie_verconv.py
-Convert an eight-letter NES Game Genie code from one version of a game to another using both iNES ROM files (.nes). Args: code_for_file1 file1 file2
+```
+usage: nesgenie_verconv.py [-h] [-s SLICE_LENGTH] [-d MAX_DIFFERENT_BYTES] code file1 file2
+
+Read two versions (e.g. Japanese and US) of the same NES game in iNES format (.nes) and a Game Genie code for one of
+the versions. Output the equivalent code for the other version of the game.
+
+positional arguments:
+  code                  An eight-letter NES Game Genie code that is known to work with file1.
+  file1                 An iNES ROM file (.nes) to read. The game your code is known to work with.
+  file2                 Another iNES ROM file (.nes) to read. The equivalent code for this game will be searched for.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -s SLICE_LENGTH, --slice-length SLICE_LENGTH
+                        Length of PRG ROM slices to compare, before and after the relevant byte (so the actual length
+                        is twice this value plus one). 1 or greater, default=4. Decrease to get more results.
+  -d MAX_DIFFERENT_BYTES, --max-different-bytes MAX_DIFFERENT_BYTES
+                        Maximum number of non-matching bytes allowed in each pair of PRG ROM slices to compare. (The
+                        relevant byte in the middle of the slice must always match.) 0 or greater, default=1. Increase
+                        to get more results.
+```
