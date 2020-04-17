@@ -1,7 +1,6 @@
 """Convert an eight-letter NES Game Genie code from one version of a game to another using both
 iNES ROM files (.nes).
 TODO:
-    - handle addresses near the start/end of PRG ROM correctly
     - support six-letter codes
 """
 
@@ -21,16 +20,19 @@ def parse_arguments():
     )
 
     parser.add_argument(
-        "-s", "--slice-length", type=int, default=4,
-        help="Length of PRG ROM slices to compare, before and after the relevant byte (so the "
-        "actual length is twice this value plus one). 1 or greater, default=4. Decrease to get "
-        "more results."
+        "-s", "--slice-length", type=int, default=9,
+        help="Length of PRG ROM slices to compare. (Each slice will be equally distributed before "
+        "and after its relevant byte if possible.) Minimum=1, default=9. Decrease to get more "
+        "results."
     )
     parser.add_argument(
         "-d", "--max-different-bytes", type=int, default=1,
         help="Maximum number of non-matching bytes allowed in each pair of PRG ROM slices to "
-        "compare. (The relevant byte in the middle of the slice must always match.) 0 or greater, "
-        "default=1. Increase to get more results."
+        "compare. (The relevant byte, usually in the middle of the slice, must always match.) "
+        "Minimum=0, default=1. Increase to get more results."
+    )
+    parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Print technical information."
     )
     parser.add_argument(
         "code", help="An eight-letter NES Game Genie code that is known to work with file1."
@@ -67,7 +69,7 @@ def decode_code(code):
         sys.exit("Only eight-letter codes are supported for now.")
     return decoded
 
-def get_PRG_addresses(CPUAddress, compareValue, handle, fileInfo):
+def get_PRG_addresses(handle, fileInfo, CPUAddress, compareValue):
     """Generate PRG ROM addresses that match the CPU address and the compare value in the file."""
 
     # get offset within each bank by ignoring the most significant bits of the CPU address
@@ -78,52 +80,41 @@ def get_PRG_addresses(CPUAddress, compareValue, handle, fileInfo):
     PRGStart = 16 + fileInfo["trainerSize"]
     for PRGPos in range(offset, fileInfo["PRGSize"], PRGBankSize):
         handle.seek(PRGStart + PRGPos)
-        byte = handle.read(1)[0]
-        if byte == compareValue:
+        if handle.read(1)[0] == compareValue:
             yield PRGPos
 
-def get_slices_from_PRG(handle, address, compareValue, sliceLen):
-    """Generate the PRG ROM slices the address and compareValue may refer to."""
+def get_PRG_slices(handle, PRGAddresses, sliceLen, fileInfo):
+    """Generate the slice surrounding each PRG ROM address."""
 
-    try:
-        fileInfo = ineslib.parse_iNES_header(handle)
-    except ineslib.iNESError as e:
-        sys.exit("Error in file1: " + str(e))
-
-    # get PRG addresses; delete those too close to the start or the end of the PRG ROM (this
-    # program is too stupid to handle those)
-    PRGAddresses = get_PRG_addresses(address, compareValue, handle, fileInfo)
-    maxPRGAddr = fileInfo["PRGSize"] - 1 - sliceLen
-    PRGAddresses = [addr for addr in PRGAddresses if sliceLen <= addr <= maxPRGAddr]
-    if not PRGAddresses:
-        sys.exit("No possible PRG ROM addresses found in file1.")
-
-    print("Corresponding PRG ROM addresses in file1:")
-    for addr in PRGAddresses:
-        print("  0x{:04x}".format(addr))
-
+    # for each PRG address, yield the slice surrounding it: tuple(bytes_before, bytes_after)
     PRGStart = 16 + fileInfo["trainerSize"]
     for addr in PRGAddresses:
-        handle.seek(PRGStart + addr - sliceLen)
-        yield handle.read(2 * sliceLen + 1)
+        # length of slice before/after the relevant byte
+        lenBefore = min(sliceLen // 2, addr)
+        lenAfter = min(sliceLen - lenBefore - 1, fileInfo["PRGSize"] - addr - 1)
+        handle.seek(PRGStart + addr - lenBefore)
+        slice_ = handle.read(lenBefore + 1 + lenAfter)
+        yield (slice_[:lenBefore], slice_[lenBefore+1:])
 
-def find_slices_in_PRG(handle, fileInfo, slices, args):
-    """Try to find each slice (bytes) in the PRG data. Yield one result per call."""
+def find_slices_in_PRG(handle, slices, compareValue, fileInfo, args):
+    """Try to find each slice in the PRG data. Yield one result per call."""
 
     # read PRG ROM data
     handle.seek(16 + fileInfo["trainerSize"])
     PRGData = handle.read(fileInfo["PRGSize"])
 
     # for each slice, find all occurrences similar enough and yield corresponding PRG ROM addresses
-    for pos in range(fileInfo["PRGSize"] - 2 * args.slice_length):
-        for slice_ in slices:
-            if slice_[args.slice_length] == PRGData[pos+args.slice_length]:
-                commonByteCnt = sum(
-                    1 for (byte1, byte2) in zip(slice_, PRGData[pos:pos+2*args.slice_length+1])
-                    if byte1 == byte2
+    for pos in range(fileInfo["PRGSize"] - args.slice_length + 1):
+        for (before, after) in slices:
+            # the relevant byte must always match
+            if PRGData[pos+len(before)] == compareValue:
+                slice_ = before + bytes((compareValue,)) + after
+                differentByteCnt = sum(
+                    1 for (byte1, byte2) in zip(slice_, PRGData[pos:pos+args.slice_length])
+                    if byte1 != byte2
                 )
-                if commonByteCnt >= args.slice_length * 2 + 1 - args.max_different_bytes:
-                    yield pos + args.slice_length
+                if differentByteCnt <= args.max_different_bytes:
+                    yield pos + len(before)
 
 def PRG_addresses_to_CPU_addresses(PRGAddresses, fileInfo):
     """Convert PRG ROM addresses into CPU ROM addresses. Yield one address per call."""
@@ -152,20 +143,34 @@ def main():
     args = parse_arguments()
 
     (address, replaceValue, compareValue) = decode_code(args.code)
-    print(
-        f"Decoded code: address=0x{address:04x}, replace=0x{replaceValue:02x}, "
-        f"compare=0x{compareValue:02x}"
-    )
+    if args.verbose:
+        print(
+            f"Decoded code: address=0x{address:04x}, replace=0x{replaceValue:02x}, "
+            f"compare=0x{compareValue:02x}"
+        )
 
     try:
         with open(args.file1, "rb") as handle:
-            slices1 = set(get_slices_from_PRG(handle, address, compareValue, args.slice_length))
+            try:
+                fileInfo1 = ineslib.parse_iNES_header(handle)
+            except ineslib.iNESError as e:
+                sys.exit("Error in file1: " + str(e))
+            PRGAddresses1 = list(get_PRG_addresses(handle, fileInfo1, address, compareValue))
+            slices = set(get_PRG_slices(handle, PRGAddresses1, args.slice_length, fileInfo1))
     except OSError:
         sys.exit("Error reading file1.")
 
-    print("Unique slices centered at those addresses in file1:")
-    for slice_ in sorted(slices1):
-        print("  " + " ".join(f"0x{byte:02x}" for byte in slice_))
+    if args.verbose:
+        print("Corresponding PRG ROM addresses in file1:")
+        for addr in PRGAddresses1:
+            print(f"  0x{addr:04x}")
+        print("Unique bytestrings around those addresses in file1 (exact byte in <brackets>):")
+        for (before, after) in sorted(slices):
+            print("  {:s} <0x{:02x}> {:s}".format(
+                " ".join(f"0x{byte:02x}" for byte in before),
+                compareValue,
+                " ".join(f"0x{byte:02x}" for byte in after)
+            ))
 
     try:
         with open(args.file2, "rb") as handle:
@@ -173,23 +178,22 @@ def main():
                 fileInfo2 = ineslib.parse_iNES_header(handle)
             except ineslib.iNESError as e:
                 sys.exit("Error in file2: " + str(e))
-            PRGAddresses2 = set(find_slices_in_PRG(handle, fileInfo2, slices1, args))
+            PRGAddresses2 = set(find_slices_in_PRG(handle, slices, compareValue, fileInfo2, args))
     except OSError:
         sys.exit("Error reading file2.")
 
-    if not PRGAddresses2:
-        sys.exit("No possible PRG ROM addresses found in file2.")
-    print("PRG ROM addresses containing one of those slices in file2:")
-    for addr in sorted(PRGAddresses2):
-        print(f"  0x{addr:04x}")
+    if args.verbose:
+        print("PRG ROM addresses in file2 matching one of those bytestrings:")
+        for addr in sorted(PRGAddresses2):
+            print(f"  0x{addr:04x}")
 
-    CPUAddresses = set(PRG_addresses_to_CPU_addresses(PRGAddresses2, fileInfo2))
-    print("Game Genie codes:")
-    for addr in sorted(CPUAddresses):
-        print("  address=0x{:04x}, replace=0x{:02x}, compare=0x{:02x}: {:s}{:s}".format(
-            addr, replaceValue, compareValue,
+    print(f"Game Genie codes for file2 (try the first ones first):")
+    CPUAddresses = sorted(set(PRG_addresses_to_CPU_addresses(PRGAddresses2, fileInfo2)))
+    CPUAddresses.sort(key=lambda addr: abs(addr - address))
+    for addr in CPUAddresses:
+        print("  {:s} (address=0x{:04x})".format(
             nesgenielib.encode_code(addr, replaceValue, compareValue),
-            " (likely)" if abs(addr - address) <= 256 else ""
+            addr
         ))
 
 if __name__ == "__main__":
