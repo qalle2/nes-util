@@ -172,7 +172,7 @@ Requires the [Pillow](https://python-pillow.org) module.
 ```
 usage: nes_chr_encode.py [-h] [-p PALETTE PALETTE PALETTE PALETTE] input_file output_file
 
-Convert a PNG image into an NES CHR (graphics) data file.
+Convert an image file into an NES CHR (graphics) data file.
 
 positional arguments:
   input_file            The image file to read (e.g. PNG). The width must be 128 pixels. The height must be a multiple
@@ -226,7 +226,8 @@ Read two versions (e.g. Japanese and US) of the same NES game in iNES format (.n
 the versions. Output the equivalent code for the other version of the game.
 
 positional arguments:
-  code                  An eight-letter NES Game Genie code that is known to work with file1.
+  code                  An NES Game Genie code that is known to work with file1. Six-letter codes are not allowed if
+                        file1 uses PRG ROM bankswitching.
   file1                 An iNES ROM file (.nes) to read. The game your code is known to work with.
   file2                 Another iNES ROM file (.nes) to read. The equivalent code for this game will be searched for.
 
