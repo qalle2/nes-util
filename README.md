@@ -12,6 +12,10 @@ DESCRIPTION
     A library for parsing/encoding iNES ROM files (.nes).
     See http://wiki.nesdev.com/w/index.php/INES
 
+CLASSES
+    builtins.Exception(builtins.BaseException)
+        iNESError
+
 FUNCTIONS
     create_iNES_header(PRGSize, CHRSize, mapper=0, mirroring='h', saveRAM=False)
         Return a 16-byte iNES header as bytes. On error, raise an exception with an error message.
@@ -21,7 +25,7 @@ FUNCTIONS
         mirroring: name table mirroring ('h'=horizontal, 'v'=vertical, 'f'=four-screen)
         saveRAM: does the game have save RAM
 
-    get_smallest_PRG_bank_size(mapper: int) -> int
+    get_smallest_PRG_bank_size(mapper)
         Get the smallest PRG ROM bank size the mapper supports (8 KiB for unknown mappers).
         mapper: iNES mapper number (0-255)
         return: bank size in bytes (8/16/32 KiB)
@@ -40,7 +44,7 @@ DESCRIPTION
     See http://nesdev.com/nesgg.txt
 
 FUNCTIONS
-    decode_code(code: str)
+    decode_code(code)
         Decode a Game Genie code.
         code: 6 or 8 letters from GENIE_LETTERS, case insensitive
         Return:
@@ -48,7 +52,7 @@ FUNCTIONS
             if code is 8 letters: a tuple of ints: (address, replacement_value, compare_value)
             if code is invalid: None
 
-    encode_code(address: int, replacement: int, compare=None)
+    encode_code(address, replacement, compare=None)
         Encode a Game Genie code.
         address: NES CPU address (0x8000-0xffff or equivalently 0x0000-0x7fff)
         replacement: replacement value (0x00-0xff)
@@ -58,31 +62,28 @@ FUNCTIONS
             if compare is not None: an 8-letter code (str)
             if the arguments are invalid: None
 
-    is_valid_code(code: str) -> bool
-        Validate a Game Genie code case-insensitively.
-        Return:
-            if code is valid: True
-            if code is invalid: False
+    is_valid_code(code)
+        Validate a Game Genie code case-insensitively. Return True if valid, False if invalid.
 
-    parse_values(input_: str)
+    parse_values(input_)
         Parse a hexadecimal representation of the numbers regarding a Game Genie code.
         input_: must match 'aaaa:rr' or 'aaaa?cc:rr', where:
             aaaa = NES CPU address in hexadecimal
             rr = replacement value in hexadecimal
             cc = compare value in hexadecimal
         Return:
-            if input_ matches 'aaaa:rr': tuple of ints: (address, replacement_value)
-            if input_ matches 'aaaa?cc:rr': tuple of ints: (address, replacement_value, compare_value)
+            if input_ matches 'aaaa:rr': (address, replacement_value)
+            if input_ matches 'aaaa?cc:rr': (address, replacement_value, compare_value)
             if input_ matches neither: None
 
-    random_code() -> str
+    random_code()
         Create a random 6-letter Game Genie code.
 
-    stringify_values(address: int, replacement: int, compare=None) -> str
+    stringify_values(address, replacement, compare=None)
         Convert the numbers regarding a Game Genie code into a hexadecimal representation.
         address: NES CPU address (0x8000-0xffff)
         replacement: replacement value (0x00-0xff)
-        compare: compare value (int, 0x00-0xff) or None
+        compare: compare value (0x00-0xff) or None
         Return:
             if compare is None: 'aaaa:rr'
             if compare is not None: 'aaaa?cc:rr'
@@ -219,7 +220,7 @@ Find the PRG ROM addresses affected by an NES Game Genie code in an iNES ROM fil
 
 ## nesgenie_verconv.py
 ```
-usage: nesgenie_verconv.py [-h] [-s SLICE_LENGTH] [-d MAX_DIFFERENT_BYTES] code file1 file2
+usage: nesgenie_verconv.py [-h] [-s SLICE_LENGTH] [-d MAX_DIFFERENT_BYTES] [-v] code file1 file2
 
 Read two versions (e.g. Japanese and US) of the same NES game in iNES format (.nes) and a Game Genie code for one of
 the versions. Output the equivalent code for the other version of the game.
@@ -232,10 +233,11 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   -s SLICE_LENGTH, --slice-length SLICE_LENGTH
-                        Length of PRG ROM slices to compare, before and after the relevant byte (so the actual length
-                        is twice this value plus one). 1 or greater, default=4. Decrease to get more results.
+                        Length of PRG ROM slices to compare. (Each slice will be equally distributed before and after
+                        its relevant byte if possible.) Minimum=1, default=9. Decrease to get more results.
   -d MAX_DIFFERENT_BYTES, --max-different-bytes MAX_DIFFERENT_BYTES
                         Maximum number of non-matching bytes allowed in each pair of PRG ROM slices to compare. (The
-                        relevant byte in the middle of the slice must always match.) 0 or greater, default=1. Increase
-                        to get more results.
+                        relevant byte, usually in the middle of the slice, must always match.) Minimum=0, default=1.
+                        Increase to get more results.
+  -v, --verbose         Print technical information.
 ```
