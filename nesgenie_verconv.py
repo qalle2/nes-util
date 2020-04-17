@@ -1,8 +1,6 @@
 """Convert an eight-letter NES Game Genie code from one version of a game to another using both
 iNES ROM files (.nes).
-TODO:
-    - support six-letter codes
-"""
+TODO: make pylint happy"""
 
 import argparse
 import os
@@ -35,7 +33,9 @@ def parse_arguments():
         "-v", "--verbose", action="store_true", help="Print technical information."
     )
     parser.add_argument(
-        "code", help="An eight-letter NES Game Genie code that is known to work with file1."
+        "code",
+        help="An NES Game Genie code that is known to work with file1. Six-letter codes are not "
+        "allowed if file1 uses PRG ROM bankswitching."
     )
     parser.add_argument(
         "file1", help="An iNES ROM file (.nes) to read. The game your code is known to work with."
@@ -58,19 +58,15 @@ def parse_arguments():
 
     return args
 
-def decode_code(code):
-    """Parse a Game Genie code from the command line arguments.
-    return: (CPU address, replace value, compare value)"""
+def is_PRG_ROM_bankswitched(fileInfo):
+    """Is the PRG ROM of an NES game bankswitched? (May give false positives.)
+    fileInfo: from ineslib.parse_iNES_header()"""
 
-    decoded = nesgenielib.decode_code(code)
-    if decoded is None:
-        sys.exit("Invalid Game Genie code.")
-    if len(decoded) == 2:
-        sys.exit("Only eight-letter codes are supported for now.")
-    return decoded
+    return fileInfo["PRGSize"] > ineslib.get_smallest_PRG_bank_size(fileInfo["mapper"])
 
-def get_PRG_addresses(handle, fileInfo, CPUAddress, compareValue):
-    """Generate PRG ROM addresses that match the CPU address and the compare value in the file."""
+def get_banked_PRG_addresses(handle, fileInfo, CPUAddress, compareValue):
+    """Generate PRG ROM addresses that match the CPU address and the compare value in the file.
+    (The file may use PRG ROM bankswitching.)"""
 
     # get offset within each bank by ignoring the most significant bits of the CPU address
     PRGBankSize = min(ineslib.get_smallest_PRG_bank_size(fileInfo["mapper"]), fileInfo["PRGSize"])
@@ -142,20 +138,42 @@ def main():
 
     args = parse_arguments()
 
-    (address, replaceValue, compareValue) = decode_code(args.code)
-    if args.verbose:
-        print(
-            f"Decoded code: address=0x{address:04x}, replace=0x{replaceValue:02x}, "
-            f"compare=0x{compareValue:02x}"
-        )
+    decoded = nesgenielib.decode_code(args.code)
+    if decoded is None:
+        sys.exit("Invalid Game Genie code.")
+    (address, replaceValue, compareValue) \
+    = (decoded[0], decoded[1], decoded[2] if len(decoded) == 3 else None)
 
+    if args.verbose:
+        print("Decoded code: address=0x{:04x}, replace=0x{:02x}, compare={:s}".format(
+            address, replaceValue, "none" if compareValue is None else f"0x{compareValue:02x}"
+        ))
+
+    # read file1
     try:
         with open(args.file1, "rb") as handle:
+            # get info from iNES header
             try:
                 fileInfo1 = ineslib.parse_iNES_header(handle)
             except ineslib.iNESError as e:
                 sys.exit("Error in file1: " + str(e))
-            PRGAddresses1 = list(get_PRG_addresses(handle, fileInfo1, address, compareValue))
+            # get possible PRG ROM addresses
+            if compareValue is None:
+                # using a six-letter code
+                if is_PRG_ROM_bankswitched(fileInfo1):
+                    sys.exit(
+                        "file1 seems to use PRG ROM bankswitching, so six-letter codes are not "
+                        "allowed."
+                    )
+                PRGAddresses1 = [address & (fileInfo1["PRGSize"] - 1)]
+                # also get a fake compare value
+                handle.seek(16 + fileInfo1["trainerSize"] + PRGAddresses1[0])
+                compareValue = handle.read(1)[0]
+            else:
+                # using an eight-letter code
+                PRGAddresses1 = get_banked_PRG_addresses(handle, fileInfo1, address, compareValue)
+            PRGAddresses1 = list(PRGAddresses1)
+            # get bytestrings surrounding the addresses
             slices = set(get_PRG_slices(handle, PRGAddresses1, args.slice_length, fileInfo1))
     except OSError:
         sys.exit("Error reading file1.")
@@ -172,28 +190,37 @@ def main():
                 " ".join(f"0x{byte:02x}" for byte in after)
             ))
 
+    # read file2
     try:
         with open(args.file2, "rb") as handle:
+            # get info from iNES header
             try:
                 fileInfo2 = ineslib.parse_iNES_header(handle)
             except ineslib.iNESError as e:
                 sys.exit("Error in file2: " + str(e))
+            # find possible addresses for all slices in PRG ROM
             PRGAddresses2 = set(find_slices_in_PRG(handle, slices, compareValue, fileInfo2, args))
     except OSError:
         sys.exit("Error reading file2.")
+
+    # ignore compare value to output six-letter codes if target game is not bankswitched
+    compareValue = compareValue if is_PRG_ROM_bankswitched(fileInfo2) else None
 
     if args.verbose:
         print("PRG ROM addresses in file2 matching one of those bytestrings:")
         for addr in sorted(PRGAddresses2):
             print(f"  0x{addr:04x}")
+        if compareValue is None:
+            print("file2 does not seem to use PRG ROM bankswitching.")
+        else:
+            print("file2 seems to use PRG ROM bankswitching.")
 
     print(f"Game Genie codes for file2 (try the first ones first):")
     CPUAddresses = sorted(set(PRG_addresses_to_CPU_addresses(PRGAddresses2, fileInfo2)))
     CPUAddresses.sort(key=lambda addr: abs(addr - address))
     for addr in CPUAddresses:
         print("  {:s} (address=0x{:04x})".format(
-            nesgenielib.encode_code(addr, replaceValue, compareValue),
-            addr
+            nesgenielib.encode_code(addr, replaceValue, compareValue), addr
         ))
 
 if __name__ == "__main__":
