@@ -20,7 +20,7 @@ def parse_arguments():
     """Parse and validate command line arguments using argparse."""
 
     parser = argparse.ArgumentParser(
-        description="Convert a PNG image into an NES CHR (graphics) data file.",
+        description="Convert an image file into an NES CHR (graphics) data file.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
