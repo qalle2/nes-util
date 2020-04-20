@@ -92,15 +92,7 @@ DATA
     GENIE_LETTERS = 'APZLGITYEOXUKSVN'
 ```
 
-The structure of NES Game Genie codes:
-* The codes consist of the following 16 letters: `A P Z L G I T Y E O X U K S V N`
-* The codes are six or eight letters long (e.g. `SXIOPO`, `YEUZUGAA`).
-* In canonical codes, the third letter reflects the length of the code:
-  * In six-letter codes, the letter is one of `A P Z L G I T Y`
-  * In eight-letter codes, the letter is one of `E O X U K S V N`
-* The Game Genie and my programs accept non-canonical codes too.
-* All codes encode a 15-bit address (NES CPU ROM `0x8000-0xffff`) and a "replacement value" (`0x00-0xff`).
-* Eight-letter codes also contain a "compare value" (`0x00-0xff`).
+![NES Game Genie code format](nesgenieformat.png)
 
 ## ines_combine.py
 ```
