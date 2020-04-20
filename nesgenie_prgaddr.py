@@ -16,6 +16,7 @@ def get_PRG_addresses(handle, fileInfo, CPUAddress, compareValue):
 
     # get offset within each bank by ignoring the most significant bits of the address
     offset = CPUAddress & (PRGBankSize - 1)
+
     # for each bank, read the byte at that offset
     for PRGPos in range(offset, fileInfo["PRGSize"], PRGBankSize):
         handle.seek(PRGStart + PRGPos)
@@ -45,19 +46,16 @@ def main():
 
     try:
         with open(file, "rb") as handle:
+            # parse iNES header
             try:
                 fileInfo = ineslib.parse_iNES_header(handle)
             except ineslib.iNESError as e:
                 sys.exit("Error: " + str(e))
-            PRGAddresses = list(get_PRG_addresses(handle, fileInfo, CPUAddress, compareValue))
+            # get PRG addresses corresponding to CPU address
+            for PRGAddr in get_PRG_addresses(handle, fileInfo, CPUAddress, compareValue):
+                print(f"0x{PRGAddr:04x}")
     except OSError:
         sys.exit("Error reading the file.")
-
-    if PRGAddresses:
-        for addr in PRGAddresses:
-            print(f"0x{addr:04x}")
-    else:
-        print("No PRG ROM addresses found.")
 
 if __name__ == "__main__":
     main()
