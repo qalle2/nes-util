@@ -82,38 +82,40 @@ def get_banked_PRG_addresses(handle, fileInfo, CPUAddress, compareValue):
 def get_PRG_slices(handle, PRGAddresses, sliceLen, fileInfo):
     """Generate the slice surrounding each PRG ROM address."""
 
-    # for each PRG address, yield the slice surrounding it: tuple(bytes_before, bytes_after)
     PRGStart = 16 + fileInfo["trainerSize"]
-    for addr in PRGAddresses:
-        # length of slice before/after the relevant byte
-        lenBefore = min(sliceLen // 2, addr)
-        lenAfter = min(sliceLen - lenBefore - 1, fileInfo["PRGSize"] - addr - 1)
-        handle.seek(PRGStart + addr - lenBefore)
+
+    for PRGAddr in PRGAddresses:
+        # get length of slice before/after the relevant byte
+        lenBefore = min(sliceLen // 2, PRGAddr)
+        lenAfter = min(sliceLen - lenBefore - 1, fileInfo["PRGSize"] - PRGAddr - 1)
+        # read slice
+        handle.seek(PRGStart + PRGAddr - lenBefore)
         slice_ = handle.read(lenBefore + 1 + lenAfter)
+        # yield bytes before and after the relevant byte
         yield (slice_[:lenBefore], slice_[lenBefore+1:])
 
 def find_slices_in_PRG(handle, slices, compareValue, fileInfo, args):
-    """Try to find each slice in the PRG data. Yield one result per call."""
+    """Generate PRG addresses of each slice."""
 
     # read PRG ROM data
     handle.seek(16 + fileInfo["trainerSize"])
     PRGData = handle.read(fileInfo["PRGSize"])
 
-    # for each slice, find all occurrences similar enough and yield corresponding PRG ROM addresses
-    for pos in range(fileInfo["PRGSize"] - args.slice_length + 1):
-        for (before, after) in slices:
+    for (before, after) in slices:
+        slice_ = before + bytes((compareValue,)) + after
+        for PRGAddr in range(fileInfo["PRGSize"] - args.slice_length + 1):
             # the relevant byte must always match
-            if PRGData[pos+len(before)] == compareValue:
-                slice_ = before + bytes((compareValue,)) + after
+            if PRGData[PRGAddr+len(before)] == compareValue:
+                # if not too many different bytes, yield PRG address of relevant byte
                 differentByteCnt = sum(
-                    1 for (byte1, byte2) in zip(slice_, PRGData[pos:pos+args.slice_length])
+                    1 for (byte1, byte2) in zip(slice_, PRGData[PRGAddr:PRGAddr+args.slice_length])
                     if byte1 != byte2
                 )
                 if differentByteCnt <= args.max_different_bytes:
-                    yield pos + len(before)
+                    yield PRGAddr + len(before)
 
 def PRG_addresses_to_CPU_addresses(PRGAddresses, fileInfo):
-    """Convert PRG ROM addresses into CPU ROM addresses. Yield one address per call."""
+    """Generate CPU addresses from PRG addresses."""
 
     PRGBankSize = min(ineslib.get_smallest_PRG_bank_size(fileInfo["mapper"]), fileInfo["PRGSize"])
     for addr in PRGAddresses:
@@ -157,7 +159,8 @@ def main():
                 fileInfo1 = ineslib.parse_iNES_header(handle)
             except ineslib.iNESError as e:
                 sys.exit("Error in file1: " + str(e))
-            # get possible PRG ROM addresses
+
+            # get PRG addresses
             if compareValue is None:
                 # using a six-letter code
                 if is_PRG_ROM_bankswitched(fileInfo1):
@@ -173,6 +176,7 @@ def main():
                 # using an eight-letter code
                 PRGAddresses1 = get_banked_PRG_addresses(handle, fileInfo1, address, compareValue)
             PRGAddresses1 = list(PRGAddresses1)
+
             # get bytestrings surrounding the addresses
             slices = set(get_PRG_slices(handle, PRGAddresses1, args.slice_length, fileInfo1))
     except OSError:
