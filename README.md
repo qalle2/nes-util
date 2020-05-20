@@ -212,10 +212,13 @@ Find the PRG ROM addresses affected by an NES Game Genie code in an iNES ROM fil
 
 ## nesgenie_verconv.py
 ```
-usage: nesgenie_verconv.py [-h] [-s SLICE_LENGTH] [-d MAX_DIFFERENT_BYTES] [-v] code file1 file2
+usage: nesgenie_verconv.py [-h] [-b SLICE_LENGTH_BEFORE] [-a SLICE_LENGTH_AFTER] [-d MAX_DIFFERENT_BYTES]
+                           code file1 file2
 
 Read two versions (e.g. Japanese and US) of the same NES game in iNES format (.nes) and a Game Genie code for one of
-the versions. Output the equivalent code for the other version of the game.
+the versions. Output the equivalent code for the other version of the game. Technical explanation: decode the code;
+find out PRG ROM addresses affected in file1; see what's in and around them; look for similar bytestrings in file2's
+PRG ROM; convert the addresses back into CPU addresses; encode them into codes.
 
 positional arguments:
   code                  An NES Game Genie code that is known to work with file1. Six-letter codes are not allowed if
@@ -225,12 +228,16 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  -s SLICE_LENGTH, --slice-length SLICE_LENGTH
-                        Length of PRG ROM slices to compare. (Each slice will be equally distributed before and after
-                        its relevant byte if possible.) Minimum=1, default=9. Decrease to get more results.
+  -b SLICE_LENGTH_BEFORE, --slice-length-before SLICE_LENGTH_BEFORE
+                        Length of PRG ROM slice to compare before the relevant byte. (Fewer bytes will be compared if
+                        the relevant byte is too close to the start of the PRG ROM.) 0 to 20, default=4. Decrease to
+                        get more results.
+  -a SLICE_LENGTH_AFTER, --slice-length-after SLICE_LENGTH_AFTER
+                        Length of PRG ROM slice to compare after the relevant byte. (Fewer bytes will be compared if
+                        the relevant byte is too close to the end of the PRG ROM.) 0 to 20, default=4. Decrease to get
+                        more results.
   -d MAX_DIFFERENT_BYTES, --max-different-bytes MAX_DIFFERENT_BYTES
                         Maximum number of non-matching bytes allowed in each pair of PRG ROM slices to compare. (The
-                        relevant byte, usually in the middle of the slice, must always match.) Minimum=0, default=1.
-                        Increase to get more results.
-  -v, --verbose         Print technical information.
+                        relevant byte must always match.) Minimum=0, default=1, maximum=sum of --slice-length-before
+                        and --slice-length-after, minus one. Increase to get more results.
 ```
