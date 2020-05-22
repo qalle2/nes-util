@@ -1,9 +1,10 @@
 # nes-util
 Various utilities related to the [Nintendo Entertainment System](http://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
 
-Note: you need ineslib.py and nesgenielib.py to run most of the other programs.
+## Libraries
+You need these to run most of the other programs in this repo.
 
-## ineslib.py
+### ineslib.py
 ```
 NAME
     ineslib
@@ -47,7 +48,7 @@ FUNCTIONS
         Parse an iNES header. Return a dict. On error, raise an exception with an error message.
 ```
 
-## nesgenielib.py
+### nesgenielib.py
 ```
 NAME
     nesgenielib
@@ -107,7 +108,10 @@ DATA
 
 ![NES Game Genie code format](nesgenieformat.png)
 
-## ines_combine.py
+## Other programs
+You need the libraries above to run most of these. Some programs require the [Pillow](https://python-pillow.org) module too.
+
+### ines_combine.py
 ```
 usage: ines_combine.py [-h] -p PRG_ROM [-c CHR_ROM] [-m MAPPER] [-n {h,v,f}] [-s] outputFile
 
@@ -131,13 +135,13 @@ optional arguments:
   -s, --save-ram        The game contains battery-backed PRG RAM at $6000-$7fff. (default: False)
 ```
 
-## ines_cpuaddr.py
+### ines_cpuaddr.py
 Convert an NES PRG ROM address into possible CPU addresses using the iNES ROM file (.nes). Args: file address_in_hexadecimal
 
-## ines_info.py
+### ines_info.py
 Print information of an iNES ROM file (.nes) in CSV format. Argument: file. Output fields: file, size, PRG ROM size, CHR ROM size, mapper, name table mirroring, does the game have save RAM, trainer size, file MD5 hash, PRG ROM MD5 hash, CHR ROM MD5 hash.
 
-## ines_split.py
+### ines_split.py
 ```
 usage: ines_split.py [-h] [-p PRG] [-c CHR] input_file
 
@@ -154,8 +158,7 @@ optional arguments:
 Specify at least one output file.
 ```
 
-## nes_chr_decode.py
-Requires the [Pillow](https://python-pillow.org) module.
+### nes_chr_decode.py
 ```
 usage: nes_chr_decode.py [-h] [-p PALETTE PALETTE PALETTE PALETTE] input_file output_file
 
@@ -175,8 +178,7 @@ optional arguments:
                         'ffffff'))
 ```
 
-## nes_chr_encode.py
-Requires the [Pillow](https://python-pillow.org) module.
+### nes_chr_encode.py
 ```
 usage: nes_chr_encode.py [-h] [-p PALETTE PALETTE PALETTE PALETTE] input_file output_file
 
@@ -196,7 +198,7 @@ optional arguments:
                         '555555', 'aaaaaa', 'ffffff'))
 ```
 
-## nes_color_swap.py
+### nes_color_swap.py
 ```
 usage: nes_color_swap.py [-h] [-l {0,1,2,3} {0,1,2,3} {0,1,2,3} {0,1,2,3}] [-f FIRST_TILE] [-c TILE_COUNT]
                          input_file output_file
@@ -217,16 +219,16 @@ optional arguments:
                         The number of tiles to change (0 = all starting from --first-tile). (default: 0)
 ```
 
-## nesgenie.py
+### nesgenie.py
 Encode and decode NES Game Genie codes. Argument: six-letter code, eight-letter code, aaaa:rr or aaaa?cc:rr (aaaa = address in hexadecimal, rr = replacement value in hexadecimal, cc = compare value in hexadecimal).
 
-## nesgenie_6to8.py
+### nesgenie_6to8.py
 Convert a 6-letter NES Game Genie code into 8 letters using the iNES ROM file (.nes). Args: file code
 
-## nesgenie_prgaddr.py
+### nesgenie_prgaddr.py
 Find the PRG ROM addresses affected by an NES Game Genie code in an iNES ROM file (.nes). Args: file code
 
-## nesgenie_verconv.py
+### nesgenie_verconv.py
 ```
 usage: nesgenie_verconv.py [-h] [-b SLICE_LENGTH_BEFORE] [-a SLICE_LENGTH_AFTER] [-d MAX_DIFFERENT_BYTES]
                            code file1 file2
