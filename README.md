@@ -17,6 +17,10 @@ CLASSES
         iNESError
 
 FUNCTIONS
+    PRG_address_to_CPU_addresses(PRGAddr, bankSize)
+        Generate CPU ROM addresses (0x8000-0xffff) from the PRG ROM address.
+        bankSize: PRG ROM bank size in bytes
+
     create_iNES_header(PRGSize, CHRSize, mapper=0, mirroring='h', saveRAM=False)
         Return a 16-byte iNES header as bytes. On error, raise an exception with an error message.
         PRGSize: PRG ROM size (16 * 1024 to 4096 * 1024 and a multiple of 16 * 1024)
@@ -25,10 +29,19 @@ FUNCTIONS
         mirroring: name table mirroring ('h'=horizontal, 'v'=vertical, 'f'=four-screen)
         saveRAM: does the game have save RAM
 
+    get_PRG_bank_size(fileInfo)
+        Get PRG ROM bank size of an iNES file. (The result may be too small.)
+        fileInfo: from parse_iNES_header()
+        return: bank size in bytes (8/16/32 KiB)
+
     get_smallest_PRG_bank_size(mapper)
         Get the smallest PRG ROM bank size the mapper supports (8 KiB for unknown mappers).
         mapper: iNES mapper number (0-255)
         return: bank size in bytes (8/16/32 KiB)
+
+    is_PRG_bankswitched(fileInfo)
+        Does the iNES file use PRG ROM bankswitching? (May give false positives.)
+        fileInfo: from parse_iNES_header()
 
     parse_iNES_header(handle)
         Parse an iNES header. Return a dict. On error, raise an exception with an error message.
@@ -206,6 +219,9 @@ Encode and decode NES Game Genie codes. Argument: six-letter code, eight-letter 
 
 ## nesgenie_6to8.py
 Convert a 6-letter NES Game Genie code into 8 letters using the iNES ROM file (.nes). Args: file code
+
+## nesgenie_cpuaddr.py
+Convert an NES PRG ROM address into possible CPU addresses for the Game Genie, using the iNES ROM file (.nes). Args: file address_in_hexadecimal
 
 ## nesgenie_prgaddr.py
 Find the PRG ROM addresses affected by an NES Game Genie code in an iNES ROM file (.nes). Args: file code
