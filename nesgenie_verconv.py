@@ -86,18 +86,6 @@ def read_PRG_data(handle, PRGAddress=0, length=None):
     handle.seek(16 + fileInfo["trainerSize"] + PRGAddress)
     return handle.read(fileInfo["PRGSize"] - PRGAddress if length is None else length)
 
-def is_PRG_bankswitched(handle):
-    """Is the PRG ROM of the game bankswitched? (May give false positives.)"""
-
-    fileInfo = ineslib.parse_iNES_header(handle)
-    return fileInfo["PRGSize"] > ineslib.get_smallest_PRG_bank_size(fileInfo["mapper"])
-
-def get_PRG_bank_size(handle):
-    """Get the PRG ROM bank size of the game. (The result may be too small.)"""
-
-    fileInfo = ineslib.parse_iNES_header(handle)
-    return min(ineslib.get_smallest_PRG_bank_size(fileInfo["mapper"]), fileInfo["PRGSize"])
-
 # --- used with file1 and user's code --------------------------------------------------------------
 
 def get_compare_value(code):
@@ -121,7 +109,7 @@ def get_banked_PRG_addresses(handle, CPUAddress, compareValue):
     (The file may use PRG ROM bankswitching.)"""
 
     fileInfo = ineslib.parse_iNES_header(handle)
-    PRGBankSize = get_PRG_bank_size(handle)
+    PRGBankSize = ineslib.get_PRG_bank_size(fileInfo)
     print("PRG ROM bank size of file1: {:d} KiB".format(PRGBankSize // 1024))
     offset = CPUAddress & (PRGBankSize - 1)  # offset within each PRG bank
 
@@ -140,12 +128,12 @@ def get_PRG_addresses(handle, args):
     # get PRG addresses
     if codeCompareValue is None:
         # using a six-letter code
-        if is_PRG_bankswitched(handle):
+        fileInfo = ineslib.parse_iNES_header(handle)
+        if ineslib.is_PRG_bankswitched(fileInfo):
             sys.exit(
                 "file1 seems to use PRG ROM bankswitching; this program does not support using "
                 "six-letter codes with such files."
             )
-        fileInfo = ineslib.parse_iNES_header(handle)
         return [codeAddr & (fileInfo["PRGSize"] - 1)]
     # using an eight-letter code
     return list(get_banked_PRG_addresses(handle, codeAddr, codeCompareValue))
@@ -201,20 +189,6 @@ def find_slices_in_PRG(handle, slices, compareValue, args):
                 )
                 if differentByteCnt <= args.max_different_bytes:
                     yield PRGAddr
-
-def PRG_addresses_to_CPU_addresses(handle, PRGAddresses):
-    """Generate CPU addresses (0x8000-0xffff) from PRG addresses."""
-
-    PRGBankSize = get_PRG_bank_size(handle)
-    print("PRG ROM bank size of file2: {:d} KiB".format(PRGBankSize // 1024))
-
-    offsetMask = PRGBankSize - 1
-    origins = range(0x8000, 0x10000, PRGBankSize)
-
-    for PRGAddr in PRGAddresses:
-        offset = PRGAddr & offsetMask
-        for origin in origins:
-            yield origin | offset
 
 def print_results(CPUAddresses, originalCode, compareValue):
     """Print the codes we found."""
@@ -281,14 +255,22 @@ def main():
                 ", ".join(f"0x{addr:04x}" for addr in sorted(PRGAddresses))
             )
 
-            CPUAddresses = sorted(PRG_addresses_to_CPU_addresses(handle, PRGAddresses))
+            bankSize = ineslib.get_PRG_bank_size(ineslib.parse_iNES_header(handle))
+            print("PRG ROM bank size of file2: {:d} KiB".format(bankSize // 1024))
+
+            CPUAddresses = set()
+            for addr in PRGAddresses:
+                CPUAddresses.update(ineslib.PRG_address_to_CPU_addresses(addr, bankSize))
+            CPUAddresses = sorted(CPUAddresses)
+
             print(
                 "Equivalent CPU addresses in file2:",
                 ", ".join(f"0x{addr:04x}" for addr in CPUAddresses)
             )
 
             # if file2 not bankswitched, discard compare value to output six-letter codes
-            compareValue = compareValue if is_PRG_bankswitched(handle) else None
+            if not ineslib.is_PRG_bankswitched(ineslib.parse_iNES_header(handle)):
+                compareValue = None
     except OSError:
         sys.exit("Error reading file2.")
 
