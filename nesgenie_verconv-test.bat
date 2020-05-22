@@ -56,6 +56,11 @@ echo.
 python nesgenie_verconv.py slxplovs test-in\smb3.nes test-in\smb3-j.nes
 echo.
 
+echo === SMB 3: US code SLZPLO to JP (should refuse the code) ===
+echo.
+python nesgenie_verconv.py slzplo test-in\smb3.nes test-in\smb3-j.nes
+echo.
+
 echo === User's code should do nothing with file1 ===
 echo.
 python nesgenie_verconv.py eaeaeaea test-in\smb3.nes test-in\smb1.nes
