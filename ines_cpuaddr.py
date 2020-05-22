@@ -1,4 +1,4 @@
-"""Convert an NES PRG ROM address into possible CPU addresses for the Game Genie."""
+"""Convert an NES PRG ROM address into possible CPU addresses."""
 
 import os
 import sys
@@ -10,8 +10,8 @@ def main():
     # read args
     if len(sys.argv) != 3:
         sys.exit(
-            "Convert an NES PRG ROM address into possible CPU addresses for the Game Genie, using "
-            "the iNES ROM file (.nes). Args: file address_in_hexadecimal"
+            "Convert an NES PRG ROM address into possible CPU addresses using the iNES ROM file "
+            "(.nes). Args: file address_in_hexadecimal"
         )
     (file, PRGAddr) = (sys.argv[1], sys.argv[2])  # pylint complains about [1:]
 
