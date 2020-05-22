@@ -131,6 +131,9 @@ optional arguments:
   -s, --save-ram        The game contains battery-backed PRG RAM at $6000-$7fff. (default: False)
 ```
 
+## ines_cpuaddr.py
+Convert an NES PRG ROM address into possible CPU addresses using the iNES ROM file (.nes). Args: file address_in_hexadecimal
+
 ## ines_info.py
 Print information of an iNES ROM file (.nes) in CSV format. Argument: file. Output fields: file, size, PRG ROM size, CHR ROM size, mapper, name table mirroring, does the game have save RAM, trainer size, file MD5 hash, PRG ROM MD5 hash, CHR ROM MD5 hash.
 
@@ -219,9 +222,6 @@ Encode and decode NES Game Genie codes. Argument: six-letter code, eight-letter 
 
 ## nesgenie_6to8.py
 Convert a 6-letter NES Game Genie code into 8 letters using the iNES ROM file (.nes). Args: file code
-
-## nesgenie_cpuaddr.py
-Convert an NES PRG ROM address into possible CPU addresses for the Game Genie, using the iNES ROM file (.nes). Args: file address_in_hexadecimal
 
 ## nesgenie_prgaddr.py
 Find the PRG ROM addresses affected by an NES Game Genie code in an iNES ROM file (.nes). Args: file code
