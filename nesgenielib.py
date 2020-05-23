@@ -1,11 +1,11 @@
 """A library for decoding and encoding NES Game Genie codes.
 See http://nesdev.com/nesgg.txt"""
 
-import random
-import re
-
 GENIE_LETTERS = "APZLGITYEOXUKSVN"
 _GENIE_DECODE_KEY = (3, 5, 2, 4, 1, 0, 7, 6)
+
+class NESGenieError(Exception):
+    """An exception for NES Game Genie related errors."""
 
 # --- decoding -------------------------------------------------------------------------------------
 
@@ -42,37 +42,33 @@ def _decode_lowlevel(code):
 def decode_code(code):
     """Decode a Game Genie code.
     code: 6 or 8 letters from GENIE_LETTERS, case insensitive
-    Return:
-        if code is 6 letters: a tuple of ints: (address, replacement_value)
-        if code is 8 letters: a tuple of ints: (address, replacement_value, compare_value)
-        if code is invalid: None"""
+    return: (address, replacement_value, compare_value/None)
+    on error: raise NESGenieError"""
 
     # validate code
     if not is_valid_code(code):
-        return None
+        raise NESGenieError
     # decode the code into an integer (6 letters to 24 bits, 8 letters to 32 bits)
     n = _decode_lowlevel(code)
     # extract values from the integer
     if len(code) == 6:
-        values = [n >> 8, n & 0xff]
+        values = [n >> 8, n & 0xff, None]
     else:
         values = [n >> 16, (n >> 8) & 0xff, n & 0xff]
     # set most significant bit of address (NES CPU ROM starts at 0x8000)
     values[0] |= 0x8000
     return tuple(values)
 
-assert decode_code("dapapa") is None
-
-assert decode_code("aaaaaa") == (0x8000, 0x00)
-assert decode_code("aaeaaa") == (0x8000, 0x00)  # canonical: "aaaaaa"
-assert decode_code("aaaaan") == (0x8700, 0x08)
-assert decode_code("aaaana") == (0x8807, 0x00)
-assert decode_code("aaanaa") == (0xf008, 0x00)
-assert decode_code("aayaaa") == (0x8070, 0x00)
-assert decode_code("anaaaa") == (0x8080, 0x70)
-assert decode_code("naaaaa") == (0x8000, 0x87)
-assert decode_code("nnynnn") == (0xffff, 0xff)
-assert decode_code("nnnnnn") == (0xffff, 0xff)  # canonical: "nnynnn"
+assert decode_code("aaaaaa") == (0x8000, 0x00, None)
+assert decode_code("aaeaaa") == (0x8000, 0x00, None)  # canonical: "aaaaaa"
+assert decode_code("aaaaan") == (0x8700, 0x08, None)
+assert decode_code("aaaana") == (0x8807, 0x00, None)
+assert decode_code("aaanaa") == (0xf008, 0x00, None)
+assert decode_code("aayaaa") == (0x8070, 0x00, None)
+assert decode_code("anaaaa") == (0x8080, 0x70, None)
+assert decode_code("naaaaa") == (0x8000, 0x87, None)
+assert decode_code("nnynnn") == (0xffff, 0xff, None)
+assert decode_code("nnnnnn") == (0xffff, 0xff, None)  # canonical: "nnynnn"
 
 assert decode_code("aaeaaaaa") == (0x8000, 0x00, 0x00)
 assert decode_code("aaaaaaaa") == (0x8000, 0x00, 0x00)  # canonical: "aaeaaaaa"
@@ -87,56 +83,7 @@ assert decode_code("naeaaaaa") == (0x8000, 0x87, 0x00)
 assert decode_code("nnnnnnnn") == (0xffff, 0xff, 0xff)
 assert decode_code("nnynnnnn") == (0xffff, 0xff, 0xff)  # canonical: "nnnnnnnn"
 
-def stringify_values(address, replacement, compare=None):
-    """Convert the numbers regarding a Game Genie code into a hexadecimal representation.
-    address: NES CPU address (0x8000-0xffff)
-    replacement: replacement value (0x00-0xff)
-    compare: compare value (0x00-0xff) or None
-    Return:
-        if compare is None: 'aaaa:rr'
-        if compare is not None: 'aaaa?cc:rr'"""
-
-    return f"{address:04x}" + ("" if compare is None else f"?{compare:02x}") + f":{replacement:02x}"
-
-assert stringify_values(0x89ab, 0xcd) == "89ab:cd"
-assert stringify_values(0x89ab, 0xcd, 0xef) == "89ab?ef:cd"
-
 # --- encoding -------------------------------------------------------------------------------------
-
-def parse_values(input_):
-    """Parse a hexadecimal representation of the numbers regarding a Game Genie code.
-    input_: must match 'aaaa:rr' or 'aaaa?cc:rr', where:
-        aaaa = NES CPU address in hexadecimal
-        rr = replacement value in hexadecimal
-        cc = compare value in hexadecimal
-    Return:
-        if input_ matches 'aaaa:rr': (address, replacement_value)
-        if input_ matches 'aaaa?cc:rr': (address, replacement_value, compare_value)
-        if input_ matches neither: None"""
-
-    # try to match "aaaa:rr"
-    match = re.search(
-        r"^ ([\da-f]{1,4}) : ([\da-f]{1,2}) $",
-        input_,
-        re.ASCII | re.IGNORECASE | re.VERBOSE
-    )
-    if match is None:
-        # try to match "aaaa?cc:rr"
-        match = re.search(
-            r"^ ([\da-f]{1,4}) \? ([\da-f]{1,2}) : ([\da-f]{1,2}) $",
-            input_,
-            re.ASCII | re.IGNORECASE | re.VERBOSE
-        )
-    if match is None:
-        return None
-    groups = tuple(int(n, 16) for n in match.groups())
-    return groups if len(groups) == 2 else (groups[0], groups[2], groups[1])
-
-assert parse_values("abcde:ff") is None
-assert parse_values("abcd:eff") is None
-assert parse_values("abcd?fff:ff") is None
-assert parse_values("89ab:cd") == (0x89ab, 0xcd)
-assert parse_values("89ab?ef:cd") == (0x89ab, 0xcd, 0xef)
 
 def _encode_lowlevel(codeLen, n):
     """Encode a Game Genie code (the low-level stuff).
@@ -165,12 +112,10 @@ def encode_code(address, replacement, compare=None):
     return:
         if compare is None: a 6-letter code (str)
         if compare is not None: an 8-letter code (str)
-        if the arguments are invalid: None"""
+    on error: raise NESGenieError"""
 
-    if address & ~0xffff:
-        return None
-    if replacement & ~0xff:
-        return None
+    if address & ~0xffff or replacement & ~0xff:
+        raise NESGenieError
 
     if compare is None:
         # six-letter code
@@ -180,15 +125,11 @@ def encode_code(address, replacement, compare=None):
     else:
         # eight-letter code
         if compare & ~0xff:
-            return None
+            raise NESGenieError
         codeLen = 8
         address |= 0x8000  # set MSB to make the third letter one of E/O/X/U/K/S/V/N
         n = (address << 16) | (replacement << 8) | compare
     return _encode_lowlevel(codeLen, n)
-
-assert encode_code(0x10000, 0x00) is None
-assert encode_code(0x0000, 0x100) is None
-assert encode_code(0x0000, 0x00, 0x100) is None
 
 assert encode_code(0x8000, 0x00) == "AAAAAA"
 assert encode_code(0x0000, 0x00) == "AAAAAA"  # canonical: 8000:00
@@ -213,10 +154,3 @@ assert encode_code(0x8807, 0x00, 0x00) == "AAEANAAA"
 assert encode_code(0xf008, 0x00, 0x00) == "AAENAAAA"
 assert encode_code(0xffff, 0xff, 0xff) == "NNNNNNNN"
 assert encode_code(0x7fff, 0xff, 0xff) == "NNNNNNNN"  # canonical: ffff?ff:ff
-
-def random_code():
-    """Create a random 6-letter Game Genie code."""
-
-    return encode_code(random.randrange(0x8000), random.randrange(0x100))
-
-assert len(random_code()) == 6
