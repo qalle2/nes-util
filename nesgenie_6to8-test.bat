@@ -1,56 +1,31 @@
 @echo off
 cls
 
-echo === Super Mario Bros. ===
-python nesgenie_6to8.py test-in\smb1.nes sxiopo
+echo === Batman - Return of the Joker - SZZZON (should find SZXZONSE) ===
+python nesgenie_6to8.py test-in\batmanjoker.nes szzzon
+echo.
+
+echo === Blaster Master - EAGPOA (should find EAKPOATA) ===
+python nesgenie_6to8.py test-in\blastermaster.nes eagpoa
+echo.
+
+echo === Blaster Master - SZLGYI (should find SZUGYIVG) ===
+python nesgenie_6to8.py test-in\blastermaster.nes szlgyi
+echo.
+
+echo === Mega Man - OZIKPX (should find OZSKPZVK) ===
+python nesgenie_6to8.py test-in\megaman1.nes ozikpx
 echo.
 
 echo === R.C. Pro-Am (shouldn't find any codes) ===
 python nesgenie_6to8.py test-in\rcproam1.nes nnynnn
+
+echo === Super Mario Bros. ===
+python nesgenie_6to8.py test-in\smb1.nes sxiopo
 echo.
 
-echo === Blaster Master - EAGPOA (correct result only) ===
-python nesgenie_6to8.py test-in\blastermaster.nes eagpoa | find "EAKPOATA"
-echo.
-
-echo === Blaster Master - EAGPOA ===
-python nesgenie_6to8.py test-in\blastermaster.nes eagpoa
-echo.
-
-echo === Blaster Master - SZLGYI (correct result only) ===
-python nesgenie_6to8.py test-in\blastermaster.nes szlgyi | find "SZUGYIVG"
-echo.
-
-echo === Blaster Master - SZLGYI ===
-python nesgenie_6to8.py test-in\blastermaster.nes szlgyi
-echo.
-
-echo === Mega Man (correct result only) ===
-python nesgenie_6to8.py test-in\megaman1.nes ozikpx | find "OZSKPZVK"
-echo.
-
-echo === Mega Man ===
-python nesgenie_6to8.py test-in\megaman1.nes ozikpx
-echo.
-
-echo === Batman - Return of the Joker (correct result only) ===
-python nesgenie_6to8.py test-in\batmanjoker.nes szzzon | find "SZXZONSE"
-echo.
-
-echo === Batman - Return of the Joker ===
-python nesgenie_6to8.py test-in\batmanjoker.nes szzzon
-echo.
-
-echo === Super Mario Bros. 3 (correct result only) ===
-python nesgenie_6to8.py test-in\smb3.nes yelzug | find "YEUZUGAA"
-echo.
-
-echo === Super Mario Bros. 3 ===
+echo === Super Mario Bros. 3 - YELZUG (should find YEUZUGAA) ===
 python nesgenie_6to8.py test-in\smb3.nes yelzug
-echo.
-
-echo === Action 52 (unknown mapper; omitting codes from output) ===
-python nesgenie_6to8.py test-in\action52.nes aaaaaa | find /v "AAEAA"
 echo.
 
 echo === These should cause errors ===

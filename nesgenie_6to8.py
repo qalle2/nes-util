@@ -3,16 +3,15 @@
 import sys
 import ineslib
 import nesgenielib
+import neslib
 
-def get_compare_values(handle, PRGSize, PRGBankSize, CPUAddress):
-    """Get possible compare values from the PRG ROM. Yield one value per call."""
+def get_compare_values(handle, CPUAddr):
+    """For each PRG ROM bank, yield the byte corresponding to the specified CPU address."""
 
-    # get offset within each bank by ignoring the most significant bits of the address
-    offset = CPUAddress & (PRGBankSize - 1)
+    fileInfo = ineslib.parse_iNES_header(handle)
 
-    # for each bank, read the byte at that offset
-    for PRGPos in range(offset, PRGSize, PRGBankSize):
-        handle.seek(16 + PRGPos)
+    for PRGAddr in neslib.CPU_address_to_PRG_addresses(handle, CPUAddr):
+        handle.seek(16 + fileInfo["trainerSize"] + PRGAddr)
         yield handle.read(1)[0]
 
 def main():
@@ -27,36 +26,33 @@ def main():
     (file, code) = (sys.argv[1], sys.argv[2])  # pylint complains about [1:]
 
     # validate code; get CPU address and replace value
-    decoded = nesgenielib.decode_code(code)
-    if decoded is None or len(decoded) == 3:
-        sys.exit("Invalid six-letter Game Genie code.")
-    (CPUAddr, repl) = decoded
+    try:
+        decoded = nesgenielib.decode_code(code)
+    except nesgenielib.NESGenieError:
+        sys.exit("Invalid Game Genie code.")
+    if decoded[2] is not None:
+        sys.exit("The code must be six letters.")
+    (CPUAddr, repl) = (decoded[0], decoded[1])
 
     try:
         with open(file, "rb") as handle:
             # read iNES header
             try:
                 fileInfo = ineslib.parse_iNES_header(handle)
-            except ineslib.iNESError as e:
-                sys.exit("Error: " + str(e))
+            except ineslib.iNESError as error:
+                sys.exit("Error: " + str(error))
 
-            # get PRG ROM bank size
-            PRGBankSize = ineslib.get_smallest_PRG_bank_size(fileInfo["mapper"])
-            if PRGBankSize >= fileInfo["PRGSize"]:
+            if not ineslib.is_PRG_bankswitched(fileInfo):
                 sys.exit("There is no reason to use eight-letter codes with this game.")
 
-            # get possible compare values
-            compValues = set(
-                get_compare_values(handle, fileInfo["PRGSize"], PRGBankSize, CPUAddr)
-            )
+            compValues = set(get_compare_values(handle, CPUAddr))
     except OSError:
         sys.exit("Error reading the file.")
 
     # ignore a compare value that equals the replace value
     compValues.discard(repl)
 
-    for code in sorted(nesgenielib.encode_code(CPUAddr, repl, comp) for comp in compValues):
-        print(code)
+    print(", ".join(sorted(nesgenielib.encode_code(CPUAddr, repl, comp) for comp in compValues)))
 
 if __name__ == "__main__":
     main()

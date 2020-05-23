@@ -3,6 +3,7 @@
 import os
 import sys
 import ineslib
+import neslib
 
 def main():
     """The main function."""
@@ -14,11 +15,6 @@ def main():
             "(.nes). Args: file address_in_hexadecimal"
         )
     (file, PRGAddr) = (sys.argv[1], sys.argv[2])  # pylint complains about [1:]
-
-    try:
-        PRGAddr = int(PRGAddr, 16)
-    except ValueError:
-        sys.exit("The PRG ROM address is not a valid hexadecimal integer.")
 
     if not os.path.isfile(file):
         sys.exit("File not found.")
@@ -33,13 +29,15 @@ def main():
     except OSError:
         sys.exit("Error reading the file.")
 
-    if not 0 <= PRGAddr < fileInfo["PRGSize"]:
-        sys.exit("PRG ROM address out of range.")
+    # parse & validate address
+    try:
+        PRGAddr = int(PRGAddr, 16)
+        if not 0 <= PRGAddr < fileInfo["PRGSize"]:
+            raise ValueError
+    except ValueError:
+        sys.exit("Invalid PRG address.")
 
-    bankSize = ineslib.get_PRG_bank_size(fileInfo)
-    print("PRG ROM bank size: {:d} KiB".format(bankSize // 1024))
-
-    CPUAddresses = ineslib.PRG_address_to_CPU_addresses(PRGAddr, bankSize)
+    CPUAddresses = neslib.PRG_address_to_CPU_addresses(fileInfo, PRGAddr)
     print("Possible CPU addresses:", " ".join(f"0x{addr:04x}" for addr in sorted(CPUAddresses)))
 
 if __name__ == "__main__":

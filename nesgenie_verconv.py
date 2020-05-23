@@ -6,6 +6,7 @@ import os
 import sys
 import ineslib
 import nesgenielib
+import neslib
 
 # --- Argument parsing -----------------------------------------------------------------------------
 
@@ -60,7 +61,7 @@ def parse_arguments():
         sys.exit("Invalid value for --slice_length_after.")
     if not 0 <= args.max_different_bytes < args.slice_length_before + args.slice_length_after:
         sys.exit("Invalid value for --max-different-bytes.")
-    if nesgenielib.decode_code(args.code) is None:
+    if not nesgenielib.is_valid_code(args.code):
         sys.exit("Invalid Game Genie code.")
     if not os.path.isfile(args.file1):
         sys.exit("file1 not found.")
@@ -69,74 +70,27 @@ def parse_arguments():
 
     return args
 
-# --- used with both input files -------------------------------------------------------------------
-
-def validate_iNES_header(handle, filename):
-    """Validate an iNES header."""
-
-    try:
-        ineslib.parse_iNES_header(handle)
-    except ineslib.iNESError as error:
-        sys.exit(f"Error in {filename:s}: {error!s}")
-
-def read_PRG_data(handle, PRGAddress=0, length=None):
-    """Read bytes from PRG ROM. (Default length: maximum.)"""
-
-    fileInfo = ineslib.parse_iNES_header(handle)
-    handle.seek(16 + fileInfo["trainerSize"] + PRGAddress)
-    return handle.read(fileInfo["PRGSize"] - PRGAddress if length is None else length)
-
 # --- used with file1 and user's code --------------------------------------------------------------
-
-def get_compare_value(code):
-    """Get compare value from user's code."""
-
-    decoded = nesgenielib.decode_code(code)
-    return decoded[2] if len(decoded) == 3 else None
 
 def print_decoded_code(code):
     """Print user's code in decoded form."""
 
-    decoded = nesgenielib.decode_code(code)
-    (addr, replaceValue) = (decoded[0], decoded[1])
-    compareValue = get_compare_value(code)
-    print("Your code decoded: address=0x{:04x}, replace=0x{:02x}, compare={:s}".format(
-        addr, replaceValue, "none" if compareValue is None else f"0x{compareValue:02x}"
-    ))
-
-def get_banked_PRG_addresses(handle, CPUAddress, compareValue):
-    """Generate PRG ROM addresses that match the CPU address and the compare value in the file.
-    (The file may use PRG ROM bankswitching.)"""
-
-    fileInfo = ineslib.parse_iNES_header(handle)
-    PRGBankSize = ineslib.get_PRG_bank_size(fileInfo)
-    print("PRG ROM bank size of file1: {:d} KiB".format(PRGBankSize // 1024))
-    offset = CPUAddress & (PRGBankSize - 1)  # offset within each PRG bank
-
-    # for each bank, if that offset matches the compare value, yield the PRG ROM address
-    for PRGAddr in range(offset, fileInfo["PRGSize"], PRGBankSize):
-        if read_PRG_data(handle, PRGAddr, 1)[0] == compareValue:
-            yield PRGAddr
+    (addr, replaceValue, compareValue) = nesgenielib.decode_code(code)
+    print(
+        "Your code decoded: CPU address = 0x{:04x}, replace value = 0x{:02x}, compare value = {:s}"
+        .format(addr, replaceValue, "none" if compareValue is None else f"0x{compareValue:02x}")
+    )
 
 def get_PRG_addresses(handle, args):
     """Get PRG ROM addresses from file1."""
 
     decoded = nesgenielib.decode_code(args.code)
-    codeAddr = decoded[0]
-    codeCompareValue = decoded[2] if len(decoded) == 3 else None
+    (codeAddr, codeCompareValue) = (decoded[0], decoded[2])
 
-    # get PRG addresses
-    if codeCompareValue is None:
-        # using a six-letter code
-        fileInfo = ineslib.parse_iNES_header(handle)
-        if ineslib.is_PRG_bankswitched(fileInfo):
-            sys.exit(
-                "file1 seems to use PRG ROM bankswitching; this program does not support using "
-                "six-letter codes with such files."
-            )
-        return [codeAddr & (fileInfo["PRGSize"] - 1)]
-    # using an eight-letter code
-    return list(get_banked_PRG_addresses(handle, codeAddr, codeCompareValue))
+    if codeCompareValue is None and ineslib.is_PRG_bankswitched(ineslib.parse_iNES_header(handle)):
+        sys.exit("Six-letter codes cannot be used because file1 uses PRG bankswitching.")
+
+    return list(neslib.CPU_address_to_PRG_addresses(handle, codeAddr, codeCompareValue))
 
 def get_PRG_slices(handle, PRGAddresses, args):
     """Generate the slice surrounding each relevant PRG ROM address: (bytes_before, bytes_after)."""
@@ -147,7 +101,10 @@ def get_PRG_slices(handle, PRGAddresses, args):
         # get actual length of slice before/after relevant byte
         lenBefore = min(args.slice_length_before, PRGAddr)
         lenAfter = min(args.slice_length_after, fileInfo["PRGSize"] - PRGAddr - 1)
-        slice_ = read_PRG_data(handle, PRGAddr - lenBefore, lenBefore + 1 + lenAfter)
+
+        handle.seek(16 + fileInfo["trainerSize"] + PRGAddr - lenBefore)
+        slice_ = handle.read(lenBefore + 1 + lenAfter)
+
         yield (slice_[:lenBefore], slice_[lenBefore+1:])
 
 def get_fake_compare_value(handle, code):
@@ -156,7 +113,8 @@ def get_fake_compare_value(handle, code):
     codeAddr = nesgenielib.decode_code(code)[0]
     fileInfo = ineslib.parse_iNES_header(handle)
     PRGAddr = codeAddr & (fileInfo["PRGSize"] - 1)
-    return read_PRG_data(handle, PRGAddr, 1)[0]
+    handle.seek(16 + fileInfo["trainerSize"] + PRGAddr)
+    return handle.read(1)[0]
 
 def print_slices(slices, compareValue):
     """Print the slices we found from file1."""
@@ -174,7 +132,10 @@ def print_slices(slices, compareValue):
 def find_slices_in_PRG(handle, slices, compareValue, args):
     """Generate PRG addresses of each slice."""
 
-    PRGData = read_PRG_data(handle)
+    # read all PRG data
+    fileInfo = ineslib.parse_iNES_header(handle)
+    handle.seek(16 + fileInfo["trainerSize"])
+    PRGData = handle.read(fileInfo["PRGSize"])
 
     for (sliceBefore, sliceAfter) in slices:
         slice_ = sliceBefore + bytes((compareValue,)) + sliceAfter
@@ -193,16 +154,12 @@ def find_slices_in_PRG(handle, slices, compareValue, args):
 def print_results(CPUAddresses, originalCode, compareValue):
     """Print the codes we found."""
 
-    if compareValue is None:
-        print("Outputting six-letter codes because file2 doesn't bankswitch PRG ROM.")
-    else:
-        print("Outputting eight-letter codes because file2 bankswitches PRG ROM.")
-
     # get address and replace value from original code
     decoded = nesgenielib.decode_code(originalCode)
     (originalAddr, replaceValue) = (decoded[0], decoded[1])
 
     # sort addresses by difference from original address
+    CPUAddresses = sorted(CPUAddresses)
     CPUAddresses.sort(key=lambda addr: abs(addr - originalAddr))
 
     # print codes with new addresses
@@ -217,13 +174,17 @@ def main():
     """The main function."""
 
     args = parse_arguments()
-    compareValue = get_compare_value(args.code)  # needed throughout the program
+    compareValue = nesgenielib.decode_code(args.code)[2]  # needed throughout the program
     print_decoded_code(args.code)
 
     # read file1
     try:
         with open(args.file1, "rb") as handle:
-            validate_iNES_header(handle, "file1")
+            # validate iNES header
+            try:
+                ineslib.parse_iNES_header(handle)
+            except ineslib.iNESError as error:
+                sys.exit(f"Error in file1: {error!s}")
 
             PRGAddresses = get_PRG_addresses(handle, args)
             if not PRGAddresses:
@@ -245,7 +206,11 @@ def main():
     # read file2
     try:
         with open(args.file2, "rb") as handle:
-            validate_iNES_header(handle, "file2")
+            # parse iNES header
+            try:
+                fileInfo = ineslib.parse_iNES_header(handle)
+            except ineslib.iNESError as error:
+                sys.exit(f"Error in file2: {error!s}")
 
             PRGAddresses = set(find_slices_in_PRG(handle, slices, compareValue, args))
             if not PRGAddresses:
@@ -255,17 +220,13 @@ def main():
                 ", ".join(f"0x{addr:04x}" for addr in sorted(PRGAddresses))
             )
 
-            bankSize = ineslib.get_PRG_bank_size(ineslib.parse_iNES_header(handle))
-            print("PRG ROM bank size of file2: {:d} KiB".format(bankSize // 1024))
-
             CPUAddresses = set()
-            for addr in PRGAddresses:
-                CPUAddresses.update(ineslib.PRG_address_to_CPU_addresses(addr, bankSize))
-            CPUAddresses = sorted(CPUAddresses)
+            for PRGAddr in PRGAddresses:
+                CPUAddresses.update(neslib.PRG_address_to_CPU_addresses(fileInfo, PRGAddr))
 
             print(
                 "Equivalent CPU addresses in file2:",
-                ", ".join(f"0x{addr:04x}" for addr in CPUAddresses)
+                ", ".join(f"0x{addr:04x}" for addr in sorted(CPUAddresses))
             )
 
             # if file2 not bankswitched, discard compare value to output six-letter codes

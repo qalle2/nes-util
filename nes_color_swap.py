@@ -91,8 +91,8 @@ def process_file(source, target, args):
 
     try:
         fileInfo = ineslib.parse_iNES_header(source)
-    except ineslib.iNESError as e:
-        sys.exit("Error: " + str(e))
+    except ineslib.iNESError as error:
+        sys.exit("Error: " + str(error))
     (PRGSize, CHRSize) = (fileInfo["PRGSize"], fileInfo["CHRSize"])
 
     if CHRSize == 0:

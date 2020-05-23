@@ -23,7 +23,6 @@ echo.
 
 echo === SMB3, YEUZUGPA (shouldn't find any) ===
 python nesgenie_prgaddr.py test-in\smb3.nes yeuzugpa
-echo.
 
 echo === Nonexistent file ===
 python nesgenie_prgaddr.py nonexistent aaaaaa
