@@ -4,11 +4,27 @@ Various utilities related to the [Nintendo Entertainment System](http://en.wikip
 ## Libraries
 You need these to run most of the other programs in this repo.
 
-### ineslib.py
+### neslib.py
 ```
 NAME
-    ineslib
+    neslib - A library for miscellaneous NES (Nintendo Entertainment System) stuff.
 
+FUNCTIONS
+    CPU_address_to_PRG_addresses(handle, CPUAddr, compareValue=None)
+        Generate PRG ROM addresses that may correspond to the CPU address.
+        handle: handle of an iNES file (.nes)
+        CPUAddr: CPU ROM address (0x8000-0xffff)
+        compareValue: 0x00-0xff or None
+
+    PRG_address_to_CPU_addresses(fileInfo, PRGAddr)
+        Generate CPU ROM addresses (0x8000-0xffff) from the PRG ROM address.
+        fileInfo: from ineslib.parse_iNES_header()
+        handle: handle of an iNES file (.nes)
+        bankSize: PRG ROM bank size in bytes
+```
+
+### ineslib.py
+```
 DESCRIPTION
     A library for parsing/encoding iNES ROM files (.nes).
     See http://wiki.nesdev.com/w/index.php/INES
@@ -18,10 +34,6 @@ CLASSES
         iNESError
 
 FUNCTIONS
-    PRG_address_to_CPU_addresses(PRGAddr, bankSize)
-        Generate CPU ROM addresses (0x8000-0xffff) from the PRG ROM address.
-        bankSize: PRG ROM bank size in bytes
-
     create_iNES_header(PRGSize, CHRSize, mapper=0, mirroring='h', saveRAM=False)
         Return a 16-byte iNES header as bytes. On error, raise an exception with an error message.
         PRGSize: PRG ROM size (16 * 1024 to 4096 * 1024 and a multiple of 16 * 1024)
@@ -35,7 +47,7 @@ FUNCTIONS
         fileInfo: from parse_iNES_header()
         return: bank size in bytes (8/16/32 KiB)
 
-    get_smallest_PRG_bank_size(mapper)
+    get_mapper_PRG_bank_size(mapper)
         Get the smallest PRG ROM bank size the mapper supports (8 KiB for unknown mappers).
         mapper: iNES mapper number (0-255)
         return: bank size in bytes (8/16/32 KiB)
@@ -50,21 +62,20 @@ FUNCTIONS
 
 ### nesgenielib.py
 ```
-NAME
-    nesgenielib
-
 DESCRIPTION
     A library for decoding and encoding NES Game Genie codes.
     See http://nesdev.com/nesgg.txt
+
+CLASSES
+    builtins.Exception(builtins.BaseException)
+        NESGenieError
 
 FUNCTIONS
     decode_code(code)
         Decode a Game Genie code.
         code: 6 or 8 letters from GENIE_LETTERS, case insensitive
-        Return:
-            if code is 6 letters: a tuple of ints: (address, replacement_value)
-            if code is 8 letters: a tuple of ints: (address, replacement_value, compare_value)
-            if code is invalid: None
+        return: (address, replacement_value, compare_value/None)
+        on error: raise NESGenieError
 
     encode_code(address, replacement, compare=None)
         Encode a Game Genie code.
@@ -74,33 +85,10 @@ FUNCTIONS
         return:
             if compare is None: a 6-letter code (str)
             if compare is not None: an 8-letter code (str)
-            if the arguments are invalid: None
+        on error: raise NESGenieError
 
     is_valid_code(code)
         Validate a Game Genie code case-insensitively. Return True if valid, False if invalid.
-
-    parse_values(input_)
-        Parse a hexadecimal representation of the numbers regarding a Game Genie code.
-        input_: must match 'aaaa:rr' or 'aaaa?cc:rr', where:
-            aaaa = NES CPU address in hexadecimal
-            rr = replacement value in hexadecimal
-            cc = compare value in hexadecimal
-        Return:
-            if input_ matches 'aaaa:rr': (address, replacement_value)
-            if input_ matches 'aaaa?cc:rr': (address, replacement_value, compare_value)
-            if input_ matches neither: None
-
-    random_code()
-        Create a random 6-letter Game Genie code.
-
-    stringify_values(address, replacement, compare=None)
-        Convert the numbers regarding a Game Genie code into a hexadecimal representation.
-        address: NES CPU address (0x8000-0xffff)
-        replacement: replacement value (0x00-0xff)
-        compare: compare value (0x00-0xff) or None
-        Return:
-            if compare is None: 'aaaa:rr'
-            if compare is not None: 'aaaa?cc:rr'
 
 DATA
     GENIE_LETTERS = 'APZLGITYEOXUKSVN'
@@ -134,9 +122,6 @@ optional arguments:
                         Type of name table mirroring: h=horizontal, v=vertical, f=four-screen. (default: h)
   -s, --save-ram        The game contains battery-backed PRG RAM at $6000-$7fff. (default: False)
 ```
-
-### ines_cpuaddr.py
-Convert an NES PRG ROM address into possible CPU addresses using the iNES ROM file (.nes). Args: file address_in_hexadecimal
 
 ### ines_info.py
 Print information of an iNES ROM file (.nes) in CSV format. Argument: file. Output fields: file, size, PRG ROM size, CHR ROM size, mapper, name table mirroring, does the game have save RAM, trainer size, file MD5 hash, PRG ROM MD5 hash, CHR ROM MD5 hash.
@@ -218,6 +203,9 @@ optional arguments:
   -c TILE_COUNT, --tile-count TILE_COUNT
                         The number of tiles to change (0 = all starting from --first-tile). (default: 0)
 ```
+
+### nes_cpuaddr.py
+Convert an NES PRG ROM address into possible CPU addresses using the iNES ROM file (.nes). Args: file address_in_hexadecimal
 
 ### nesgenie.py
 Encode and decode NES Game Genie codes. Argument: six-letter code, eight-letter code, aaaa:rr or aaaa?cc:rr (aaaa = address in hexadecimal, rr = replacement value in hexadecimal, cc = compare value in hexadecimal).
