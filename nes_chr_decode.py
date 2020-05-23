@@ -6,6 +6,7 @@ import os
 import sys
 from PIL import Image  # Pillow
 import ineslib
+import neslib
 
 def parse_arguments():
     """Parse and validate command line arguments using argparse."""
@@ -51,15 +52,6 @@ def decode_color_code(color):
         sys.exit("Invalid command line color argument.")
     return (color >> 16, (color >> 8) & 0xff, color & 0xff)
 
-def decode_character_slice(LSBs, MSBs):
-    """Decode 8*1 pixels of one character.
-    LSBs: int with 8 less significant bits
-    MSBs: int with 8 more significant bits
-    return: iterable with 8 2-bit big-endian integers"""
-
-    MSBs <<= 1
-    return (((LSBs >> shift) & 1) | ((MSBs >> shift) & 2) for shift in range(7, -1, -1))
-
 def decode_pixel_rows(source, charRowCount):
     """in: NES character data file
     yield: one pixel row per call (128*1 px, 2-bit values)"""
@@ -71,7 +63,8 @@ def decode_pixel_rows(source, charRowCount):
             indexedPixelRow.clear()
             for charX in range(16):
                 i = charX * 16 + pxY
-                indexedPixelRow.extend(decode_character_slice(charDataRow[i], charDataRow[i+8]))
+                bitplanes = (charDataRow[i], charDataRow[i+8])  # LSBs, MSBs
+                indexedPixelRow.extend(neslib.decode_character_slice(*bitplanes))
             yield indexedPixelRow
 
 def get_CHR_data_position(handle):
