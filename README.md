@@ -21,6 +21,17 @@ FUNCTIONS
         fileInfo: from ineslib.parse_iNES_header()
         handle: handle of an iNES file (.nes)
         bankSize: PRG ROM bank size in bytes
+
+    decode_character_slice(LSBs, MSBs)
+        Decode 8*1 pixels of one character (planar to interleaved).
+        LSBs: the least significant bits (8-bit int)
+        MSBs: the most significant bits (8-bit int)
+        return: pixels (iterable, 8 2-bit big-endian ints)
+
+    encode_character_slice(charSlice)
+        Encode 8*1 pixels of one character (interleaved to planar).
+        charSlice: pixels (8 2-bit big-endian ints)
+        return: (8-bit int least_significant_bits, 8-bit int most_significant_bits)
 ```
 
 ### ineslib.py
