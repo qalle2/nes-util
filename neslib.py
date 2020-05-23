@@ -35,3 +35,29 @@ def CPU_address_to_PRG_addresses(handle, CPUAddr, compareValue=None):
         handle.seek(16 + fileInfo["trainerSize"] + PRGAddr)
         if handle.read(1)[0] == compareValue:
             yield PRGAddr
+
+def decode_character_slice(LSBs, MSBs):
+    """Decode 8*1 pixels of one character (planar to interleaved).
+    LSBs: the least significant bits (8-bit int)
+    MSBs: the most significant bits (8-bit int)
+    return: pixels (iterable, 8 2-bit big-endian ints)"""
+
+    pixels = 8 * [0]
+    for i in range(7, -1, -1):
+        pixels[i] = (LSBs & 1) | ((MSBs & 1) << 1)
+        LSBs >>= 1
+        MSBs >>= 1
+
+    return pixels
+
+def encode_character_slice(charSlice):
+    """Encode 8*1 pixels of one character (interleaved to planar).
+    charSlice: pixels (8 2-bit big-endian ints)
+    return: (8-bit int least_significant_bits, 8-bit int most_significant_bits)"""
+
+    LSBs = MSBs = 0
+    for pixel in charSlice:
+        LSBs = (LSBs << 1) | (pixel & 1)
+        MSBs = (MSBs << 1) | (pixel >> 1)
+
+    return (LSBs, MSBs)
