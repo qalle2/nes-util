@@ -62,7 +62,7 @@ _MIN_PRG_BANK_SIZES_KIB = {
 class iNESError(Exception):
     """An exception for iNES file format related errors."""
 
-def get_smallest_PRG_bank_size(mapper):
+def get_mapper_PRG_bank_size(mapper):
     """Get the smallest PRG ROM bank size the mapper supports (8 KiB for unknown mappers).
     mapper: iNES mapper number (0-255)
     return: bank size in bytes (8/16/32 KiB)"""
@@ -74,20 +74,13 @@ def get_PRG_bank_size(fileInfo):
     fileInfo: from parse_iNES_header()
     return: bank size in bytes (8/16/32 KiB)"""
 
-    return min(get_smallest_PRG_bank_size(fileInfo["mapper"]), fileInfo["PRGSize"])
+    return min(get_mapper_PRG_bank_size(fileInfo["mapper"]), fileInfo["PRGSize"])
 
 def is_PRG_bankswitched(fileInfo):
     """Does the iNES file use PRG ROM bankswitching? (May give false positives.)
     fileInfo: from parse_iNES_header()"""
 
-    return fileInfo["PRGSize"] > get_smallest_PRG_bank_size(fileInfo["mapper"])
-
-def PRG_address_to_CPU_addresses(PRGAddr, bankSize):
-    """Generate CPU ROM addresses (0x8000-0xffff) from the PRG ROM address.
-    bankSize: PRG ROM bank size in bytes"""
-
-    offset = PRGAddr & (bankSize - 1)  # address within each bank
-    return (origin | offset for origin in range(0x8000, 0x10000, bankSize))
+    return fileInfo["PRGSize"] > get_mapper_PRG_bank_size(fileInfo["mapper"])
 
 def parse_iNES_header(handle):
     """Parse an iNES header. Return a dict. On error, raise an exception with an error message."""
