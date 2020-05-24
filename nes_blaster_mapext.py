@@ -1,4 +1,6 @@
 """Extract world maps from Blaster Master US ROM to PNGs.
+Source: http://bck.sourceforge.net/blastermaster.txt
+(I actually figured out most of the info myself before I found that document.)
 TODO: clean up (pylint complains)"""
 
 import argparse
@@ -6,6 +8,7 @@ import itertools
 import os
 import sys
 from PIL import Image
+import ineslib
 import neslib
 
 # addresses of maps: (16-KiB PRG ROM bank, pointer offset within PRG ROM bank, 4-KiB CHR ROM bank)
@@ -42,6 +45,8 @@ def parse_arguments():
         help="Map to extract: 0-7=side view of area 1-8, 8-15=top view of area 1-8. Default=0."
     )
     parser.add_argument("--usb", help="Save ultra-subblocks as a PNG file (256*256 px).")
+    parser.add_argument("--sb", help="Save subblocks as a PNG file (512*512 px).")
+    parser.add_argument("--blocks", help="Save blocks as a PNG file (1024*1024 px).")
     parser.add_argument(
         "input_file", help="The Blaster Master ROM file in iNES format (.nes, US version)."
     )
@@ -60,77 +65,210 @@ def parse_arguments():
 
     return args
 
-def decode_character_slice(LSBs, MSBs):
-    """Decode 8*1 pixels of one character.
-    LSBs: integer with 8 less significant bits
-    MSBs: integer with 8 more significant bits
-    return: iterable with 8 2-bit big-endian integers"""
+def is_blaster_master(fileInfo):
+    """Is the file likely Blaster Master (US)?
+    fileInfo: from ineslib.parse_iNES_header()"""
 
-    MSBs <<= 1
-    return (((LSBs >> shift) & 1) | ((MSBs >> shift) & 2) for shift in range(7, -1, -1))
-
-def decode_tile(data):
-    """Decode an NES tile. Return a tuple of 64 2-bit integers."""
-
-    decodedData = []
-    for (bitplane0, bitplane1) in zip(data[0:8], data[8:16]):
-        decodedData.extend(decode_character_slice(bitplane0, bitplane1))
-    return tuple(decodedData)
+    return (
+        fileInfo["PRGSize"] == 128 * 1024
+        and fileInfo["CHRSize"] == 128 * 1024
+        and fileInfo["mapper"] == 1
+        and fileInfo["mirroring"] == "horizontal"
+        and not fileInfo["saveRAM"]
+    )
 
 def decode_offset(bytes_):
     """Decode address, convert into offset within bank."""
 
     addr = bytes_[0] + bytes_[1] * 0x100  # decode little-endian unsigned short
     if not 0x8000 <= addr <= 0xbfff:
-        sys.exit("Invalid offset within bank.")
+        sys.exit("Invalid address.")
     return addr & 0x3fff  # convert into offset
 
-def create_USBs_image(USBData, USBAttrData, tileData, worldPalette):
-    """Return a Pillow Image with up to 16 * 16 ultra-subblocks, each 16 * 16 px."""
+def find_ranges(values):
+    """Generate ranges from values. E.g. [0, 1, 5] -> range(0, 2), range(5, 6)."""
+
+    rangeStart = None
+
+    for value in sorted(values):
+        if rangeStart is None or value > prevValue + 1:
+            if rangeStart is not None:
+                yield range(rangeStart, prevValue + 1)
+            rangeStart = value
+        prevValue = value
+
+    if rangeStart is not None:
+        yield range(rangeStart, prevValue + 1)
+
+def format_range(range_):
+    """Convert range into hexadecimal representation.
+    E.g. range(0, 2) -> '0x00-0x01', range(5, 6) -> '0x05'."""
+
+    end = range_.stop - 1
+    return f"0x{range_.start:02x}" + (f"-0x{end:02x}" if end > range_.start else "")
+
+def read_block_data(addr, length, PRGBankData, maxValue=255):
+    """Read ultra-subblock, subblock or block data from PRG ROM data. Return tuple."""
+
+    if not 4 <= length <= 256 * 4 or length % 4:
+        sys.exit(f"Invalid data size.")
+    data = tuple(PRGBankData[i:i+4] for i in range(addr, addr + length, 4))
+    valuesUsed = set(itertools.chain.from_iterable(data))
+    print("Entries defined: {:d} (0x00-0x{:02x})".format(len(data), len(data) - 1))
+    print("Unique values used by entries: {:d} ({:s})".format(
+        len(valuesUsed), ", ".join(format_range(r) for r in find_ranges(valuesUsed))
+    ))
+    if max(valuesUsed) > maxValue:
+        sys.exit("Invalid value in data.")
+    return data
+
+def read_map_data(addr, length, PRGBankData, maxValue=255):
+    """Read map data from PRG ROM data (up to 32 * 32 blocks). Return tuple."""
+
+    if not 32 <= length <= 32 * 32 or length % 32:
+        sys.exit("Invalid data size.")
+    data = PRGBankData[addr:addr+length]
+    valuesUsed = set(data)
+    print("Blocks: {:d}".format(len(data)))
+    print("Unique blocks: {:d} ({:s})".format(
+        len(valuesUsed), ", ".join(format_range(r) for r in find_ranges(valuesUsed))
+    ))
+    if max(valuesUsed) > maxValue:
+        sys.exit("Invalid block index in map data.")
+    return data
+
+def create_USB_image(USBData, USBAttrData, tileData, worldPalette):
+    """Return a Pillow Image with 16 * 16 ultra-subblocks, each 16 * 16 pixels."""
 
     image = Image.new("P", (16 * 16, 16 * 16), 0)  # indexed color
-    imagePalette = sorted(set(neslib.PALETTE[color] for color in worldPalette))
-    image.putpalette(itertools.chain.from_iterable(imagePalette))  # RGBRGB...
-    worldPalToImgPal = tuple(imagePalette.index(neslib.PALETTE[color]) for color in worldPalette)
+    RGBPalette = sorted(set(neslib.PALETTE[color] for color in worldPalette))
+    image.putpalette(itertools.chain.from_iterable(RGBPalette))  # RGBRGB...
+    worldPalToImgPal = tuple(RGBPalette.index(neslib.PALETTE[color]) for color in worldPalette)
 
     # for each USB, draw 2 * 2 tiles with correct palette
-    for (USBIndex, USBTiles) in enumerate(USBData):  # index bits: UUUUuuuu
+    for (USBIndex, USBTiles) in enumerate(USBData):  # index bits: UUUU_uuuu
         worldSubPal = USBAttrData[USBIndex] & 3
         for (tileIndex, tile) in enumerate(USBTiles):  # index bits: Tt
-            for pixel in range(8 * 8):  # bits: PPPppp
-                targetY = USBIndex & 0xf0 | tileIndex << 2 & 0x08 | pixel >> 3         # UUUUTPPP
-                targetX = USBIndex << 4 & 0xf0 | tileIndex << 3 & 0x08 | pixel & 0x07  # uuuutppp
+            for pixel in range(8 * 8):  # bits: PP_Pppp
+                targetY = USBIndex & 0xf0 | tileIndex << 2 & 0x08 | pixel >> 3         # UUUU_TPPP
+                targetX = USBIndex << 4 & 0xf0 | tileIndex << 3 & 0x08 | pixel & 0x07  # uuuu_tppp
                 worldPalColor = worldSubPal << 2 | tileData[tile][pixel]
                 image.putpixel((targetX, targetY), worldPalToImgPal[worldPalColor])
     return image
 
-# TODO: continue optimization from here
+def get_USB_image_coords(USB):
+    """Get source coordinates for ultra-subblock in ultra-subblock image.
+    return: (x1, y1, x2, y2)"""
 
-def create_map_image(mapData, blockData, SBData, USBsImg, worldPalette):
-    """Return an image of the entire map with 32 * 32 blocks, each 64 * 64 pixels."""
+    # bits:
+    # USB = TTTT_tttt
+    # x   = tttt_0000
+    # y   = TTTT_0000
+
+    x = USB << 4 & 0xf0
+    y = USB & 0xf0
+    return (x, y, x + 16, y + 16)
+
+def get_SB_image_coords(SB, USB):
+    """Get target coordinates for ultra-subblock in subblock image.
+    SB/USB: subblock/ultra-subblock index
+    return: (x, y)"""
+
+    # bits:
+    # SB  =   SSSS_ssss
+    # USB =          Uu
+    # x   = S_SSSU_0000
+    # y   = s_sssu_0000
+
+    x = SB << 5 & 0x1e0 | USB << 4 & 0x10
+    y = SB << 1 & 0x1e0 | USB << 3 & 0x10
+    return (x, y)
+
+def create_SB_image(SBData, USBImg, worldPalette):
+    """Return a Pillow Image with 16 * 16 subblocks, each 32 * 32 pixels."""
+
+    outImg = Image.new("P", (16 * 32, 16 * 32), 0)  # indexed color
+    RGBPalette = sorted(set(neslib.PALETTE[color] for color in worldPalette))
+    outImg.putpalette(itertools.chain.from_iterable(RGBPalette))  # RGBRGB...
+
+    for (SBIndex, SB) in enumerate(SBData):
+        for (USBIndex, USB) in enumerate(SB):
+            # copy USB from one image to another
+            inImg = USBImg.crop(get_USB_image_coords(USB))
+            outImg.paste(inImg, get_SB_image_coords(SBIndex, USBIndex))
+    return outImg
+
+def get_block_image_coords(block, SB, USB):
+    """Get target coordinates for ultra-subblock in block image.
+    block/SB/USB: block/subblock/ultra-subblock index
+    return: (x, y)"""
+
+    # bits:
+    # block =    BBBB_bbbb
+    # SB    =           Ss
+    # USB   =           Uu
+    # x     = bb_bbsu_0000
+    # y     = BB_BBSU_0000
+
+    x = block << 6 & 0x3c0 | SB << 5 & 0x20 | USB << 4 & 0x10
+    y = block << 2 & 0x3c0 | SB << 4 & 0x20 | USB << 3 & 0x10
+    return (x, y)
+
+def create_block_image(blockData, SBData, USBImg, worldPalette):
+    """Return a Pillow Image with 16 * 16 blocks, each 64 * 64 pixels."""
+
+    outImg = Image.new("P", (16 * 64, 16 * 64), 0)  # indexed color
+    RGBPalette = sorted(set(neslib.PALETTE[color] for color in worldPalette))
+    outImg.putpalette(itertools.chain.from_iterable(RGBPalette))  # RGBRGB...
+
+    # TODO: finish
+                #outImg.paste(inImg, get_block_image_coords(blockIndex, SBIndex, USBIndex))
+    return outImg
+
+def get_map_image_coords(block, SB, USB):
+    """Get target coordinates for ultra-subblock in map image.
+    block/SB/USB: block/subblock/ultra-subblock index
+    return: (x, y)"""
+
+    # bits:
+    # block =  BB_BBBb_bbbb
+    # SB    =            Ss
+    # USB   =            Uu
+    # x     = bbb_bbsu_0000
+    # y     = BBB_BBSU_0000
+
+    x = block << 6 & 0x7c0 | SB << 5 & 0x20 | USB << 4 & 0x10
+    y = block << 1 & 0x7c0 | SB << 4 & 0x20 | USB << 3 & 0x10
+    return (x, y)
+
+def create_map_image(mapData, blockData, SBData, USBImg, worldPalette):
+    """Return Pillow Image of entire map with 32 * 32 blocks, each 64 * 64 pixels."""
 
     outImg = Image.new("P", (2048, len(mapData) * 2), 0)  # indexed color
     RGBPalette = sorted(set(neslib.PALETTE[color] for color in worldPalette))
     outImg.putpalette(itertools.chain.from_iterable(RGBPalette))  # RGBRGB...
-    # copy subblocks from the image we created earlier
-    for (blockIndex, block) in enumerate(mapData):  # world = len(mapData) blocks
-        SBs = blockData[block]
-        for (SBIndex, SB) in enumerate(SBs):  # block = 2 * 2 subblocks
-            USBs = SBData[SB]
-            for (USBIndex, USB) in enumerate(USBs):  # subblock = 2 * 2 ultra-subblocks
-                inX = USB % 16 * 16
-                inY = USB // 16 * 16
-                inImg = USBsImg.crop((inX, inY, inX + 16, inY + 16))
-                outX = blockIndex % 32 * 64 + SBIndex % 2 * 32 + USBIndex % 2 * 16
-                outY = blockIndex // 32 * 64 + SBIndex // 2 * 32 + USBIndex // 2 * 16
-                outImg.paste(inImg, (outX, outY))
+
+    # world = 32*? blocks, block = 2*2 subblocks, subblock = 2*2 ultra-subblocks,
+    # ultra-subblock = 2*2 tiles, tile = 8*8 pixels
+    for (blockIndex, block) in enumerate(mapData):
+        for (SBIndex, SB) in enumerate(blockData[block]):
+            for (USBIndex, USB) in enumerate(SBData[SB]):
+                # copy USB from image to another
+                inImg = USBImg.crop(get_USB_image_coords(USB))
+                outImg.paste(inImg, get_map_image_coords(blockIndex, SBIndex, USBIndex))
     return outImg
 
-def convert_map(source, args):
-    """Convert one map into PNG. See http://bck.sourceforge.net/blastermaster.txt"""
+def convert_map(sourceHnd, args):
+    """Convert one map into PNG."""
 
-    if source.seek(0, 2) != 16 + 256 * 1024:
-        sys.exit("Incorrect input file size.")
+    # parse iNES header
+    try:
+        fileInfo = ineslib.parse_iNES_header(sourceHnd)
+    except ineslib.iNESError as error:
+        sys.exit("iNES error: " + str(error))
+
+    if not is_blaster_master(fileInfo):
+        sys.exit("The file doesn't seem like Blaster Master.")
 
     (PRGBank, worldPtr, CHRBank) = MAP_DATA_ADDRESSES[args.map]
     scrollPtr = worldPtr + 2
@@ -138,9 +276,9 @@ def convert_map(source, args):
     print(f"Banks: PRG (16 KiB) = {PRGBank:d}, CHR (4 KiB) = {CHRBank:d}")
     print(f"Pointer offsets within PRG bank: world=0x{worldPtr:04x}, scroll=0x{scrollPtr:04x}")
 
-    # read PRG ROM bank from file
-    source.seek(16 + PRGBank * 16 * 1024)
-    PRGBankData = source.read(16 * 1024)
+    # read PRG bank data
+    sourceHnd.seek(16 + fileInfo["trainerSize"] + PRGBank * 16 * 1024)
+    PRGBankData = sourceHnd.read(16 * 1024)
 
     # After the pointers, the order of data sections varies.
     # The first ones are always: palette, USBs, subblocks, blocks, map.
@@ -170,60 +308,52 @@ def convert_map(source, args):
     # read this world's palette (always 4*4 bytes, contains duplicate NES colors)
     worldPalette = PRGBankData[palAddr:palAddr+16]
 
-    # read ultra-subblock data
-    USBDataLen = SBAddr - USBAddr
-    if not 4 <= USBDataLen <= 256 * 4 or USBDataLen % 4:
-        sys.exit("Invalid ultra-subblock data size.")
-    USBData = tuple(PRGBankData[i:i+4] for i in range(USBAddr, USBAddr + USBDataLen, 4))
+    # TODO: rip unused USBs/SBs/blocks, add to TCRF
 
-    # read subblock data
-    SBDataLen = blockAddr - SBAddr
-    if not 4 <= SBDataLen <= 256 * 4 or SBDataLen % 4:
-        sys.exit("Invalid subblock data size.")
-    SBData = tuple(PRGBankData[i:i+4] for i in range(SBAddr, SBAddr + SBDataLen, 4))
-    if max(itertools.chain.from_iterable(SBData)) >= len(USBData):
-        sys.exit("Invalid ultra-subblock index in subblock data.")
+    print("Reading ultra-subblock data...")
+    USBData = read_block_data(USBAddr, SBAddr - USBAddr, PRGBankData)
 
-    # read block data
-    blockDataLen = mapAddr - blockAddr
-    if not 4 <= blockDataLen <= 256 * 4 or blockDataLen % 4:
-        sys.exit("Invalid block data size.")
-    blockData = tuple(PRGBankData[i:i+4] for i in range(blockAddr, blockAddr + blockDataLen, 4))
-    if max(itertools.chain.from_iterable(blockData)) >= len(SBData):
-        sys.exit("Invalid subblock index in block data.")
+    print("Reading subblock data...")
+    SBData = read_block_data(SBAddr, blockAddr - SBAddr, PRGBankData, len(USBData) - 1)
 
-    # read map data (up to 32 * 32 blocks)
-    mapDataLen = min(USBAttrAddr, scrollAddr) - mapAddr
-    if not 32 <= mapDataLen <= 32 * 32 or mapDataLen % 32:
-        sys.exit("Invalid map data size.")
-    mapData = PRGBankData[mapAddr:mapAddr+mapDataLen]
-    if max(mapData) >= len(blockData):
-        sys.exit("Invalid block index in map data.")
+    print("Reading block data...")
+    blockData = read_block_data(blockAddr, mapAddr - blockAddr, PRGBankData, len(SBData) - 1)
+
+    print("Reading map data...")
+    mapData = read_map_data(
+        mapAddr, min(USBAttrAddr, scrollAddr) - mapAddr, PRGBankData, len(blockData) - 1
+    )
 
     # read ultra-subblock attribute data (1 byte/ultra-subblock)
     if not (scrollAddr < USBAttrAddr or scrollAddr == USBAttrAddr + len(USBData)):
         sys.exit("Invalid ultra-subblock attribute or scroll data address.")
     USBAttrData = PRGBankData[USBAttrAddr:USBAttrAddr+len(USBData)]
 
-    print(
-        "Counts: "
-        f"ultra-subblocks={len(USBData):d}, subblocks={len(SBData):d}, blocks={len(blockData):d}"
-    )
-    print("Map size (blocks):", len(mapData))
-
     # read and decode tile data
-    source.seek(16 + 128 * 1024 + CHRBank * 4 * 1024)
-    CHRBankData = source.read(4 * 1024)
-    tileData = tuple(decode_tile(CHRBankData[i*16:(i+1)*16]) for i in range(256))
+    sourceHnd.seek(16 + fileInfo["trainerSize"] + fileInfo["PRGSize"] + CHRBank * 4 * 1024)
+    CHRBankData = sourceHnd.read(4 * 1024)
+    tileData = tuple(neslib.decode_tile(CHRBankData[i*16:(i+1)*16]) for i in range(256))
 
-    # create image with ultra subblocks, optionally save
-    USBsImg = create_USBs_image(USBData, USBAttrData, tileData, worldPalette)
+    # create image with ultra-subblocks, optionally save
+    USBImg = create_USB_image(USBData, USBAttrData, tileData, worldPalette)
     if args.usb is not None:
         with open(args.usb, "wb") as target:
-            USBsImg.save(target)
+            USBImg.save(target)
+
+    # optionally create and save image with subblocks
+    if args.sb is not None:
+        SBImg = create_SB_image(SBData, USBImg, worldPalette)
+        with open(args.sb, "wb") as target:
+            SBImg.save(target)
+
+    # optionally create and save image with blocks
+    if args.blocks is not None:
+        blockImg = create_block_image(blockData, SBData, USBImg, worldPalette)
+        with open(args.blocks, "wb") as target:
+            blockImg.save(target)
 
     # create main output image and save it
-    mapImg = create_map_image(mapData, blockData, SBData, USBsImg, worldPalette)
+    mapImg = create_map_image(mapData, blockData, SBData, USBImg, worldPalette)
     with open(args.output_file, "wb") as target:
         target.seek(0)
         mapImg.save(target)
@@ -233,8 +363,8 @@ def main():
 
     args = parse_arguments()
     try:
-        with open(args.input_file, "rb") as source:
-            convert_map(source, args)
+        with open(args.input_file, "rb") as sourceHnd:
+            convert_map(sourceHnd, args)
     except OSError:
         sys.exit("Error reading/writing files.")
 
