@@ -85,29 +85,7 @@ def decode_offset(bytes_):
         sys.exit("Invalid address.")
     return addr & 0x3fff  # convert into offset
 
-def find_ranges(values):
-    """Generate ranges from values. E.g. [0, 1, 5] -> range(0, 2), range(5, 6)."""
-
-    rangeStart = None
-
-    for value in sorted(values):
-        if rangeStart is None or value > prevValue + 1:
-            if rangeStart is not None:
-                yield range(rangeStart, prevValue + 1)
-            rangeStart = value
-        prevValue = value
-
-    if rangeStart is not None:
-        yield range(rangeStart, prevValue + 1)
-
-def format_range(range_):
-    """Convert range into hexadecimal representation.
-    E.g. range(0, 2) -> '0x00-0x01', range(5, 6) -> '0x05'."""
-
-    end = range_.stop - 1
-    return f"0x{range_.start:02x}" + (f"-0x{end:02x}" if end > range_.start else "")
-
-def read_block_data(addr, length, PRGBankData, maxValue=255):
+def read_block_data(addr, length, PRGBankData, maxValue=None):
     """Read ultra-subblock, subblock or block data from PRG ROM data. Return tuple."""
 
     if not 4 <= length <= 256 * 4 or length % 4:
@@ -115,14 +93,17 @@ def read_block_data(addr, length, PRGBankData, maxValue=255):
     data = tuple(PRGBankData[i:i+4] for i in range(addr, addr + length, 4))
     valuesUsed = set(itertools.chain.from_iterable(data))
     print("Entries defined: {:d} (0x00-0x{:02x})".format(len(data), len(data) - 1))
-    print("Unique values used by entries: {:d} ({:s})".format(
-        len(valuesUsed), ", ".join(format_range(r) for r in find_ranges(valuesUsed))
-    ))
-    if max(valuesUsed) > maxValue:
-        sys.exit("Invalid value in data.")
+    print("Unique values used by entries: {:d}".format(len(valuesUsed)))
+
+    if maxValue is not None:
+        if max(valuesUsed) > maxValue:
+            sys.exit("Invalid value in data.")
+        unused = set(range(maxValue + 1)) - set(valuesUsed)
+        print("Values unused by entries: " + ", ".join(f"0x{u:02x}" for u in sorted(unused)))
+
     return data
 
-def read_map_data(addr, length, PRGBankData, maxValue=255):
+def read_map_data(addr, length, PRGBankData, maxValue):
     """Read map data from PRG ROM data (up to 32 * 32 blocks). Return tuple."""
 
     if not 32 <= length <= 32 * 32 or length % 32:
@@ -130,11 +111,13 @@ def read_map_data(addr, length, PRGBankData, maxValue=255):
     data = PRGBankData[addr:addr+length]
     valuesUsed = set(data)
     print("Blocks: {:d}".format(len(data)))
-    print("Unique blocks: {:d} ({:s})".format(
-        len(valuesUsed), ", ".join(format_range(r) for r in find_ranges(valuesUsed))
-    ))
+    print("Unique blocks used: {:d}".format(len(valuesUsed)))
+
     if max(valuesUsed) > maxValue:
         sys.exit("Invalid block index in map data.")
+    unused = set(range(maxValue + 1)) - set(valuesUsed)
+    print("Unused blocks: " + ", ".join(f"0x{u:02x}" for u in sorted(unused)))
+
     return data
 
 def create_USB_image(USBData, USBAttrData, tileData, worldPalette):
@@ -191,8 +174,8 @@ def create_SB_image(SBData, USBImg, worldPalette):
     RGBPalette = sorted(set(neslib.PALETTE[color] for color in worldPalette))
     outImg.putpalette(itertools.chain.from_iterable(RGBPalette))  # RGBRGB...
 
-    for (SBIndex, SB) in enumerate(SBData):
-        for (USBIndex, USB) in enumerate(SB):
+    for (SBIndex, USBs) in enumerate(SBData):
+        for (USBIndex, USB) in enumerate(USBs):
             # copy USB from one image to another
             inImg = USBImg.crop(get_USB_image_coords(USB))
             outImg.paste(inImg, get_SB_image_coords(SBIndex, USBIndex))
@@ -204,11 +187,11 @@ def get_block_image_coords(block, SB, USB):
     return: (x, y)"""
 
     # bits:
-    # block =    BBBB_bbbb
-    # SB    =           Ss
-    # USB   =           Uu
-    # x     = bb_bbsu_0000
-    # y     = BB_BBSU_0000
+    # block = BBBB bbbb
+    # SB    = S s
+    # USB   = U u
+    # x     = bbbb s u 0000
+    # y     = BBBB S U 0000
 
     x = block << 6 & 0x3c0 | SB << 5 & 0x20 | USB << 4 & 0x10
     y = block << 2 & 0x3c0 | SB << 4 & 0x20 | USB << 3 & 0x10
@@ -221,8 +204,11 @@ def create_block_image(blockData, SBData, USBImg, worldPalette):
     RGBPalette = sorted(set(neslib.PALETTE[color] for color in worldPalette))
     outImg.putpalette(itertools.chain.from_iterable(RGBPalette))  # RGBRGB...
 
-    # TODO: finish
-                #outImg.paste(inImg, get_block_image_coords(blockIndex, SBIndex, USBIndex))
+    for (blockIndex, SBs) in enumerate(blockData):
+        for (SBIndex, SB) in enumerate(SBs):
+            for (USBIndex, USB) in enumerate(SBData[SB]):
+                inImg = USBImg.crop(get_USB_image_coords(USB))
+                outImg.paste(inImg, get_block_image_coords(blockIndex, SBIndex, USBIndex))
     return outImg
 
 def get_map_image_coords(block, SB, USB):
@@ -231,11 +217,11 @@ def get_map_image_coords(block, SB, USB):
     return: (x, y)"""
 
     # bits:
-    # block =  BB_BBBb_bbbb
-    # SB    =            Ss
-    # USB   =            Uu
-    # x     = bbb_bbsu_0000
-    # y     = BBB_BBSU_0000
+    # block = BBBBB bbbbb
+    # SB    = S s
+    # USB   = U u
+    # x     = bbbbb s u 0000
+    # y     = BBBBB S U 0000
 
     x = block << 6 & 0x7c0 | SB << 5 & 0x20 | USB << 4 & 0x10
     y = block << 1 & 0x7c0 | SB << 4 & 0x20 | USB << 3 & 0x10
@@ -273,6 +259,7 @@ def convert_map(sourceHnd, args):
     (PRGBank, worldPtr, CHRBank) = MAP_DATA_ADDRESSES[args.map]
     scrollPtr = worldPtr + 2
 
+    print(f"Map: {args.map:d}")
     print(f"Banks: PRG (16 KiB) = {PRGBank:d}, CHR (4 KiB) = {CHRBank:d}")
     print(f"Pointer offsets within PRG bank: world=0x{worldPtr:04x}, scroll=0x{scrollPtr:04x}")
 
@@ -307,8 +294,6 @@ def convert_map(sourceHnd, args):
 
     # read this world's palette (always 4*4 bytes, contains duplicate NES colors)
     worldPalette = PRGBankData[palAddr:palAddr+16]
-
-    # TODO: rip unused USBs/SBs/blocks, add to TCRF
 
     print("Reading ultra-subblock data...")
     USBData = read_block_data(USBAddr, SBAddr - USBAddr, PRGBankData)
