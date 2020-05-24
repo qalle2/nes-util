@@ -154,6 +154,22 @@ optional arguments:
 Specify at least one output file.
 ```
 
+### nes_blaster_mapext.py
+```
+usage: nes_blaster_mapext.py [-h] [-m MAP] [--usb USB] input_file output_file
+
+Extract world maps from NES Blaster Master to PNG files.
+
+positional arguments:
+  input_file         The Blaster Master ROM file in iNES format (.nes, US version).
+  output_file        The PNG image file to write.
+
+optional arguments:
+  -h, --help         show this help message and exit
+  -m MAP, --map MAP  Map to extract: 0-7=side view of area 1-8, 8-15=top view of area 1-8. Default=0.
+  --usb USB          Save ultra-subblocks as a PNG file (256*256 px).
+```
+
 ### nes_chr_decode.py
 ```
 usage: nes_chr_decode.py [-h] [-p PALETTE PALETTE PALETTE PALETTE] input_file output_file
