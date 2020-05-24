@@ -104,8 +104,8 @@ def CPU_address_to_PRG_addresses(handle, CPUAddr, compareValue=None):
         if handle.read(1)[0] == compareValue:
             yield PRGAddr
 
-def decode_character_slice(LSBs, MSBs):
-    """Decode 8*1 pixels of one character (planar to interleaved).
+def decode_tile_slice(LSBs, MSBs):
+    """Decode 8*1 pixels of one tile (planar to interleaved).
     LSBs: the least significant bits (8-bit int)
     MSBs: the most significant bits (8-bit int)
     return: pixels (iterable, 8 2-bit big-endian ints)"""
@@ -118,13 +118,23 @@ def decode_character_slice(LSBs, MSBs):
 
     return pixels
 
-def encode_character_slice(charSlice):
-    """Encode 8*1 pixels of one character (interleaved to planar).
-    charSlice: pixels (8 2-bit big-endian ints)
+def decode_tile(data):
+    """Decode an NES tile (planar to interleaved).
+    data: 16 bytes
+    return: pixels as 64 2-bit big-endian integers"""
+
+    decodedData = []
+    for bitplanes in zip(data[0:8], data[8:16]):  # LSBs, MSBs
+        decodedData.extend(decode_tile_slice(*bitplanes))
+    return tuple(decodedData)
+
+def encode_tile_slice(tileSlice):
+    """Encode 8*1 pixels of one tile (interleaved to planar).
+    tileSlice: pixels (8 2-bit big-endian ints)
     return: (8-bit int least_significant_bits, 8-bit int most_significant_bits)"""
 
     LSBs = MSBs = 0
-    for pixel in charSlice:
+    for pixel in tileSlice:
         LSBs = (LSBs << 1) | (pixel & 1)
         MSBs = (MSBs << 1) | (pixel >> 1)
 
