@@ -64,7 +64,7 @@ def decode_pixel_rows(source, charRowCount):
             for charX in range(16):
                 i = charX * 16 + pxY
                 bitplanes = (charDataRow[i], charDataRow[i+8])  # LSBs, MSBs
-                indexedPixelRow.extend(neslib.decode_character_slice(*bitplanes))
+                indexedPixelRow.extend(neslib.decode_tile_slice(*bitplanes))
             yield indexedPixelRow
 
 def get_CHR_data_position(handle):

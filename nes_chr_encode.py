@@ -120,7 +120,7 @@ def encode_image(img):
             charSlice = tuple(img.getpixel((charX * 8 + x, y)) for x in range(8))
             targetPos = charX * 16 + y % 8
             # LSBs, MSBs
-            (charData[targetPos], charData[targetPos+8]) = neslib.encode_character_slice(charSlice)
+            (charData[targetPos], charData[targetPos+8]) = neslib.encode_tile_slice(charSlice)
         if y % 8 == 7:
             yield charData
 
