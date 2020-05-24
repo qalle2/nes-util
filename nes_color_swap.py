@@ -4,6 +4,7 @@ import argparse
 import os
 import sys
 import ineslib
+import neslib
 
 def parse_arguments():
     """Parse command line arguments using argparse."""
@@ -48,24 +49,6 @@ def read_file(source, bytesLeft):
         yield source.read(chunkSize)
         bytesLeft -= chunkSize
 
-def decode_character_slice(LSBs, MSBs):
-    """Decode 8*1 pixels of one character.
-    LSBs: integer with 8 less significant bits
-    MSBs: integer with 8 more significant bits
-    return: iterable of 8 2-bit big-endian integers"""
-
-    MSBs <<= 1
-    return (((LSBs >> shift) & 1) | ((MSBs >> shift) & 2) for shift in range(7, -1, -1))
-
-def encode_character_slice(indexedPixels):
-    """Encode 8*1 pixels of one character.
-    in: iterable of 8 2-bit integers
-    return: (integer with 8 less significant bits, integer with 8 more significant bits)"""
-
-    LSBs = sum((indexedPixels[i] & 1) << (7 - i) for i in range(8))
-    MSBs = sum((indexedPixels[i] >> 1) << (7 - i) for i in range(8))
-    return (LSBs, MSBs)
-
 def swap_colors(chunk, outputColors):
     """Replace colors 0-3 in NES CHR data chunk with outputColors."""
 
@@ -77,9 +60,9 @@ def swap_colors(chunk, outputColors):
             LSBytePos = charPos + pixelY
             MSBytePos = charPos + 8 + pixelY
             # decode pixels into 2-bit integers, replace colors, reencode
-            slice_ = decode_character_slice(chunk[LSBytePos], chunk[MSBytePos])
+            slice_ = neslib.decode_tile_slice(chunk[LSBytePos], chunk[MSBytePos])
             slice_ = tuple(outputColors[color] for color in slice_)
-            (chunk[LSBytePos], chunk[MSBytePos]) = encode_character_slice(slice_)
+            (chunk[LSBytePos], chunk[MSBytePos]) = neslib.encode_tile_slice(slice_)
     return chunk
 
 def process_file(source, target, args):
