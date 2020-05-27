@@ -1,7 +1,10 @@
-"""Extract world maps from Blaster Master US ROM to PNGs.
+"""Extract world maps from Blaster Master ROM to PNGs.
 Source: http://bck.sourceforge.net/blastermaster.txt
 (I actually figured out most of the info myself before I found that document.)
-TODO: clean up (pylint complains)"""
+TODO: clean up (pylint complains)
+Note: tank view of world 4 is different between US/JP versions (ultra-subblocks seem identical,
+but subblocks, blocks and map differ).
+"""
 
 import argparse
 import itertools
@@ -12,6 +15,7 @@ import ineslib
 import neslib
 
 # addresses of maps: (16-KiB PRG ROM bank, pointer address within PRG ROM bank, 4-KiB CHR ROM bank)
+# note: JP version uses PRG bank 4 instead of 2
 MAP_DATA_ADDRESSES = {
     0: (0, 0 * 4, 8),
     1: (0, 1 * 4, 9),
@@ -39,14 +43,20 @@ def parse_arguments():
     )
 
     parser.add_argument(
-        "-m", "--map", type=int, default=0,
-        help="Map to extract: 0-7=side view of area 1-8, 8-15=top view of area 1-8. Default=0."
+        "-j", "--japan", action="store_true",
+        help="Input file is Japanese version (Chou-Wakusei Senki - MetaFight)."
     )
-    parser.add_argument("--usb", help="Save ultra-subblocks as a PNG file (256*256 px).")
-    parser.add_argument("--sb", help="Save subblocks as a PNG file (512*512 px).")
-    parser.add_argument("--blocks", help="Save blocks as a PNG file (1024*1024 px).")
     parser.add_argument(
-        "input_file", help="The Blaster Master ROM file in iNES format (.nes, US version)."
+        "-m", "--map", type=int, default=0,
+        help="Map to extract: 0-7=tank view of area 1-8, 8-15=overhead view of area 1-8. Default=0."
+    )
+    parser.add_argument("--usb", help="Save ultra-subblocks as PNG file (256*256 px).")
+    parser.add_argument("--sb", help="Save subblocks as PNG file (512*512 px).")
+    parser.add_argument("--blocks", help="Save blocks as PNG file (1024*1024 px).")
+    parser.add_argument(
+        "input_file",
+        help="Blaster Master ROM file in iNES format (.nes, US/US prototype/EUR/JP; see also "
+        "--japan)."
     )
     parser.add_argument("output_file", help="The PNG image file to write.")
 
@@ -66,15 +76,14 @@ def parse_arguments():
 # --------------------------------------------------------------------------------------------------
 
 def is_blaster_master(fileInfo):
-    """Is the file likely Blaster Master (US)?
+    """Is the file likely Blaster Master? (Don't validate too accurately because the file may be
+    a hack.)
     fileInfo: from ineslib.parse_iNES_header()"""
 
     return (
         fileInfo["PRGSize"] == 128 * 1024
         and fileInfo["CHRSize"] == 128 * 1024
         and fileInfo["mapper"] == 1
-        and fileInfo["mirroring"] == "horizontal"
-        and not fileInfo["saveRAM"]
     )
 
 def decode_offset(bytes_):
@@ -210,6 +219,7 @@ def convert_map(sourceHnd, args):
         sys.exit("The file doesn't look like Blaster Master.")
 
     (PRGBank, worldPtr, CHRBank) = MAP_DATA_ADDRESSES[args.map]
+    PRGBank = 4 if PRGBank == 2 and args.japan else PRGBank  # the only version difference
     scrollPtr = worldPtr + 2
 
     print(f"Map: {args.map:d}")
@@ -269,7 +279,9 @@ def convert_map(sourceHnd, args):
     assert max(set(mapData)) < len(blockData)
 
     # read ultra-subblock attribute data (1 byte/ultra-subblock)
-    assert scrollAddr < USBAttrAddr or USBAttrAddr + len(USBData) == scrollAddr
+    if USBAttrAddr <= scrollAddr < USBAttrAddr + len(USBData):
+        # map 3 of JP version
+        print("Warning: scroll data overlaps with ultra-subblock attribute data.", file=sys.stderr)
     USBAttrData = PRGBankData[USBAttrAddr:USBAttrAddr+len(USBData)]
 
     # read and decode tile data
