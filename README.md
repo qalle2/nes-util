@@ -156,18 +156,21 @@ Specify at least one output file.
 
 ### nes_blaster_mapext.py
 ```
-usage: nes_blaster_mapext.py [-h] [-m MAP] [--usb USB] input_file output_file
+usage: nes_blaster_mapext.py [-h] [-j] [-m MAP] [--usb USB] [--sb SB] [--blocks BLOCKS] input_file output_file
 
 Extract world maps from NES Blaster Master to PNG files.
 
 positional arguments:
-  input_file         The Blaster Master ROM file in iNES format (.nes, US version).
+  input_file         Blaster Master ROM file in iNES format (.nes, US/US prototype/EUR/JP; see also --japan).
   output_file        The PNG image file to write.
 
 optional arguments:
   -h, --help         show this help message and exit
-  -m MAP, --map MAP  Map to extract: 0-7=side view of area 1-8, 8-15=top view of area 1-8. Default=0.
-  --usb USB          Save ultra-subblocks as a PNG file (256*256 px).
+  -j, --japan        Input file is Japanese version (Chou-Wakusei Senki - MetaFight).
+  -m MAP, --map MAP  Map to extract: 0-7=tank view of area 1-8, 8-15=overhead view of area 1-8. Default=0.
+  --usb USB          Save ultra-subblocks as PNG file (256*256 px).
+  --sb SB            Save subblocks as PNG file (512*512 px).
+  --blocks BLOCKS    Save blocks as PNG file (1024*1024 px).
 ```
 
 ### nes_chr_decode.py
