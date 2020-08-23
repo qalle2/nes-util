@@ -1,0 +1,29 @@
+clear
+
+echo "=== Excitebike, AAAAAA ==="
+python3 nesgenie_prgaddr.py test-in/excitebike.nes aaaaaa
+echo ""
+
+echo "=== SMB, SXIOPO ==="
+python3 nesgenie_prgaddr.py test-in/smb1.nes sxiopo
+echo ""
+
+echo "=== Blaster Master (US), XTVYGGAV ==="
+python3 nesgenie_prgaddr.py test-in/blastermaster.nes xtvyggav
+echo ""
+
+echo "=== Blaster Master (EUR), AASTKETG ==="
+python3 nesgenie_prgaddr.py test-in/blastermaster-e.nes aastketg
+echo ""
+
+echo "=== SMB3, YEUZUGAA ==="
+python3 nesgenie_prgaddr.py test-in/smb3.nes yeuzugaa
+echo ""
+
+echo "=== SMB3, YEUZUGPA (shouldn't find any) ==="
+python3 nesgenie_prgaddr.py test-in/smb3.nes yeuzugpa
+
+echo "=== This should cause an error ==="
+python3 nesgenie_prgaddr.py test-in/smb1.nes dapapa
+echo ""
+

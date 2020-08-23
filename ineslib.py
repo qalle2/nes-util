@@ -156,3 +156,4 @@ def create_iNES_header(PRGSize, CHRSize, mapper=0, mirroring="h", saveRAM=False)
     flags7 = mapper & 0xf0
 
     return _INES_ID + bytes((PRGSize16KiB, CHRSize8KiB, flags6, flags7)) + 8 * b"\x00"
+

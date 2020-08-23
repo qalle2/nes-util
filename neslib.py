@@ -73,8 +73,7 @@ PALETTE = {
 def PRG_address_to_CPU_addresses(fileInfo, PRGAddr):
     """Generate CPU ROM addresses (0x8000-0xffff) from the PRG ROM address.
     fileInfo: from ineslib.parse_iNES_header()
-    handle: handle of an iNES file (.nes)
-    bankSize: PRG ROM bank size in bytes"""
+    PRGAddr: PRG ROM address"""
 
     PRGBankSize = ineslib.get_PRG_bank_size(fileInfo)
     offset = PRGAddr & (PRGBankSize - 1)  # address within each bank
@@ -84,7 +83,7 @@ def PRG_address_to_CPU_addresses(fileInfo, PRGAddr):
 
 def CPU_address_to_PRG_addresses(handle, CPUAddr, compareValue=None):
     """Generate PRG ROM addresses that may correspond to the CPU address.
-    handle: handle of an iNES file (.nes)
+    handle: handle of a valid iNES file (.nes)
     CPUAddr: CPU ROM address (0x8000-0xffff)
     compareValue: 0x00-0xff or None"""
 
@@ -97,12 +96,11 @@ def CPU_address_to_PRG_addresses(handle, CPUAddr, compareValue=None):
     if compareValue is None:
         for PRGAddr in PRGAddrRange:
             yield PRGAddr
-
-    # only generate addresses matching the compare value
-    for PRGAddr in PRGAddrRange:
-        handle.seek(16 + fileInfo["trainerSize"] + PRGAddr)
-        if handle.read(1)[0] == compareValue:
-            yield PRGAddr
+    else:
+        for PRGAddr in PRGAddrRange:
+            handle.seek(16 + fileInfo["trainerSize"] + PRGAddr)
+            if handle.read(1)[0] == compareValue:
+                yield PRGAddr
 
 def decode_tile_slice(LSBs, MSBs):
     """Decode 8*1 pixels of one tile (planar to interleaved).
@@ -139,3 +137,4 @@ def encode_tile_slice(tileSlice):
         MSBs = (MSBs << 1) | (pixel >> 1)
 
     return (LSBs, MSBs)
+

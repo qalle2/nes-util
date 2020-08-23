@@ -1,0 +1,26 @@
+clear
+
+rm -f test-out/*.png
+
+echo "=== Default settings, US version ==="
+echo ""
+python3 nes_blaster_mapext.py test-in/blastermaster.nes test-out/default.png
+echo ""
+
+echo "=== All maps, USB/SB/blocks output, US version ==="
+echo ""
+for ((i = 0; i < 16; i++)); do python3 nes_blaster_mapext.py --map $i --usb test-out/usb$i.png --sb test-out/sb$i.png --blocks test-out/blocks$i.png test-in/blastermaster.nes test-out/world$i.png; done
+echo ""
+
+echo "=== All maps, USB/SB/blocks output, Japanese version ==="
+echo ""
+for ((i = 0; i < 16; i++)); do python3 nes_blaster_mapext.py --japan --map $i --usb test-out/usb$[i]j.png --sb test-out/sb$[i]j.png --blocks test-out/blocks$[i]j.png test-in/blastermaster-j.nes test-out/world$[i]j.png; done
+echo ""
+
+echo "=== These should cause two errors (incorrect game version) ==="
+echo ""
+python3 nes_blaster_mapext.py --map 9 test-in/blastermaster-j.nes test-out/error1.png
+echo ""
+python3 nes_blaster_mapext.py --japan --map 9 test-in/blastermaster.nes test-out/error2.png
+echo ""
+

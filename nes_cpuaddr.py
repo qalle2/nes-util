@@ -38,7 +38,8 @@ def main():
         sys.exit("Invalid PRG address.")
 
     CPUAddresses = neslib.PRG_address_to_CPU_addresses(fileInfo, PRGAddr)
-    print("Possible CPU addresses:", " ".join(f"0x{addr:04x}" for addr in sorted(CPUAddresses)))
+    print("Possible CPU addresses:", ", ".join(f"0x{addr:04x}" for addr in sorted(CPUAddresses)))
 
 if __name__ == "__main__":
     main()
+
