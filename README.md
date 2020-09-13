@@ -107,7 +107,7 @@ DATA
 
 ![NES Game Genie code format](nesgenieformat.png)
 
-## Other programs
+## Other Python programs
 You need the libraries above to run most of these. Some programs require the [Pillow](https://python-pillow.org) module too.
 
 ### ines_combine.py
@@ -277,3 +277,9 @@ optional arguments:
                         relevant byte must always match.) Minimum=0, default=1, maximum=sum of --slice-length-before
                         and --slice-length-after, minus one. Increase to get more results.
 ```
+
+## NES programs
+
+### nes.asm
+NES assembly routines for [asm6f](https://github.com/freem/asm6f). Used by many of my projects.
+
