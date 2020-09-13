@@ -1,4 +1,5 @@
 ; NES assembly routines for asm6f (https://github.com/freem/asm6f). Used by many of my projects.
+; For a summary of this file, try: grep "^\(;\|macro\)" nes.asm
 
 ; --- Constants -----------------------------------------------------------------------------------
 
