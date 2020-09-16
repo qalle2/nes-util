@@ -154,3 +154,4 @@ assert encode_code(0x8807, 0x00, 0x00) == "AAEANAAA"
 assert encode_code(0xf008, 0x00, 0x00) == "AAENAAAA"
 assert encode_code(0xffff, 0xff, 0xff) == "NNNNNNNN"
 assert encode_code(0x7fff, 0xff, 0xff) == "NNNNNNNN"  # canonical: ffff?ff:ff
+

@@ -12,26 +12,33 @@ NAME
 FUNCTIONS
     CPU_address_to_PRG_addresses(handle, CPUAddr, compareValue=None)
         Generate PRG ROM addresses that may correspond to the CPU address.
-        handle: handle of an iNES file (.nes)
+        handle: handle of a valid iNES file (.nes)
         CPUAddr: CPU ROM address (0x8000-0xffff)
         compareValue: 0x00-0xff or None
 
     PRG_address_to_CPU_addresses(fileInfo, PRGAddr)
         Generate CPU ROM addresses (0x8000-0xffff) from the PRG ROM address.
         fileInfo: from ineslib.parse_iNES_header()
-        handle: handle of an iNES file (.nes)
-        bankSize: PRG ROM bank size in bytes
+        PRGAddr: PRG ROM address
 
-    decode_character_slice(LSBs, MSBs)
-        Decode 8*1 pixels of one character (planar to interleaved).
+    decode_tile(data)
+        Decode an NES tile (planar to interleaved).
+        data: 16 bytes
+        return: pixels as 64 2-bit big-endian integers
+
+    decode_tile_slice(LSBs, MSBs)
+        Decode 8*1 pixels of one tile (planar to interleaved).
         LSBs: the least significant bits (8-bit int)
         MSBs: the most significant bits (8-bit int)
         return: pixels (iterable, 8 2-bit big-endian ints)
 
-    encode_character_slice(charSlice)
-        Encode 8*1 pixels of one character (interleaved to planar).
-        charSlice: pixels (8 2-bit big-endian ints)
+    encode_tile_slice(tileSlice)
+        Encode 8*1 pixels of one tile (interleaved to planar).
+        tileSlice: pixels (8 2-bit big-endian ints)
         return: (8-bit int least_significant_bits, 8-bit int most_significant_bits)
+
+DATA
+    PALETTE = {0: (116, 116, 116), 1: (36, 24, 140), 2: (0, 0, 168), 3: (6...
 ```
 
 ### ineslib.py

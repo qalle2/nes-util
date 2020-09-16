@@ -135,6 +135,5 @@ def encode_tile_slice(tileSlice):
     for pixel in tileSlice:
         LSBs = (LSBs << 1) | (pixel & 1)
         MSBs = (MSBs << 1) | (pixel >> 1)
-
     return (LSBs, MSBs)
 
