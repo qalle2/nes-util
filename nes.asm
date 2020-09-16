@@ -1,9 +1,10 @@
 ; NES assembly routines for asm6f (https://github.com/freem/asm6f). Used by many of my projects.
-; For a summary of this file, try: grep "^\(;\|macro\)" nes.asm
+; For a summary of this file, try: grep "^macro" nes.asm
 
 ; --- Constants -----------------------------------------------------------------------------------
 
 ; memory-mapped registers
+; see http://wiki.nesdev.com/w/index.php/PPU_registers
 ppu_ctrl   equ $2000
 ppu_mask   equ $2001
 ppu_status equ $2002
@@ -30,32 +31,26 @@ button_right  equ %00000001
 
 ; --- Macros --------------------------------------------------------------------------------------
 
-; PPU macros
+; Note: start comments at column 44 (for grep "^macro").
 
-macro wait_for_vblank
-    ; Wait until in VBlank.
+; PPU
 
+macro wait_for_vblank                      ; wait until in VBlank
 -   bit ppu_status
     bpl -
 endm
 
-macro wait_for_vblank_start
-    ; Wait until next VBlank starts.
-
+macro wait_for_vblank_start                ; wait until next VBlank starts
     bit ppu_status
 -   bit ppu_status
     bpl -
 endm
 
-macro reset_ppu_address_latch
-    ; Reset the ppu_addr/ppu_scroll latch.
-
+macro reset_ppu_address_latch              ; reset ppu_addr/ppu_scroll latch
     bit ppu_status
 endm
 
-macro set_ppu_address _address
-    ; Set PPU address. _address: 16 bits.
-
+macro set_ppu_address _address             ; _address: 16 bits
     lda #>(_address)
     sta ppu_addr
     if (<_address) != (>_address)
@@ -64,20 +59,16 @@ macro set_ppu_address _address
     sta ppu_addr
 endm
 
-macro set_ppu_scroll _horizontal, _vertical
-    ; Set PPU scroll values. _horizontal: 8 bits, _vertical: 8 bits.
-
-    lda #_horizontal
+macro set_ppu_scroll _horz, _vert          ; _horz: 8 bits, _vert: 8 bits
+    lda #_horz
     sta ppu_scroll
-    if (_horizontal) != (_vertical)
-        lda #_vertical
+    if (_horz) != (_vert)
+        lda #_vert
     endif
     sta ppu_scroll
 endm
 
-macro copy_sprite_data _source
-    ; Copy sprite data from CPU memory to PPU. _source: start address, 16 bits ($xx00).
-
+macro copy_sprite_data _source             ; sprite data: CPU -> PPU; _source: 16 bits, $xx00
     if <(_source) != 0
         error "invalid sprite data source address"
     endif
@@ -88,7 +79,6 @@ macro copy_sprite_data _source
 endm
 
 macro initialize_nes
-    ; Initialize the NES.
     ; Afterwards, wait for VBlank before doing any PPU operations.
     ; In between, you have about 30,000 cycles to do non-PPU-related stuff.
     ; See http://wiki.nesdev.com/w/index.php/Init_code
@@ -107,97 +97,75 @@ macro initialize_nes
     wait_vblank_start
 endm
 
-; Flag macros (only the most significant bit of a flag byte is important)
+; Flags
 
-macro clear_flag _flag
-    ; Clear a flag (MSB of byte).
-
+macro clear_flag _flag                     ; clear MSB of byte
     lsr _flag
 endm
 
-macro set_flag _flag
-    ; Set a flag (MSB of byte).
-
+macro set_flag _flag                       ; set MSB of byte
     sec
     ror _flag
 endm
 
-macro branch_if_flag_clear _flag, _target
-    ; Branch to _target if MSB of _flag is clear.
-
+macro branch_if_flag_clear _flag, _target  ; branch if MSB clear
     bit _flag
     bpl _target
 endm
 
-macro branch_if_flag_set _flag, _target
-    ; Branch to _target if MSB of _flag is set.
-
+macro branch_if_flag_set _flag, _target    ; branch if MSB set
     bit _flag
     bmi _target
 endm
 
-macro copy_via_a _from, _to
-    ; Copy _from to _to via accumulator.
-
-    lda _from
-    sta _to
+macro copy_via_a _source, _target          ; _source -> A -> _target
+    lda _source
+    sta _target
 endm
 
 ; Synthetic instructions; see http://wiki.nesdev.com/w/index.php/Synthetic_instructions
 
-macro add _operand  ; A + _operand -> A
+macro add _operand                         ; A + _operand -> A
     clc
     adc _operand
 endm
 
-macro sub _operand  ; A - _operand -> A
+macro sub _operand                         ; A - _operand -> A
     sec
     sbc _operand
 endm
 
-macro negate_a  ; 0 - A -> A
+macro negate_a                             ; 0 - A -> A
     eor #$ff
     add #1
 endm
 
-macro reverse_subtract_a _operand  ; _operand - A -> A
+macro reverse_subtract_a _operand          ; _operand - A -> A
     eor #$ff
     sec
     adc _operand
 endm
 
-macro asr_a  ; ASR A
+macro asr_a                                ; ASR A
     cmp #$80
     ror
 endm
 
-macro rol8_a  ; 8-bit ROL A
+macro rol8_a                               ; 8-bit ROL A
     cmp #$80
     rol
 endm
 
-macro rol8_mem _memory  ; 8-bit ROL _memory
-    lda _memory
-    asl
-    rol _memory
-endm
-
-macro ror8_a  ; 8-bit ROR A
+macro ror8_a                               ; 8-bit ROR A
     pha
     lsr
     pla
     ror
 endm
 
-macro ror8_mem _memory  ; 8-bit ROR _memory
-    lda _memory
-    lsr
-    ror _memory
-endm
-
 ; Misc macros
 
-macro push_registers  ; push A, X, Y
+macro push_registers                       ; push A, X, Y
     pha
     txa
     pha
@@ -205,7 +173,7 @@ macro push_registers  ; push A, X, Y
     pha
 endm
 
-macro pull_registers  ; pull Y, X, A
+macro pull_registers                       ; pull Y, X, A
     pla
     tay
     pla
@@ -213,27 +181,8 @@ macro pull_registers  ; pull Y, X, A
     pla
 endm
 
-macro copy_array _source, _target, _length  ; _length: 0=256
-    ldx #_length
--   lda (_source) - 1, x
-    sta (_target) - 1, x
-    dex
-    bne -
-endm
-
-macro copy_array_to_vram _source, _length
-    ldx #0
--   lda _source, x
-    sta ppu_data
-    inx
-    cpx #_length
-    bne -
-endm
-
-macro identity_table_macro
-    ; 256 bytes, value = index
-    ; See http://wiki.nesdev.com/w/index.php/Identity_table
-
+macro identity_table_macro                 ; 256 bytes, value = index
+    ; see http://wiki.nesdev.com/w/index.php/Identity_table
     hex 00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f
     hex 10 11 12 13 14 15 16 17 18 19 1a 1b 1c 1d 1e 1f
     hex 20 21 22 23 24 25 26 27 28 29 2a 2b 2c 2d 2e 2f
@@ -250,5 +199,5 @@ macro identity_table_macro
     hex d0 d1 d2 d3 d4 d5 d6 d7 d8 d9 da db dc dd de df
     hex e0 e1 e2 e3 e4 e5 e6 e7 e8 e9 ea eb ec ed ee ef
     hex f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 fa fb fc fd fe ff
-macend
+endm
 
