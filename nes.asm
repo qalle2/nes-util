@@ -93,6 +93,7 @@ macro initialize_nes
     stx ppu_ctrl  ; disable NMI
     stx ppu_mask  ; disable rendering
     stx dmc_freq  ; disable DMC IRQs
+    stx snd_chn   ; disable sound channels
 
     wait_vblank_start
 endm
