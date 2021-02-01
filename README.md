@@ -142,7 +142,12 @@ optional arguments:
 ```
 
 ### ines_info.py
-Print information of an iNES ROM file (.nes) in CSV format. Argument: file. Output fields: file, size, PRG ROM size, CHR ROM size, mapper, name table mirroring, does the game have save RAM, trainer size, file MD5 hash, PRG ROM MD5 hash, CHR ROM MD5 hash.
+Print information of an iNES ROM file (.nes) in CSV format. Argument: file. Output fields: "file","size","PRG ROM size","CHR ROM size","mapper","name table mirroring","has save RAM?","trainer size","file CRC32","PRG ROM CRC32","CHR ROM CRC32"
+
+Example:
+```
+"smb1.nes",40976,32768,8192,0,"vertical","no",0,"3337ec46","5cf548d3","867b51ad"
+```
 
 ### ines_split.py
 ```

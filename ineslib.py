@@ -1,8 +1,6 @@
 """A library for parsing/encoding iNES ROM files (.nes).
 See http://wiki.nesdev.com/w/index.php/INES"""
 
-_INES_ID = b"NES\x1a"
-
 # Smallest possible PRG ROM bank sizes for mappers in KiB (32 = no bankswitching).
 # Source: http://wiki.nesdev.com/w/index.php/List_of_mappers
 # These are the mappers used by at least three games among my 1951 verified good dumps ("[!]"),
@@ -95,7 +93,7 @@ def parse_iNES_header(handle):
     = (header[0:4], header[4], header[5], header[6], header[7])
 
     # validate id
-    if id_ != _INES_ID:
+    if id_ != b"NES\x1a":
         raise iNESError("invalid_id")
 
     # get the size of PRG ROM, CHR ROM and trainer
@@ -155,5 +153,5 @@ def create_iNES_header(PRGSize, CHRSize, mapper=0, mirroring="h", saveRAM=False)
         flags6 |= 0x02
     flags7 = mapper & 0xf0
 
-    return _INES_ID + bytes((PRGSize16KiB, CHRSize8KiB, flags6, flags7)) + 8 * b"\x00"
+    return b"NES\x1a" + bytes((PRGSize16KiB, CHRSize8KiB, flags6, flags7)) + 8 * b"\x00"
 
