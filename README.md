@@ -181,20 +181,18 @@ optional arguments:
 ```
 
 ### nes_chr_decode.py
+Requires Pillow (see above).
 ```
 usage: nes_chr_decode.py [-h] [-p PALETTE PALETTE PALETTE PALETTE]
                          input_file output_file
 
-Convert NES CHR (graphics) data into a PNG file or a raw RGB data file. PNG
-output requires the Pillow module. Raw RGB data files (extension '.data',
-three bytes per pixel) can be opened with GIMP.
+Convert NES CHR (graphics) data into a PNG file.
 
 positional arguments:
   input_file            File to read. An iNES ROM file (extension '.nes') or
                         raw CHR data (any other extension; size must be a
                         multiple of 256 bytes).
-  output_file           Image file to write. Always 128 pixels (16 tiles)
-                        wide. Extension must be '.png' or '.data'.
+  output_file           PNG file to write. Always 128 pixels (16 tiles) wide.
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -205,23 +203,29 @@ optional arguments:
 ```
 
 ### nes_chr_encode.py
+Requires Pillow (see above).
 ```
-usage: nes_chr_encode.py [-h] [-p PALETTE PALETTE PALETTE PALETTE] input_file output_file
+usage: nes_chr_encode.py [-h] [-p PALETTE PALETTE PALETTE PALETTE]
+                         input_file output_file
 
 Convert an image file into an NES CHR (graphics) data file.
 
 positional arguments:
-  input_file            The image file to read (e.g. PNG). The width must be 128 pixels. The height must be a multiple
-                        of 8 pixels. There must be four unique colors or less. --palette must contain all the colors
-                        in the image, but the image need not contain all the colors in --palette.
-  output_file           The NES CHR data file to write. The size will be a multiple of 256 bytes.
+  input_file            The image file to read (e.g. PNG). The width must be
+                        128 pixels. The height must be a multiple of 8 pixels.
+                        There must be four unique colors or less. --palette
+                        must contain all the colors in the image, but the
+                        image need not contain all the colors in --palette.
+  output_file           The NES CHR data file to write. The size will be a
+                        multiple of 256 bytes.
 
 optional arguments:
   -h, --help            show this help message and exit
   -p PALETTE PALETTE PALETTE PALETTE, --palette PALETTE PALETTE PALETTE PALETTE
-                        PNG palette (which colors correspond to CHR colors 0-3). Four 6-digit hexadecimal RRGGBB color
-                        codes ("000000"-"ffffff") separated by spaces. Must be all distinct. (default: ('000000',
-                        '555555', 'aaaaaa', 'ffffff'))
+                        PNG palette (which colors correspond to CHR colors
+                        0...3). Four color codes (hexadecimal RGB or RRGGBB)
+                        separated by spaces. Must be all distinct. Default:
+                        '000000 555555 aaaaaa ffffff'
 ```
 
 ### nes_color_swap.py

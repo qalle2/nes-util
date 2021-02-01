@@ -1,6 +1,5 @@
 clear
 
-rm -f test-out/*.data
 rm -f test-out/*.nes
 rm -f test-out/*.png
 
@@ -12,7 +11,6 @@ echo
 echo "=== Decoding raw CHR data files ==="
 python3 nes_chr_decode.py test-in/smb1.chr test-out/smb1-chr2.png
 python3 nes_chr_decode.py --palette 0000ff f00 f0f ffff00 test-in/smb1.chr test-out/smb1-chr3.png
-python3 nes_chr_decode.py test-in/smb1.chr --palette 0000ff f00 f0f ffff00 test-out/smb1-chr4.data
 python3 nes_chr_decode.py test-in/blastermaster.chr test-out/blastermaster-chr2.png
 python3 nes_chr_decode.py test-in/chr-2color.chr test-out/chr-2color.png
 echo

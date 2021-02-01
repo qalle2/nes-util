@@ -1,17 +1,11 @@
-"""Convert NES CHR data into a PNG file or a raw RGB data file."""
+"""Convert NES CHR data into a PNG file."""
 
 import argparse
 import itertools
 import os
 import struct
 import sys
-
-# try to import Pillow (for PNG support)
-try:
-    from PIL import Image
-    PILLOW_LOADED = True
-except ImportError:
-    PILLOW_LOADED = False
+from PIL import Image  # Pillow
 
 def get_ines_chr_info(handle):
     """Get (CHR_ROM_address, CHR_ROM_size) of an iNES ROM file.
@@ -98,28 +92,13 @@ def chr_data_to_png(handle, palette):
 
     return image
 
-def chr_data_to_raw_rgb_data(source, palette, target):
-    """Convert CHR data into a raw RGB data file."""
-
-    (chrAddr, chrSize) = get_chr_addr_and_size(source)
-    charRowCount = chrSize // 256
-
-    palette = [bytes(color) for color in palette]
-
-    source.seek(chrAddr)
-    target.seek(0)
-    for pixelRow in decode_pixel_rows(source, charRowCount):
-        target.write(b"".join(palette[value] for value in pixelRow))
-
 # --- main, argument parsing ----------------------------------------------------------------------
 
 def parse_arguments():
     """Parse command line arguments using argparse."""
 
     parser = argparse.ArgumentParser(
-        description="Convert NES CHR (graphics) data into a PNG file or a raw RGB data file. PNG "
-        "output requires the Pillow module. Raw RGB data files (extension '.data', three bytes "
-        "per pixel) can be opened with GIMP."
+        description="Convert NES CHR (graphics) data into a PNG file."
     )
 
     parser.add_argument(
@@ -134,19 +113,10 @@ def parse_arguments():
     )
     parser.add_argument(
         "output_file",
-        help="Image file to write. Always 128 pixels (16 tiles) wide. Extension must be '.png' "
-        "or '.data'."
+        help="PNG file to write. Always 128 pixels (16 tiles) wide."
     )
 
     args = parser.parse_args()
-
-    outExtension = os.path.splitext(args.output_file)[1].lower()
-    if PILLOW_LOADED:
-        if outExtension not in (".png", ".data"):
-            sys.exit("Output file extension must be '.png' or '.data'")
-    else:
-        if outExtension != ".data":
-            sys.exit("Pillow module not installed; output file extension must be '.data'")
 
     if not os.path.isfile(args.input_file):
         sys.exit("Input file not found.")
@@ -189,21 +159,20 @@ def main():
     args = parse_arguments()
     palette = tuple(decode_color_code(color) for color in args.palette)
 
+    # convert into image
     try:
-        if args.output_file.lower().endswith(".png"):
-            # convert into PNG
-            with open(args.input_file, "rb") as handle:
-                image = chr_data_to_png(handle, palette)
-            with open(args.output_file, "wb") as handle:
-                handle.seek(0)
-                image.save(handle, "png")
-        else:
-            # convert into raw RGB data
-            with open(args.input_file, "rb") as source, \
-            open(args.output_file, "wb") as target:
-                chr_data_to_raw_rgb_data(source, palette, target)
+        with open(args.input_file, "rb") as handle:
+            image = chr_data_to_png(handle, palette)
     except OSError:
-        sys.exit("Error reading/writing files.")
+        sys.exit("Error reading input file.")
+
+    # save image
+    try:
+        with open(args.output_file, "wb") as handle:
+            handle.seek(0)
+            image.save(handle, "png")
+    except OSError:
+        sys.exit("Error writing output file.")
 
 if __name__ == "__main__":
     main()
