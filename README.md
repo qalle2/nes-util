@@ -2,7 +2,7 @@
 Various utilities related to the [Nintendo Entertainment System](http://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
 
 ## Libraries
-You need these to run most of the other programs in this repo.
+You need these to run some of the other programs in this repo.
 
 ### neslib.py
 ```
@@ -118,9 +118,10 @@ DATA
 Some of these require the libraries above or the [Pillow](https://python-pillow.org) module.
 
 ### ines_combine.py
-Requires ineslib.py.
 ```
-usage: ines_combine.py [-h] -p PRG_ROM [-c CHR_ROM] [-m MAPPER] [-n {h,v,f}] [-s] outputFile
+usage: ines_combine.py [-h] -p PRG_ROM [-c CHR_ROM] [-m MAPPER] [-n {h,v,f}]
+                       [-s]
+                       outputFile
 
 Create an iNES ROM file (.nes) from PRG ROM and CHR ROM data files.
 
@@ -130,16 +131,18 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   -p PRG_ROM, --prg-rom PRG_ROM
-                        PRG ROM data file; required; the size must be 16-4096 KiB and a multiple of 16 KiB. (default:
-                        None)
+                        PRG ROM data file. Required. Size: 16...4096 KiB and a
+                        multiple of 16 KiB.
   -c CHR_ROM, --chr-rom CHR_ROM
-                        CHR ROM data file; the size must be 0-2040 KiB and a multiple of 8 KiB. If the file is empty
-                        or the argument is omitted, the game uses CHR RAM. (default: None)
+                        CHR ROM data file. Optional. Size: 0...2040 KiB and a
+                        multiple of 8 KiB.
   -m MAPPER, --mapper MAPPER
-                        Mapper number (0-255). (default: 0)
+                        Mapper number (0...255). Default=0 (NROM).
   -n {h,v,f}, --mirroring {h,v,f}
-                        Type of name table mirroring: h=horizontal, v=vertical, f=four-screen. (default: h)
-  -s, --save-ram        The game contains battery-backed PRG RAM at $6000-$7fff. (default: False)
+                        Type of name table mirroring: h=horizontal (default),
+                        v=vertical, f=four-screen.
+  -s, --save-ram        The game contains battery-backed PRG RAM at
+                        $6000...$7fff.
 ```
 
 ### ines_info.py
@@ -314,4 +317,3 @@ optional arguments:
 
 ### nes.asm
 NES assembly routines for [asm6f](https://github.com/freem/asm6f). Used by many of my projects.
-
