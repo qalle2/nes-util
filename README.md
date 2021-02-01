@@ -185,22 +185,23 @@ optional arguments:
 usage: nes_chr_decode.py [-h] [-p PALETTE PALETTE PALETTE PALETTE]
                          input_file output_file
 
-Convert NES CHR (graphics) data into a PNG or a GIF file. PNG output requires
-the Pillow module.
+Convert NES CHR (graphics) data into a PNG file or a raw RGB data file. PNG
+output requires the Pillow module. Raw RGB data files (extension '.data',
+three bytes per pixel) can be opened with GIMP.
 
 positional arguments:
   input_file            File to read. An iNES ROM file (extension '.nes') or
                         raw CHR data (any other extension; size must be a
                         multiple of 256 bytes).
-  output_file           Image file to write. Always 128 pixels wide. Extension
-                        must be '.png' or '.gif'.
+  output_file           Image file to write. Always 128 pixels (16 tiles)
+                        wide. Extension must be '.png' or '.data'.
 
 optional arguments:
   -h, --help            show this help message and exit
   -p PALETTE PALETTE PALETTE PALETTE, --palette PALETTE PALETTE PALETTE PALETTE
-                        Four colors to output for CHR colors 0...3. Separated
-                        by spaces. Each color is hexadecimal RGB or RRGGBB.
-                        Default: '000 555 aaa fff'
+                        Output palette (which colors correspond to CHR colors
+                        0...3). Four color codes (hexadecimal RGB or RRGGBB)
+                        separated by spaces. Default: '000 555 aaa fff'
 ```
 
 ### nes_chr_encode.py

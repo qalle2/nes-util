@@ -1,4 +1,4 @@
-"""Convert NES CHR data into a PNG or GIF file."""
+"""Convert NES CHR data into a PNG file or a raw RGB data file."""
 
 import argparse
 import itertools
@@ -98,49 +98,18 @@ def chr_data_to_png(handle, palette):
 
     return image
 
-def chr_data_to_gif(source, palette, target):
-    """Convert CHR data into a GIF file using a crappy internal encoder (~5 bits/pixel)."""
+def chr_data_to_raw_rgb_data(source, palette, target):
+    """Convert CHR data into a raw RGB data file."""
 
     (chrAddr, chrSize) = get_chr_addr_and_size(source)
     charRowCount = chrSize // 256
 
+    palette = [bytes(color) for color in palette]
+
+    source.seek(chrAddr)
     target.seek(0)
-    data = bytearray()
-
-    # Header
-    data.extend(b"GIF87a")
-    # Logical Screen Descriptor (use 2-bit Global Color Table)
-    data.extend(struct.pack("<2H3B", 128, charRowCount * 8, 0x81, 0, 0))
-    # Global Color Table (4 * 3 bytes)
-    data.extend(b"".join(bytes(color) for color in palette))
-    # Image Descriptor
-    data.extend(struct.pack("<s4HB", b",", 0, 0, 128, charRowCount * 8, 0))
-    # palette bit depth in LZW encoding (3 bits)
-    data.append(3)
-    target.write(data)
-
-    # LZW data inside subblocks; all LZW codes are four bits
-    source.seek(0)
     for pixelRow in decode_pixel_rows(source, charRowCount):
-        # write 128 pixels to one subblock; write a clear code before every
-        # five pixels; note: decoder will read low nybble first;
-        # note: it would be cleaner to write two clear codes before every
-        # four pixels, but GIMP doesn't seem to like it
-        data.clear()
-        # subblock size
-        data.append(25 * 3 + 2)
-        # first 125 pixels
-        for pos in range(0, 125, 5):
-            data.append(8               | (pixelRow[pos]   << 4))
-            data.append(pixelRow[pos+1] | (pixelRow[pos+2] << 4))
-            data.append(pixelRow[pos+3] | (pixelRow[pos+4] << 4))
-        # last three pixels
-        data.append(8             | (pixelRow[125] << 4))
-        data.append(pixelRow[126] | (pixelRow[127] << 4))
-        target.write(data)
-
-    # a subblock with a clear code and an end code; an empty subblock; Trailer
-    target.write(b"\x01\x98\x00;")
+        target.write(b"".join(palette[value] for value in pixelRow))
 
 # --- main, argument parsing ----------------------------------------------------------------------
 
@@ -148,14 +117,15 @@ def parse_arguments():
     """Parse command line arguments using argparse."""
 
     parser = argparse.ArgumentParser(
-        description="Convert NES CHR (graphics) data into a PNG or a GIF file. PNG output "
-        "requires the Pillow module."
+        description="Convert NES CHR (graphics) data into a PNG file or a raw RGB data file. PNG "
+        "output requires the Pillow module. Raw RGB data files (extension '.data', three bytes "
+        "per pixel) can be opened with GIMP."
     )
 
     parser.add_argument(
         "-p", "--palette", nargs=4, default=("000", "555", "aaa", "fff"),
-        help="Four colors to output for CHR colors 0...3. Separated by spaces. Each color is "
-        "hexadecimal RGB or RRGGBB. Default: '000 555 aaa fff'"
+        help="Output palette (which colors correspond to CHR colors 0...3). Four color codes "
+        "(hexadecimal RGB or RRGGBB) separated by spaces. Default: '000 555 aaa fff'"
     )
     parser.add_argument(
         "input_file",
@@ -164,18 +134,19 @@ def parse_arguments():
     )
     parser.add_argument(
         "output_file",
-        help="Image file to write. Always 128 pixels wide. Extension must be '.png' or '.gif'."
+        help="Image file to write. Always 128 pixels (16 tiles) wide. Extension must be '.png' "
+        "or '.data'."
     )
 
     args = parser.parse_args()
 
     outExtension = os.path.splitext(args.output_file)[1].lower()
     if PILLOW_LOADED:
-        if outExtension not in (".png", ".gif"):
-            sys.exit("Output file extension must be '.png' or '.gif'")
+        if outExtension not in (".png", ".data"):
+            sys.exit("Output file extension must be '.png' or '.data'")
     else:
-        if outExtension != ".gif":
-            sys.exit("Pillow module not installed; output file extension must be '.gif'")
+        if outExtension != ".data":
+            sys.exit("Pillow module not installed; output file extension must be '.data'")
 
     if not os.path.isfile(args.input_file):
         sys.exit("Input file not found.")
@@ -227,10 +198,10 @@ def main():
                 handle.seek(0)
                 image.save(handle, "png")
         else:
-            # convert into GIF
+            # convert into raw RGB data
             with open(args.input_file, "rb") as source, \
             open(args.output_file, "wb") as target:
-                chr_data_to_gif(source, palette, target)
+                chr_data_to_raw_rgb_data(source, palette, target)
     except OSError:
         sys.exit("Error reading/writing files.")
 
