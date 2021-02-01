@@ -115,9 +115,10 @@ DATA
 ![NES Game Genie code format](nesgenieformat.png)
 
 ## Other Python programs
-You need the libraries above to run most of these. Some programs require the [Pillow](https://python-pillow.org) module too.
+Some of these require the libraries above or the [Pillow](https://python-pillow.org) module.
 
 ### ines_combine.py
+Requires ineslib.py.
 ```
 usage: ines_combine.py [-h] -p PRG_ROM [-c CHR_ROM] [-m MAPPER] [-n {h,v,f}] [-s] outputFile
 
@@ -153,20 +154,21 @@ Example:
 ```
 usage: ines_split.py [-h] [-p PRG] [-c CHR] input_file
 
-Extract PRG ROM and/or CHR ROM data from an iNES ROM file (.nes).
+Extract PRG ROM and/or CHR ROM data from an iNES ROM file (.nes). Specify at
+least one output file.
 
 positional arguments:
-  input_file         The iNES ROM file (.nes) to read.
+  input_file         iNES ROM file (.nes) to read.
 
 optional arguments:
   -h, --help         show this help message and exit
-  -p PRG, --prg PRG  The file to extract PRG ROM data to (16-4096 KiB).
-  -c CHR, --chr CHR  The file to extract CHR ROM data to (8-2040 KiB).
-
-Specify at least one output file.
+  -p PRG, --prg PRG  File to write PRG ROM data to.
+  -c CHR, --chr CHR  File to write CHR ROM data to. Not written if there is no
+                     data.
 ```
 
 ### nes_blaster_mapext.py
+Requires ineslib.py, neslib.py and Pillow (see above).
 ```
 usage: nes_blaster_mapext.py [-h] [-j] [-m MAP] [--usb USB] [--sb SB] [--blocks BLOCKS] input_file output_file
 
@@ -234,6 +236,7 @@ optional arguments:
 ```
 
 ### nes_color_swap.py
+Requires ineslib.py and neslib.py.
 ```
 usage: nes_color_swap.py [-h] [-l {0,1,2,3} {0,1,2,3} {0,1,2,3} {0,1,2,3}] [-f FIRST_TILE] [-c TILE_COUNT]
                          input_file output_file
@@ -255,18 +258,27 @@ optional arguments:
 ```
 
 ### nes_cpuaddr.py
+Requires ineslib.py and neslib.py.
+
 Convert an NES PRG ROM address into possible CPU addresses using the iNES ROM file (.nes). Args: file address_in_hexadecimal
 
 ### nesgenie.py
+Requires nesgenielib.py.
+
 Encode and decode NES Game Genie codes. Argument: six-letter code, eight-letter code, aaaa:rr or aaaa?cc:rr (aaaa = address in hexadecimal, rr = replacement value in hexadecimal, cc = compare value in hexadecimal).
 
 ### nesgenie_6to8.py
+Requires ineslib.py, nesgenielib.py and neslib.py.
+
 Convert a 6-letter NES Game Genie code into 8 letters using the iNES ROM file (.nes). Args: file code
 
 ### nesgenie_prgaddr.py
+Requires ineslib.py, nesgenielib.py and neslib.py.
+
 Find the PRG ROM addresses affected by an NES Game Genie code in an iNES ROM file (.nes). Args: file code
 
 ### nesgenie_verconv.py
+Requires ineslib.py, nesgenielib.py and neslib.py.
 ```
 usage: nesgenie_verconv.py [-h] [-b SLICE_LENGTH_BEFORE] [-a SLICE_LENGTH_AFTER] [-d MAX_DIFFERENT_BYTES]
                            code file1 file2
