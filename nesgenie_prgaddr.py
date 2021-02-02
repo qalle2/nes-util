@@ -21,10 +21,10 @@ def main():
         sys.exit("File not found.")
 
     # decode the code
-    try:
-        (CPUAddr, replaceValue, compareValue) = nesgenielib.decode_code(code)
-    except nesgenielib.NESGenieError:
+    values = nesgenielib.decode_code(code)
+    if values is None:
         sys.exit("Invalid NES Game Genie code.")
+    (cpuAddr, compareValue) = (values[0], values[2])
 
     try:
         with open(file, "rb") as handle:
@@ -37,7 +37,7 @@ def main():
             # get PRG addresses
             print(", ".join(
                 f"0x{PRGAddr:04x}" for PRGAddr
-                in neslib.CPU_address_to_PRG_addresses(handle, CPUAddr, compareValue)
+                in neslib.CPU_address_to_PRG_addresses(handle, cpuAddr, compareValue)
             ))
     except OSError:
         sys.exit("Error reading the file.")

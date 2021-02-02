@@ -266,19 +266,15 @@ Convert an NES PRG ROM address into possible CPU addresses using the iNES ROM fi
 ### nesgenie.py
 Requires nesgenielib.py.
 
-Encodes and decodes NES Game Genie codes. Argument: six-letter code, eight-letter code, AAAA RR or AAAA RR CC (AAAA = address in hexadecimal, RR = replacement value in hexadecimal, CC = compare value in hexadecimal).
+Encode and decode NES Game Genie codes. Argument: six-letter code, eight-letter code, AAAA RR or AAAA RR CC (AAAA = address in hexadecimal, RR = replacement value in hexadecimal, CC = compare value in hexadecimal).
 
 ### nesgenie_6to8.py
 Requires ineslib.py, nesgenielib.py and neslib.py.
-
-TODO: is the program using nesgenielib correctly?
 
 Convert a 6-letter NES Game Genie code into 8 letters using the iNES ROM file (.nes). Args: file code
 
 ### nesgenie_prgaddr.py
 Requires ineslib.py, nesgenielib.py and neslib.py.
-
-TODO: is the program using nesgenielib correctly?
 
 Find the PRG ROM addresses affected by an NES Game Genie code in an iNES ROM file (.nes). Args: file code
 

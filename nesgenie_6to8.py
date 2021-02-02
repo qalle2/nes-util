@@ -26,9 +26,8 @@ def main():
     (file, code) = (sys.argv[1], sys.argv[2])  # pylint complains about [1:]
 
     # validate code; get CPU address and replace value
-    try:
-        decoded = nesgenielib.decode_code(code)
-    except nesgenielib.NESGenieError:
+    decoded = nesgenielib.decode_code(code)
+    if decoded is None:
         sys.exit("Invalid Game Genie code.")
     if decoded[2] is not None:
         sys.exit("The code must be six letters.")

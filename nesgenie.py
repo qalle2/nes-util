@@ -1,4 +1,4 @@
-"""Encodes and decodes NES Game Genie codes."""
+"""Encode and decode NES Game Genie codes."""
 
 import sys
 import nesgenielib
@@ -24,7 +24,7 @@ def main():
         values = nesgenielib.decode_code(code)
     else:
         sys.exit(
-            "Encodes and decodes NES Game Genie codes. Argument: six-letter code, eight-letter "
+            "Encode and decode NES Game Genie codes. Argument: six-letter code, eight-letter "
             "code, AAAA RR or AAAA RR CC (AAAA = address in hexadecimal, RR = replacement value "
             "in hexadecimal, CC = compare value in hexadecimal)."
         )
