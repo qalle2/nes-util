@@ -1,12 +1,14 @@
 clear
 
 rm -f test-out/*.nes
+rm -f test-out/*.png
 
-echo "=== These should cause three errors ==="
-python3 nes_color_swap.py --first-tile 9999 test-in/smb1.nes test-out/temp2.nes
-python3 nes_color_swap.py --tile-count 9999 test-in/smb1.nes test-out/temp3.nes
-python3 nes_color_swap.py test-in/invalid-id.nes test-out/temp4.nes
-echo ""
+echo "=== These should cause four errors ==="
+python3 nes_color_swap.py --first-tile 9999 test-in/smb1.nes test-out/test1.nes
+python3 nes_color_swap.py --tile-count 9999 test-in/smb1.nes test-out/test2.nes
+python3 nes_color_swap.py test-in/invalid-id.nes test-out/test3.nes
+python3 nes_color_swap.py test-in/videomation.nes test-out/test4.nes
+echo
 
 rm -f test-out/*.nes
 
@@ -16,26 +18,25 @@ python3 nes_color_swap.py --colors 0 1 2 3 test-in/smb1.nes test-out/smb1-colors
 python3 nes_color_swap.py --colors 0 2 3 1 test-in/smb1.nes test-out/smb1-colors0231.nes
 python3 nes_color_swap.py --colors 0 3 1 2 test-in/smb1.nes test-out/smb1-colors0312.nes
 python3 nes_color_swap.py --colors 1 2 3 2 test-in/smb1.nes test-out/smb1-colors1232.nes
-python3 nes_color_swap.py -l 1 2 3 0 --tile-count 1 test-in/smb1.nes test-out/smb1-tile_0_only.nes
-python3 nes_color_swap.py -l 1 2 3 0 --first-tile 1 --tile-count 1 test-in/smb1.nes test-out/smb1-tile_1_only.nes
-python3 nes_color_swap.py -l 1 2 3 0 --first-tile 511 test-in/smb1.nes test-out/smb1-tile_511_only.nes
+python3 nes_color_swap.py -c 1 2 3 0 --tile-count 1 test-in/smb1.nes test-out/smb1-tile_0_only.nes
+python3 nes_color_swap.py -c 1 2 3 0 --first-tile 1 --tile-count 1 test-in/smb1.nes test-out/smb1-tile_1_only.nes
+python3 nes_color_swap.py -c 1 2 3 0 --first-tile 511 test-in/smb1.nes test-out/smb1-tile_511_only.nes
 python3 nes_color_swap.py test-in/blastermaster.nes test-out/blastermaster-colors0231.nes
-python3 nes_color_swap.py -l 0 1 2 3 test-in/blastermaster.nes test-out/blastermaster-colors0123.nes
-echo ""
+python3 nes_color_swap.py -c 0 1 2 3 test-in/blastermaster.nes test-out/blastermaster-colors0123.nes
+echo
 
 echo "=== Comparing (should be identical) ==="
 diff -q test-in/smb1.nes test-out/smb1-colors0123.nes
 diff -q test-in/blastermaster.nes test-out/blastermaster-colors0123.nes
-echo ""
+echo
 
 echo "=== Comparing (only tile 0/1/511 changed) ==="
 # TODO: find a better way to compare
 diff test-in/smb1.nes test-out/smb1-tile_0_only.nes
 diff test-in/smb1.nes test-out/smb1-tile_1_only.nes
 diff test-in/smb1.nes test-out/smb1-tile_511_only.nes
-echo ""
+echo
 
 echo "=== Verify these files yourself ==="
 ls -1 test-out/*.nes
-echo ""
-
+echo

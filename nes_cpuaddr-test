@@ -4,5 +4,4 @@ python3 nes_cpuaddr.py test-in/blastermaster.nes 1ffff
 python3 nes_cpuaddr.py test-in/smb1.nes 7fff
 python3 nes_cpuaddr.py test-in/smb1.nes 8000
 python3 nes_cpuaddr.py test-in/smb3.nes 3ffff
-echo ""
-
+echo
