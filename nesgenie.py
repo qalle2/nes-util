@@ -1,64 +1,39 @@
 """Encodes and decodes NES Game Genie codes."""
 
-import re
 import sys
 import nesgenielib
 
-class GenieError(Exception):
-    """An exception for NES Game Genie related errors."""
-
-def parse_values(input_):
-    """Parse a hexadecimal representation of the numbers regarding a Game Genie code.
-    input_: must match 'aaaa:rr' or 'aaaa?cc:rr', where:
-        aaaa = NES CPU address in hexadecimal
-        rr = replacement value in hexadecimal
-        cc = compare value in hexadecimal
-    on error: raise GenieError
-    return: (address, replacement_value, compare_value/None)"""
-
-    # try to match "aaaa:rr"
-    match = re.search(
-        r"^ ([\da-f]{1,4}) : ([\da-f]{1,2}) $",
-        input_,
-        re.ASCII | re.IGNORECASE | re.VERBOSE
-    )
-    if match is None:
-        # try to match "aaaa?cc:rr"
-        match = re.search(
-            r"^ ([\da-f]{1,4}) \? ([\da-f]{1,2}) : ([\da-f]{1,2}) $",
-            input_,
-            re.ASCII | re.IGNORECASE | re.VERBOSE
-        )
-    if match is None:
-        raise GenieError
-    groups = tuple(int(n, 16) for n in match.groups())
-    return (groups[0], groups[1], None) if len(groups) == 2 else (groups[0], groups[2], groups[1])
-
 def main():
-    """The main function."""
-
-    if len(sys.argv) != 2:
+    if len(sys.argv) == 2:
+        # decode Game Genie code
+        values = nesgenielib.decode_code(sys.argv[1])
+        if values is None:
+            sys.exit("Invalid Game Genie code.")
+        # reencode to get canonical form
+        code = nesgenielib.encode_code(*values)
+    elif 3 <= len(sys.argv) <= 4:
+        # encode Game Genie code
+        try:
+            values = [int(n, 16) for n in sys.argv[1:]]
+        except ValueError:
+            sys.exit("Invalid hexadecimal integers.")
+        code = nesgenielib.encode_code(*values)
+        if code is None:
+            sys.exit("Hexadecimal integers out of range.")
+        # redecode to get canonical form
+        values = nesgenielib.decode_code(code)
+    else:
         sys.exit(
             "Encodes and decodes NES Game Genie codes. Argument: six-letter code, eight-letter "
-            "code, aaaa:rr or aaaa?cc:rr (aaaa = address in hexadecimal, rr = replacement value in "
-            "hexadecimal, cc = compare value in hexadecimal)."
+            "code, AAAA RR or AAAA RR CC (AAAA = address in hexadecimal, RR = replacement value "
+            "in hexadecimal, CC = compare value in hexadecimal)."
         )
-    input_ = sys.argv[1]
 
-    # a code to decode?
-    try:
-        values = nesgenielib.decode_code(input_)
-    except nesgenielib.NESGenieError:
-        # hexadecimal values to encode?
-        try:
-            values = parse_values(input_)
-        except GenieError:
-            sys.exit("Invalid input.")
-        print(nesgenielib.encode_code(*values))
-        sys.exit()
-    print("CPU address = 0x{:04x}, replace value = 0x{:02x}, compare value = {:s}".format(
-        values[0], values[1], "none" if values[2] is None else "0x{:02x}".format(values[2])
-    ))
+    comp = "none" if values[2] is None else f"0x{values[2]:02x}"
+    print(
+        f"{code}: CPU address = 0x{values[0]:04x}, replace value = 0x{values[1]:02x}, "
+        f"compare value = {comp}"
+    )
 
 if __name__ == "__main__":
     main()

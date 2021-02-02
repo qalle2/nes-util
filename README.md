@@ -81,35 +81,30 @@ FUNCTIONS
 ### nesgenielib.py
 ```
 DESCRIPTION
-    A library for decoding and encoding NES Game Genie codes.
+    Decode and encode Nintendo Entertainment System (NES) Game Genie codes.
     See http://nesdev.com/nesgg.txt
-
-CLASSES
-    builtins.Exception(builtins.BaseException)
-        NESGenieError
 
 FUNCTIONS
     decode_code(code)
         Decode a Game Genie code.
-        code: 6 or 8 letters from GENIE_LETTERS, case insensitive
-        return: (address, replacement_value, compare_value/None)
-        on error: raise NESGenieError
-
-    encode_code(address, replacement, compare=None)
-        Encode a Game Genie code.
-        address: NES CPU address (0x8000-0xffff or equivalently 0x0000-0x7fff)
-        replacement: replacement value (0x00-0xff)
-        compare: compare value (int, 0x00-0xff) or None
+        code: 6 or 8 letters from CODE_LETTERS
         return:
-            if compare is None: a 6-letter code (str)
-            if compare is not None: an 8-letter code (str)
-        on error: raise NESGenieError
+            if invalid  code: None
+            if 6-letter code: (CPU_address, replacement_value, None)
+            if 8-letter code: (CPU_address, replacement_value, compare_value)
 
-    is_valid_code(code)
-        Validate a Game Genie code case-insensitively. Return True if valid, False if invalid.
+    encode_code(addr, repl, comp=None)
+        Encode a Game Genie code.
+        addr: CPU address (0...0xffff; MSB ignored)
+        repl: replacement value (0...0xff)
+        comp: compare value (0...0xff or None)
+        return:
+            if invalid arguments  : None
+            if compare is None    : 6-letter code
+            if compare is not None: 8-letter code
 
 DATA
-    GENIE_LETTERS = 'APZLGITYEOXUKSVN'
+    CODE_LETTERS = 'APZLGITYEOXUKSVN'
 ```
 
 ![NES Game Genie code format](nesgenieformat.png)
@@ -271,20 +266,26 @@ Convert an NES PRG ROM address into possible CPU addresses using the iNES ROM fi
 ### nesgenie.py
 Requires nesgenielib.py.
 
-Encode and decode NES Game Genie codes. Argument: six-letter code, eight-letter code, aaaa:rr or aaaa?cc:rr (aaaa = address in hexadecimal, rr = replacement value in hexadecimal, cc = compare value in hexadecimal).
+Encodes and decodes NES Game Genie codes. Argument: six-letter code, eight-letter code, AAAA RR or AAAA RR CC (AAAA = address in hexadecimal, RR = replacement value in hexadecimal, CC = compare value in hexadecimal).
 
 ### nesgenie_6to8.py
 Requires ineslib.py, nesgenielib.py and neslib.py.
+
+TODO: is the program using nesgenielib correctly?
 
 Convert a 6-letter NES Game Genie code into 8 letters using the iNES ROM file (.nes). Args: file code
 
 ### nesgenie_prgaddr.py
 Requires ineslib.py, nesgenielib.py and neslib.py.
 
+TODO: is the program using nesgenielib correctly?
+
 Find the PRG ROM addresses affected by an NES Game Genie code in an iNES ROM file (.nes). Args: file code
 
 ### nesgenie_verconv.py
 Requires ineslib.py, nesgenielib.py and neslib.py.
+
+TODO: doesn't work at the moment because of changes to nesgenielib.
 ```
 usage: nesgenie_verconv.py [-h] [-b SLICE_LENGTH_BEFORE] [-a SLICE_LENGTH_AFTER] [-d MAX_DIFFERENT_BYTES]
                            code file1 file2

@@ -1,63 +1,38 @@
-"""A library for decoding and encoding NES Game Genie codes.
+"""Decode and encode Nintendo Entertainment System (NES) Game Genie codes.
 See http://nesdev.com/nesgg.txt"""
 
-GENIE_LETTERS = "APZLGITYEOXUKSVN"
-_GENIE_DECODE_KEY = (3, 5, 2, 4, 1, 0, 7, 6)
-
-class NESGenieError(Exception):
-    """An exception for NES Game Genie related errors."""
-
-# --- decoding -------------------------------------------------------------------------------------
-
-def is_valid_code(code):
-    """Validate a Game Genie code case-insensitively. Return True if valid, False if invalid."""
-
-    return len(code) in (6, 8) and not set(code.upper()) - set(GENIE_LETTERS)
-
-assert is_valid_code("papapa")
-assert is_valid_code("papapapa")
-assert not is_valid_code("dapapa")
-assert not is_valid_code("papapap")
-assert not is_valid_code("dananana")
-
-def _decode_lowlevel(code):
-    """Decode a Game Genie code (the low-level stuff).
-    code: a valid code, 6 or 8 letters, case insensitive
-    Return:
-        if code is 6 letters: 24 bits (16 for address, 8 for replacement value)
-        if code is 8 letters: 32 bits (16 for address, 8 for replacement value, 8 for compare
-        value)"""
-
-    # decode each letter into a four-bit int
-    code = tuple(GENIE_LETTERS.index(letter) for letter in code.upper())
-    # construct four decoded bits per round by copying bits from two letters
-    decoded = 0
-    for lowBitsLetterPos in _GENIE_DECODE_KEY[:len(code)]:
-        highBitLetterPos = (lowBitsLetterPos - 1) % len(code)
-        decoded <<= 4
-        decoded |= code[lowBitsLetterPos] & 0b0111
-        decoded |= code[highBitLetterPos] & 0b1000
-    return decoded
+CODE_LETTERS = "APZLGITYEOXUKSVN"
+_DECODE_KEY = (3, 5, 2, 4, 1, 0, 7, 6)
 
 def decode_code(code):
     """Decode a Game Genie code.
-    code: 6 or 8 letters from GENIE_LETTERS, case insensitive
-    return: (address, replacement_value, compare_value/None)
-    on error: raise NESGenieError"""
+    code: 6 or 8 letters from CODE_LETTERS
+    return:
+        if invalid  code: None
+        if 6-letter code: (CPU_address, replacement_value, None)
+        if 8-letter code: (CPU_address, replacement_value, compare_value)"""
 
-    # validate code
-    if not is_valid_code(code):
-        raise NESGenieError
-    # decode the code into an integer (6 letters to 24 bits, 8 letters to 32 bits)
-    n = _decode_lowlevel(code)
-    # extract values from the integer
-    if len(code) == 6:
-        values = [n >> 8, n & 0xff, None]
-    else:
-        values = [n >> 16, (n >> 8) & 0xff, n & 0xff]
-    # set most significant bit of address (NES CPU ROM starts at 0x8000)
-    values[0] |= 0x8000
-    return tuple(values)
+    # validate
+    if not (len(code) in (6, 8) and set(code.upper()).issubset(set(CODE_LETTERS))):
+        return None
+    # convert letters into 4-bit ints
+    code = [CODE_LETTERS.index(letter) for letter in code.upper()]
+    # combine to a 24/32-bit integer according to _DECODE_KEY
+    # (16 bits for CPU address, 8 for replacement value, optionally 8 for compare value)
+    n = 0
+    for loPos in _DECODE_KEY[:len(code)]:
+        hiPos = (loPos - 1) % len(code)
+        n = (n << 4) | (code[hiPos] & 8) | (code[loPos] & 7)
+    # split and set MSB of CPU address
+    (n, comp) = (n, None) if len(code) == 6 else (n >> 8, n & 0xff)
+    (addr, repl) = (n >> 8, n & 0xff)
+    return (addr | 0x8000, repl, comp)
+
+assert decode_code("apapa")     is None
+assert decode_code("apapapa")   is None
+assert decode_code("apapapapa") is None
+assert decode_code("dapapa")    is None
+assert decode_code("dapapapa")  is None
 
 assert decode_code("aaaaaa") == (0x8000, 0x00, None)
 assert decode_code("aaeaaa") == (0x8000, 0x00, None)  # canonical: "aaaaaa"
@@ -83,53 +58,44 @@ assert decode_code("naeaaaaa") == (0x8000, 0x87, 0x00)
 assert decode_code("nnnnnnnn") == (0xffff, 0xff, 0xff)
 assert decode_code("nnynnnnn") == (0xffff, 0xff, 0xff)  # canonical: "nnnnnnnn"
 
-# --- encoding -------------------------------------------------------------------------------------
-
-def _encode_lowlevel(codeLen, n):
-    """Encode a Game Genie code (the low-level stuff).
-    codeLen: length of code (6/8)
-    n:
-        if codeLen=6: 24 bits (16 for address, 8 for replacement value)
-        if codeLen=8: 32 bits (16 for address, 8 for replacement value, 8 for compare value)
-    return: a Game Genie code of length codeLen"""
-
-    # code letters as indexes to GENIE_LETTERS
-    code = codeLen * [0]
-    # copy bits from n to two code positions specified by _GENIE_DECODE_KEY
-    for pos in _GENIE_DECODE_KEY[codeLen-1::-1]:
-        prevPos = (pos - 1) % codeLen
-        code[pos] |= n & 0b0111
-        code[prevPos] |= n & 0b1000
-        n >>= 4
-    # encode code letters from indexes to letters
-    return "".join(GENIE_LETTERS[i] for i in code)
-
-def encode_code(address, replacement, compare=None):
+def encode_code(addr, repl, comp=None):
     """Encode a Game Genie code.
-    address: NES CPU address (0x8000-0xffff or equivalently 0x0000-0x7fff)
-    replacement: replacement value (0x00-0xff)
-    compare: compare value (int, 0x00-0xff) or None
+    addr: CPU address (0...0xffff; MSB ignored)
+    repl: replacement value (0...0xff)
+    comp: compare value (0...0xff or None)
     return:
-        if compare is None: a 6-letter code (str)
-        if compare is not None: an 8-letter code (str)
-    on error: raise NESGenieError"""
+        if invalid arguments  : None
+        if compare is None    : 6-letter code
+        if compare is not None: 8-letter code"""
 
-    if address & ~0xffff or replacement & ~0xff:
-        raise NESGenieError
-
-    if compare is None:
-        # six-letter code
+    # validate
+    if not (
+        0 <= addr <= 0xffff and 0 <= repl <= 0xff and (comp is None or 0 <= comp <= 0xff)
+    ):
+        return None
+    # combine args into a 24/32-bit integer; clear/set MSB of address to get correct 3rd
+    # letter later (one of APZLGITY for 6-letter codes, one of EOXUKSVN for 8-letter codes)
+    if comp is None:
         codeLen = 6
-        address &= 0x7fff  # clear MSB to make the third letter one of A/P/Z/L/G/I/T/Y
-        n = (address << 8) | replacement
+        addr &= 0x7fff
+        n = (addr << 8) | repl
     else:
-        # eight-letter code
-        if compare & ~0xff:
-            raise NESGenieError
         codeLen = 8
-        address |= 0x8000  # set MSB to make the third letter one of E/O/X/U/K/S/V/N
-        n = (address << 16) | (replacement << 8) | compare
-    return _encode_lowlevel(codeLen, n)
+        addr |= 0x8000
+        n = (addr << 16) | (repl << 8) | comp
+    # convert 24/32-bit int into 4-bit ints according to _DECODE_KEY
+    encoded = codeLen * [0]
+    for loPos in _DECODE_KEY[codeLen-1::-1]:
+        hiPos = (loPos - 1) % codeLen
+        encoded[loPos] |= n & 7
+        encoded[hiPos] |= n & 8
+        n >>= 4
+    # convert 4-bit ints into letters
+    return "".join(CODE_LETTERS[i] for i in encoded)
+
+assert encode_code(0x10000, 0x00)       is None
+assert encode_code(0xffff, 0x100)       is None
+assert encode_code(0xffff, 0xff, 0x100) is None
 
 assert encode_code(0x8000, 0x00) == "AAAAAA"
 assert encode_code(0x0000, 0x00) == "AAAAAA"  # canonical: 8000:00
@@ -154,4 +120,3 @@ assert encode_code(0x8807, 0x00, 0x00) == "AAEANAAA"
 assert encode_code(0xf008, 0x00, 0x00) == "AAENAAAA"
 assert encode_code(0xffff, 0xff, 0xff) == "NNNNNNNN"
 assert encode_code(0x7fff, 0xff, 0xff) == "NNNNNNNN"  # canonical: ffff?ff:ff
-
