@@ -1,99 +1,30 @@
 # nes-util
 Various utilities related to the [Nintendo Entertainment System](http://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
 
-## Libraries
-You need these to run some of the other programs in this repo.
+**Note**: many programs in this repo require the [Pillow](https://python-pillow.org) module and qneslib.py (immediately below).
 
-### neslib.py
+## qneslib.py
+Does not do anything by itself but is needed by many other programs in this repo. Just copy this file to the same directory. Formerly known as neslib.py, ineslib.py and nesgenielib.py.
 ```
 NAME
-    neslib - A library for miscellaneous NES (Nintendo Entertainment System) stuff.
+    qneslib - qalle's NES library (Nintendo Entertainment System stuff).
 
 FUNCTIONS
-    CPU_address_to_PRG_addresses(handle, CPUAddr, compareValue=None)
+    cpu_address_to_prg_addresses(handle, cpuAddr, compareValue=None)
         Generate PRG ROM addresses that may correspond to the CPU address.
         handle: handle of a valid iNES file (.nes)
-        CPUAddr: CPU ROM address (0x8000-0xffff)
+        cpuAddr: CPU ROM address (0x8000-0xffff)
         compareValue: 0x00-0xff or None
 
-    PRG_address_to_CPU_addresses(fileInfo, PRGAddr)
-        Generate CPU ROM addresses (0x8000-0xffff) from the PRG ROM address.
-        fileInfo: from ineslib.parse_iNES_header()
-        PRGAddr: PRG ROM address
-
-    decode_tile(data)
-        Decode an NES tile (planar to interleaved).
-        data: 16 bytes
-        return: pixels as 64 2-bit big-endian integers
-
-    decode_tile_slice(LSBs, MSBs)
-        Decode 8*1 pixels of one tile (planar to interleaved).
-        LSBs: the least significant bits (8-bit int)
-        MSBs: the most significant bits (8-bit int)
-        return: pixels (iterable, 8 2-bit big-endian ints)
-
-    encode_tile_slice(tileSlice)
-        Encode 8*1 pixels of one tile (interleaved to planar).
-        tileSlice: pixels (8 2-bit big-endian ints)
-        return: (8-bit int least_significant_bits, 8-bit int most_significant_bits)
-
-DATA
-    PALETTE = {0: (116, 116, 116), 1: (36, 24, 140), 2: (0, 0, 168), 3: (6...
-```
-
-### ineslib.py
-```
-DESCRIPTION
-    A library for parsing/encoding iNES ROM files (.nes).
-    See http://wiki.nesdev.com/w/index.php/INES
-
-CLASSES
-    builtins.Exception(builtins.BaseException)
-        iNESError
-
-FUNCTIONS
-    create_iNES_header(PRGSize, CHRSize, mapper=0, mirroring='h', saveRAM=False)
-        Return a 16-byte iNES header as bytes. On error, raise an exception with an error message.
-        PRGSize: PRG ROM size (16 * 1024 to 4096 * 1024 and a multiple of 16 * 1024)
-        CHRSize: CHR ROM size (0 to 2040 * 1024 and a multiple of 8 * 1024)
-        mapper: mapper number (0-255)
-        mirroring: name table mirroring ('h'=horizontal, 'v'=vertical, 'f'=four-screen)
-        saveRAM: does the game have save RAM
-
-    get_PRG_bank_size(fileInfo)
-        Get PRG ROM bank size of an iNES file. (The result may be too small.)
-        fileInfo: from parse_iNES_header()
-        return: bank size in bytes (8/16/32 KiB)
-
-    get_mapper_PRG_bank_size(mapper)
-        Get the smallest PRG ROM bank size the mapper supports (8 KiB for unknown mappers).
-        mapper: iNES mapper number (0-255)
-        return: bank size in bytes (8/16/32 KiB)
-
-    is_PRG_bankswitched(fileInfo)
-        Does the iNES file use PRG ROM bankswitching? (May give false positives.)
-        fileInfo: from parse_iNES_header()
-
-    parse_iNES_header(handle)
-        Parse an iNES header. Return a dict. On error, raise an exception with an error message.
-```
-
-### nesgenielib.py
-```
-DESCRIPTION
-    Decode and encode Nintendo Entertainment System (NES) Game Genie codes.
-    See http://nesdev.com/nesgg.txt
-
-FUNCTIONS
-    decode_code(code)
+    game_genie_decode(code)
         Decode a Game Genie code.
-        code: 6 or 8 letters from CODE_LETTERS
+        code: 6 or 8 letters from GAME_GENIE_LETTERS
         return:
             if invalid  code: None
             if 6-letter code: (CPU_address, replacement_value, None)
             if 8-letter code: (CPU_address, replacement_value, compare_value)
 
-    encode_code(addr, repl, comp=None)
+    game_genie_encode(addr, repl, comp=None)
         Encode a Game Genie code.
         addr: CPU address (0...0xffff; MSB ignored)
         repl: replacement value (0...0xff)
@@ -103,16 +34,52 @@ FUNCTIONS
             if compare is None    : 6-letter code
             if compare is not None: 8-letter code
 
+    ines_header_decode(handle)
+        Parse the header from an iNES ROM file. Return a dict or None on error.
+
+    ines_header_encode(prgSize, chrSize, mapper=0, mirroring='h', saveRam=False)
+        Return a 16-byte iNES header.
+        prgSize: PRG ROM size
+        chrSize: CHR ROM size
+        mapper: iNES mapper number
+        mirroring: name table mirroring ('h'/'v'/'f')
+        saveRam: does the game have save RAM
+
+    is_prg_bankswitched(prgSize, mapper)
+        Does the game use PRG ROM bankswitching? (May give false positives.)
+        prgSize: PRG ROM size, mapper: iNES mapper number
+
+    min_prg_bank_size(prgSize, mapper)
+        Get the smallest possible PRG ROM bank size the game may use (8/16/32 KiB).
+        The result may be too small.
+        prgSize: PRG ROM size, mapper: iNES mapper number
+
+    min_prg_bank_size_for_mapper(mapper)
+        Get the smallest PRG ROM bank size supported by the iNES mapper number
+        (8/16/32 KiB; 8 KiB if unknown).
+
+    prg_address_to_cpu_addresses(prgAddr, prgBankSize)
+        Generate CPU ROM addresses (0x8000...0xffff) from PRG ROM address.
+        prgBankSize: PRG ROM bank size (8/16/32 KiB)
+
+    tile_slice_decode(loByte, hiByte)
+        Decode 8*1 pixels of one tile.
+        loByte, hiByte: low/high bitplane (8 bits each)
+        return: eight 2-bit big-endian ints
+
+    tile_slice_encode(pixels)
+        Encode 8*1 pixels of one tile.
+        pixels: eight 2-bit big-endian ints
+        return: 8-bit ints: (low_bitplane, high_bitplane)
+
 DATA
-    CODE_LETTERS = 'APZLGITYEOXUKSVN'
+    GAME_GENIE_LETTERS = 'APZLGITYEOXUKSVN'
+    PALETTE = {0: (116, 116, 116), 1: (36, 24, 140), 2: (0, 0, 168), 3: (6...
 ```
 
 ![NES Game Genie code format](nesgenieformat.png)
 
-## Other Python programs
-Some of these require the libraries above or the [Pillow](https://python-pillow.org) module.
-
-### ines_combine.py
+## ines_combine.py
 ```
 usage: ines_combine.py [-h] -p PRG_ROM [-c CHR_ROM] [-m MAPPER] [-n {h,v,f}]
                        [-s]
@@ -140,7 +107,7 @@ optional arguments:
                         $6000...$7fff.
 ```
 
-### ines_info.py
+## ines_info.py
 Print information of an iNES ROM file (.nes) in CSV format. Argument: file. Output fields: "file","size","PRG ROM size","CHR ROM size","mapper","name table mirroring","has save RAM?","trainer size","file CRC32","PRG ROM CRC32","CHR ROM CRC32"
 
 Example:
@@ -148,7 +115,7 @@ Example:
 "smb1.nes",40976,32768,8192,0,"vertical","no",0,"3337ec46","5cf548d3","867b51ad"
 ```
 
-### ines_split.py
+## ines_split.py
 ```
 usage: ines_split.py [-h] [-p PRG] [-c CHR] input_file
 
@@ -165,8 +132,8 @@ optional arguments:
                      data.
 ```
 
-### nes_blaster_mapext.py
-Requires ineslib.py, neslib.py and Pillow (see above).
+## nes_blaster_mapext.py
+Note: does not work at the moment because of changes to qneslib.py.
 ```
 usage: nes_blaster_mapext.py [-h] [-j] [-m MAP] [--usb USB] [--sb SB] [--blocks BLOCKS] input_file output_file
 
@@ -185,8 +152,7 @@ optional arguments:
   --blocks BLOCKS    Save blocks as PNG file (1024*1024 px).
 ```
 
-### nes_chr_decode.py
-Requires Pillow (see above).
+## nes_chr_decode.py
 ```
 usage: nes_chr_decode.py [-h] [-p PALETTE PALETTE PALETTE PALETTE]
                          input_file output_file
@@ -207,8 +173,7 @@ optional arguments:
                         separated by spaces. Default: '000 555 aaa fff'
 ```
 
-### nes_chr_encode.py
-Requires Pillow (see above).
+## nes_chr_encode.py
 ```
 usage: nes_chr_encode.py [-h] [-p PALETTE PALETTE PALETTE PALETTE]
                          input_file output_file
@@ -233,7 +198,7 @@ optional arguments:
                         '000000 555555 aaaaaa ffffff'
 ```
 
-### nes_color_swap.py
+## nes_color_swap.py
 ```
 usage: nes_color_swap.py [-h] [-c {0,1,2,3} {0,1,2,3} {0,1,2,3} {0,1,2,3}]
                          [-f FIRST_TILE] [-n TILE_COUNT]
@@ -258,30 +223,20 @@ optional arguments:
                         from --first-tile.
 ```
 
-### nes_cpuaddr.py
-Requires ineslib.py and neslib.py.
-
+## nes_cpuaddr.py
 Convert an NES PRG ROM address into possible CPU addresses using the iNES ROM file (.nes). Args: file address_in_hexadecimal
 
-### nesgenie.py
-Requires nesgenielib.py.
-
+## nesgenie.py
 Encode and decode NES Game Genie codes. Argument: six-letter code, eight-letter code, AAAA RR or AAAA RR CC (AAAA = address in hexadecimal, RR = replacement value in hexadecimal, CC = compare value in hexadecimal).
 
-### nesgenie_6to8.py
-Requires ineslib.py, nesgenielib.py and neslib.py.
-
+## nesgenie_6to8.py
 Convert a 6-letter NES Game Genie code into 8 letters using the iNES ROM file (.nes). Args: file code
 
-### nesgenie_prgaddr.py
-Requires ineslib.py, nesgenielib.py and neslib.py.
-
+## nesgenie_prgaddr.py
 Find the PRG ROM addresses affected by an NES Game Genie code in an iNES ROM file (.nes). Args: file code
 
-### nesgenie_verconv.py
-Requires ineslib.py, nesgenielib.py and neslib.py.
-
-TODO: doesn't work at the moment because of changes to nesgenielib.
+## nesgenie_verconv.py
+Note: does not work at the moment because of changes to qneslib.py.
 ```
 usage: nesgenie_verconv.py [-h] [-b SLICE_LENGTH_BEFORE] [-a SLICE_LENGTH_AFTER] [-d MAX_DIFFERENT_BYTES]
                            code file1 file2
@@ -313,7 +268,5 @@ optional arguments:
                         and --slice-length-after, minus one. Increase to get more results.
 ```
 
-## NES programs
-
-### nes.asm
+## nes.asm
 NES assembly routines for [asm6f](https://github.com/freem/asm6f). Used by many of my projects.

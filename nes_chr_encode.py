@@ -3,7 +3,7 @@
 import argparse
 import os
 import sys
-from PIL import Image  # Pillow
+from PIL import Image  # Pillow, https://python-pillow.org
 
 def reorder_palette(img, mapping):
     """Return image with reordered palette. mapping: from command line arguments"""

@@ -2,8 +2,8 @@
 
 import argparse
 import os
-import struct
 import sys
+import qneslib  # qalle's NES library, https://github.com/qalle2/nes-util
 
 def parse_arguments():
     """Parse command line arguments using argparse."""
@@ -40,33 +40,6 @@ def parse_arguments():
 
     return args
 
-def parse_ines_header(handle):
-    """Parse an iNES header. Return a dict or None on error."""
-
-    fileSize = handle.seek(0, 2)
-
-    if fileSize < 16:
-        return None
-
-    # get fields from header
-    handle.seek(0)
-    (id_, prgSize, chrSize, flags6, flags7) = struct.unpack("4s4B8x", handle.read(16))
-
-    # get sizes in bytes
-    prgSize = (prgSize if prgSize else 256) * 16 * 1024
-    chrSize = chrSize * 8 * 1024
-    trainerSize = bool(flags6 & 0x04) * 512
-
-    # validate id and file size
-    if id_ != b"NES\x1a" or fileSize < 16 + trainerSize + prgSize + chrSize:
-        return None
-
-    return {
-        "prgSize": prgSize,
-        "chrSize": chrSize,
-        "trainerSize": trainerSize,
-    }
-
 def copy_file_slice(source, bytesLeft, target):
     """Copy bytesLeft bytes from one file handle to another."""
 
@@ -80,7 +53,7 @@ def main():
 
     try:
         with open(args.input_file, "rb") as source:
-            fileInfo = parse_ines_header(source)
+            fileInfo = qneslib.ines_header_decode(source)
             if fileInfo is None:
                 sys.exit("Invalid iNES ROM file.")
 
@@ -88,7 +61,7 @@ def main():
                 # copy PRG ROM data
                 try:
                     with open(args.prg, "wb") as target:
-                        source.seek(16 + fileInfo["trainerSize"])
+                        source.seek(fileInfo["prgStart"])
                         target.seek(0)
                         copy_file_slice(source, fileInfo["prgSize"], target)
                 except OSError:
@@ -98,7 +71,7 @@ def main():
                 # copy CHR ROM data
                 try:
                     with open(args.chr, "wb") as target:
-                        source.seek(16 + fileInfo["trainerSize"] + fileInfo["prgSize"])
+                        source.seek(fileInfo["chrStart"])
                         target.seek(0)
                         copy_file_slice(source, fileInfo["chrSize"], target)
                 except OSError:

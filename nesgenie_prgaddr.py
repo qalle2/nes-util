@@ -2,9 +2,7 @@
 
 import os
 import sys
-import ineslib
-import nesgenielib
-import neslib
+import qneslib  # qalle's NES library, https://github.com/qalle2/nes-util
 
 def main():
     """The main function."""
@@ -21,23 +19,20 @@ def main():
         sys.exit("File not found.")
 
     # decode the code
-    values = nesgenielib.decode_code(code)
+    values = qneslib.game_genie_decode(code)
     if values is None:
         sys.exit("Invalid NES Game Genie code.")
     (cpuAddr, compareValue) = (values[0], values[2])
 
     try:
         with open(file, "rb") as handle:
-            # validate file
-            try:
-                ineslib.parse_iNES_header(handle)
-            except ineslib.iNESError as error:
-                sys.exit("Error: " + str(error))
+            if qneslib.ines_header_decode(handle) is None:
+                sys.exit("Invalid iNES ROM file.")
 
             # get PRG addresses
             print(", ".join(
                 f"0x{PRGAddr:04x}" for PRGAddr
-                in neslib.CPU_address_to_PRG_addresses(handle, cpuAddr, compareValue)
+                in qneslib.cpu_address_to_prg_addresses(handle, cpuAddr, compareValue)
             ))
     except OSError:
         sys.exit("Error reading the file.")

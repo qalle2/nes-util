@@ -1,47 +1,9 @@
 """Print information of an iNES ROM file (.nes)."""
 
 import os
-import struct
 import sys
 import zlib
-
-def parse_ines_header(handle):
-    """Parse an iNES header. Return a dict or None on error."""
-
-    fileSize = handle.seek(0, 2)
-
-    if fileSize < 16:
-        return None
-
-    # get fields from header
-    handle.seek(0)
-    (id_, prgSize, chrSize, flags6, flags7) = struct.unpack("4s4B8x", handle.read(16))
-
-    # get sizes in bytes
-    prgSize = (prgSize if prgSize else 256) * 16 * 1024
-    chrSize = chrSize * 8 * 1024
-    trainerSize = bool(flags6 & 0x04) * 512
-
-    # validate id and file size
-    if id_ != b"NES\x1a" or fileSize < 16 + trainerSize + prgSize + chrSize:
-        return None
-
-    # get type of name table mirroring
-    if flags6 & 0x08:
-        mirroring = "four-screen"
-    elif flags6 & 0x01:
-        mirroring = "vertical"
-    else:
-        mirroring = "horizontal"
-
-    return {
-        "prgSize": prgSize,
-        "chrSize": chrSize,
-        "mapper": (flags7 & 0xf0) | (flags6 >> 4),
-        "mirroring": mirroring,
-        "trainerSize": trainerSize,
-        "saveRam": bool(flags6 & 0x02),
-    }
+import qneslib  # qalle's NES library, https://github.com/qalle2/nes-util
 
 def file_slice_checksum(handle, bytesLeft):
     """Compute the CRC32 checksum of a slice of the file, starting from current position."""
@@ -56,7 +18,7 @@ def file_slice_checksum(handle, bytesLeft):
 def get_ines_info(handle):
     """Process an iNES file."""
 
-    fileInfo = parse_ines_header(handle)
+    fileInfo = qneslib.ines_header_decode(handle)
     if fileInfo is None:
         sys.exit(os.path.basename(handle.name) + ": invalid iNES ROM file")
 
@@ -64,8 +26,9 @@ def get_ines_info(handle):
 
     handle.seek(0)
     fileChecksum = file_slice_checksum(handle, fileSize)
-    handle.seek(16 + fileInfo["trainerSize"])
+    handle.seek(fileInfo["prgStart"])
     prgChecksum = file_slice_checksum(handle, fileInfo["prgSize"])
+    handle.seek(fileInfo["chrStart"])
     chrChecksum = file_slice_checksum(handle, fileInfo["chrSize"])
 
     fileInfo.update({
@@ -90,7 +53,6 @@ def print_file_info(fileInfo):
         "file", "size", "prgSize", "chrSize", "mapper", "mirroring", "saveRam", "trainerSize",
         "fileChecksum", "prgChecksum", "chrChecksum"
     )
-    assert len(fields) == len(set(fields)) == len(fileInfo)  # no duplicates/missing fields
     print(",".join(format_output_value(fileInfo[field]) for field in fields))
 
 def main():

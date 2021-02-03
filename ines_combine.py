@@ -2,8 +2,8 @@
 
 import argparse
 import os
-import struct
 import sys
+import qneslib  # qalle's NES library, https://github.com/qalle2/nes-util
 
 def parse_arguments():
     """Parse command line arguments using argparse."""
@@ -50,37 +50,6 @@ def parse_arguments():
 
     return args
 
-def create_ines_header(prgSize, chrSize, mapper=0, mirroring="h", saveRam=False):
-    """Return a 16-byte iNES header. See https://wiki.nesdev.com/w/index.php/INES
-    prgSize: PRG ROM size
-    chrSize: CHR ROM size
-    mapper: mapper number
-    mirroring: name table mirroring ('h'/'v'/'f')
-    saveRam: does the game have save RAM"""
-
-    # get PRG ROM size in 16-KiB units; encode 256 as 0
-    (prgSize, remainder) = divmod(prgSize, 16 * 1024)
-    if remainder or not 1 <= prgSize <= 256:
-        sys.exit("Invalid PRG ROM size.")
-    prgSize %= 256
-
-    # get CHR ROM size in 8-KiB units
-    (chrSize, remainder) = divmod(chrSize, 8 * 1024)
-    if remainder or chrSize > 255:
-        sys.exit("Invalid CHR ROM size.")
-
-    # encode flags
-    flags6 = (mapper & 0x0f) << 4
-    if mirroring == "v":
-        flags6 |= 0x01
-    elif mirroring == "f":
-        flags6 |= 0x08
-    if saveRam:
-        flags6 |= 0x02
-    flags7 = mapper & 0xf0
-
-    return struct.pack("4s4B8s", b"NES\x1a", prgSize, chrSize, flags6, flags7, 8 * b"\x00")
-
 def copy_file(source, target):
     """Copy source file to current position in target file in chunks."""
 
@@ -107,7 +76,7 @@ def main():
         except OSError:
             sys.exit("Error getting CHR ROM file size.")
 
-    header = create_ines_header(
+    header = qneslib.ines_header_encode(
         prgSize=prgSize,
         chrSize=chrSize,
         mapper=args.mapper,

@@ -1,27 +1,27 @@
 """Encode and decode NES Game Genie codes."""
 
 import sys
-import nesgenielib
+import qneslib  # qalle's NES library, https://github.com/qalle2/nes-util
 
 def main():
     if len(sys.argv) == 2:
         # decode Game Genie code
-        values = nesgenielib.decode_code(sys.argv[1])
+        values = qneslib.game_genie_decode(sys.argv[1])
         if values is None:
             sys.exit("Invalid Game Genie code.")
         # reencode to get canonical form
-        code = nesgenielib.encode_code(*values)
+        code = qneslib.game_genie_encode(*values)
     elif 3 <= len(sys.argv) <= 4:
         # encode Game Genie code
         try:
             values = [int(n, 16) for n in sys.argv[1:]]
         except ValueError:
             sys.exit("Invalid hexadecimal integers.")
-        code = nesgenielib.encode_code(*values)
+        code = qneslib.game_genie_encode(*values)
         if code is None:
             sys.exit("Hexadecimal integers out of range.")
         # redecode to get canonical form
-        values = nesgenielib.decode_code(code)
+        values = qneslib.game_genie_decode(code)
     else:
         sys.exit(
             "Encode and decode NES Game Genie codes. Argument: six-letter code, eight-letter "

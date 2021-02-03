@@ -4,9 +4,7 @@
 import argparse
 import os
 import sys
-import ineslib
-import nesgenielib
-import neslib
+import qneslib  # qalle's NES library, https://github.com/qalle2/nes-util
 
 # --- Argument parsing -----------------------------------------------------------------------------
 
@@ -61,7 +59,7 @@ def parse_arguments():
         sys.exit("Invalid value for --slice_length_after.")
     if not 0 <= args.max_different_bytes < args.slice_length_before + args.slice_length_after:
         sys.exit("Invalid value for --max-different-bytes.")
-    if not nesgenielib.is_valid_code(args.code):
+    if qneslib.game_genie_decode(args.code) is None:
         sys.exit("Invalid Game Genie code.")
     if not os.path.isfile(args.file1):
         sys.exit("file1 not found.")
@@ -75,34 +73,34 @@ def parse_arguments():
 def print_decoded_code(code):
     """Print user's code in decoded form."""
 
-    (addr, replaceValue, compareValue) = nesgenielib.decode_code(code)
+    (addr, replaceValue, compareValue) = qneslib.game_genie_decode(code)
     print(
         "Your code decoded: CPU address = 0x{:04x}, replace value = 0x{:02x}, compare value = {:s}"
         .format(addr, replaceValue, "none" if compareValue is None else f"0x{compareValue:02x}")
     )
 
-def get_PRG_addresses(handle, args):
+def get_prg_addresses(handle, args):
     """Get PRG ROM addresses from file1."""
 
-    decoded = nesgenielib.decode_code(args.code)
+    decoded = qneslib.game_genie_decode(args.code)
     (codeAddr, codeCompareValue) = (decoded[0], decoded[2])
 
-    if codeCompareValue is None and ineslib.is_PRG_bankswitched(ineslib.parse_iNES_header(handle)):
+    if codeCompareValue is None and qneslib.is_prg_bankswitched(qneslib.ines_header_decode(handle)):
         sys.exit("Six-letter codes cannot be used because file1 uses PRG bankswitching.")
 
-    return list(neslib.CPU_address_to_PRG_addresses(handle, codeAddr, codeCompareValue))
+    return list(qneslib.cpu_address_to_prg_addresses(handle, codeAddr, codeCompareValue))
 
-def get_PRG_slices(handle, PRGAddresses, args):
+def get_prg_slices(handle, prgAddresses, args):
     """Generate the slice surrounding each relevant PRG ROM address: (bytes_before, bytes_after)."""
 
-    fileInfo = ineslib.parse_iNES_header(handle)
+    fileInfo = qneslib.ines_header_decode(handle)
 
-    for PRGAddr in PRGAddresses:
+    for prgAddr in prgAddresses:
         # get actual length of slice before/after relevant byte
-        lenBefore = min(args.slice_length_before, PRGAddr)
-        lenAfter = min(args.slice_length_after, fileInfo["PRGSize"] - PRGAddr - 1)
+        lenBefore = min(args.slice_length_before, prgAddr)
+        lenAfter = min(args.slice_length_after, fileInfo["prgSize"] - prgAddr - 1)
 
-        handle.seek(16 + fileInfo["trainerSize"] + PRGAddr - lenBefore)
+        handle.seek(fileInfo["prgStart"] + prgAddr - lenBefore)
         slice_ = handle.read(lenBefore + 1 + lenAfter)
 
         yield (slice_[:lenBefore], slice_[lenBefore+1:])
@@ -110,10 +108,10 @@ def get_PRG_slices(handle, PRGAddresses, args):
 def get_fake_compare_value(handle, code):
     """Get a fake compare value from file1 for user's six-letter code."""
 
-    codeAddr = nesgenielib.decode_code(code)[0]
-    fileInfo = ineslib.parse_iNES_header(handle)
-    PRGAddr = codeAddr & (fileInfo["PRGSize"] - 1)
-    handle.seek(16 + fileInfo["trainerSize"] + PRGAddr)
+    codeAddr = qneslib.game_genie_decode(code)[0]
+    fileInfo = qneslib.ines_header_decode(handle)
+    prgAddr = codeAddr & (fileInfo["prgSize"] - 1)
+    handle.seek(fileInfo["prgStart"] + prgAddr)
     return handle.read(1)[0]
 
 def print_slices(slices, compareValue):
@@ -129,42 +127,42 @@ def print_slices(slices, compareValue):
 
 # --- used with file2 and codes to output ----------------------------------------------------------
 
-def find_slices_in_PRG(handle, slices, compareValue, args):
+def find_slices_in_prg(handle, slices, compareValue, args):
     """Generate PRG addresses of each slice."""
 
     # read all PRG data
-    fileInfo = ineslib.parse_iNES_header(handle)
-    handle.seek(16 + fileInfo["trainerSize"])
-    PRGData = handle.read(fileInfo["PRGSize"])
+    fileInfo = qneslib.ines_header_decode(handle)
+    handle.seek(fileInfo["prgStart"])
+    prgData = handle.read(fileInfo["prgSize"])
 
     for (sliceBefore, sliceAfter) in slices:
         slice_ = sliceBefore + bytes((compareValue,)) + sliceAfter
         # PRG addresses of possible relevant bytes
-        for PRGAddr in range(len(sliceBefore), len(PRGData) - len(sliceAfter)):
+        for prgAddr in range(len(sliceBefore), len(prgData) - len(sliceAfter)):
             # the relevant byte must always match
-            if PRGData[PRGAddr] == compareValue:
+            if prgData[prgAddr] == compareValue:
                 # if not too many different bytes around, yield PRG address of relevant byte
-                PRGSlice = PRGData[PRGAddr-len(sliceBefore):PRGAddr+len(sliceAfter)+1]
+                prgSlice = prgData[prgAddr-len(sliceBefore):prgAddr+len(sliceAfter)+1]
                 differentByteCnt = sum(
-                    1 for (byte1, byte2) in zip(slice_, PRGSlice) if byte1 != byte2
+                    1 for (byte1, byte2) in zip(slice_, prgSlice) if byte1 != byte2
                 )
                 if differentByteCnt <= args.max_different_bytes:
-                    yield PRGAddr
+                    yield prgAddr
 
-def print_results(CPUAddresses, originalCode, compareValue):
+def print_results(cpuAddresses, originalCode, compareValue):
     """Print the codes we found."""
 
     # get address and replace value from original code
-    decoded = nesgenielib.decode_code(originalCode)
+    decoded = qneslib.game_genie_decode(originalCode)
     (originalAddr, replaceValue) = (decoded[0], decoded[1])
 
     # sort addresses by difference from original address
-    CPUAddresses = sorted(CPUAddresses)
-    CPUAddresses.sort(key=lambda addr: abs(addr - originalAddr))
+    cpuAddresses = sorted(cpuAddresses)
+    cpuAddresses.sort(key=lambda addr: abs(addr - originalAddr))
 
     # print codes with new addresses
     codes = (
-        nesgenielib.encode_code(addr, replaceValue, compareValue) for addr in CPUAddresses
+        qneslib.game_genie_encode(addr, replaceValue, compareValue) for addr in cpuAddresses
     )
     print("Possible Game Genie codes for file2 (try the first one first):", ", ".join(codes))
 
@@ -174,27 +172,24 @@ def main():
     """The main function."""
 
     args = parse_arguments()
-    compareValue = nesgenielib.decode_code(args.code)[2]  # needed throughout the program
+    compareValue = qneslib.game_genie_decode(args.code)[2]  # needed throughout the program
     print_decoded_code(args.code)
 
     # read file1
     try:
         with open(args.file1, "rb") as handle:
-            # validate iNES header
-            try:
-                ineslib.parse_iNES_header(handle)
-            except ineslib.iNESError as error:
-                sys.exit(f"Error in file1: {error!s}")
+            if qneslib.ines_header_decode(handle) is None:
+                sys.exit("file1 is not a valid iNES ROM file.")
 
-            PRGAddresses = get_PRG_addresses(handle, args)
-            if not PRGAddresses:
+            prgAddresses = get_prg_addresses(handle, args)
+            if not prgAddresses:
                 sys.exit("Your code seems to affect file1 in no way.")
             print(
                 "PRG ROM addresses affected in file1:",
-                ", ".join(f"0x{addr:04x}" for addr in sorted(PRGAddresses))
+                ", ".join(f"0x{addr:04x}" for addr in sorted(prgAddresses))
             )
 
-            slices = set(get_PRG_slices(handle, PRGAddresses, args))
+            slices = set(get_prg_slices(handle, prgAddresses, args))
 
             if compareValue is None:
                 compareValue = get_fake_compare_value(handle, args.code)
@@ -206,36 +201,34 @@ def main():
     # read file2
     try:
         with open(args.file2, "rb") as handle:
-            # parse iNES header
-            try:
-                fileInfo = ineslib.parse_iNES_header(handle)
-            except ineslib.iNESError as error:
-                sys.exit(f"Error in file2: {error!s}")
+            fileInfo = qneslib.ines_header_decode(handle)
+            if fileInfo is None:
+                sys.exit("file2 is not a valid iNES ROM file.")
 
-            PRGAddresses = set(find_slices_in_PRG(handle, slices, compareValue, args))
-            if not PRGAddresses:
+            prgAddresses = set(find_slices_in_prg(handle, slices, compareValue, args))
+            if not prgAddresses:
                 sys.exit("file2 contains nothing similar to what your code affects in file1.")
             print(
                 "PRG ROM addresses in file2 matching some of the bytestrings above:",
-                ", ".join(f"0x{addr:04x}" for addr in sorted(PRGAddresses))
+                ", ".join(f"0x{addr:04x}" for addr in sorted(prgAddresses))
             )
 
-            CPUAddresses = set()
-            for PRGAddr in PRGAddresses:
-                CPUAddresses.update(neslib.PRG_address_to_CPU_addresses(fileInfo, PRGAddr))
+            cpuAddresses = set()
+            for prgAddr in prgAddresses:
+                cpuAddresses.update(qneslib.prg_address_to_cpu_addresses(fileInfo, prgAddr))
 
             print(
                 "Equivalent CPU addresses in file2:",
-                ", ".join(f"0x{addr:04x}" for addr in sorted(CPUAddresses))
+                ", ".join(f"0x{addr:04x}" for addr in sorted(cpuAddresses))
             )
 
             # if file2 not bankswitched, discard compare value to output six-letter codes
-            if not ineslib.is_PRG_bankswitched(ineslib.parse_iNES_header(handle)):
+            if not qneslib.is_prg_bankswitched(qneslib.ines_header_decode(handle)):
                 compareValue = None
     except OSError:
         sys.exit("Error reading file2.")
 
-    print_results(CPUAddresses, args.code, compareValue)
+    print_results(cpuAddresses, args.code, compareValue)
 
 if __name__ == "__main__":
     main()

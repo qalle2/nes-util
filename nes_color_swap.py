@@ -3,7 +3,7 @@
 import argparse
 import os
 import sys
-import struct
+import qneslib  # qalle's NES library, https://github.com/qalle2/nes-util
 
 def parse_arguments():
     """Parse command line arguments using argparse."""
@@ -48,29 +48,6 @@ def parse_arguments():
 
     return args
 
-def get_ines_chr_address(handle):
-    """Parse an iNES header. Return CHR data address or None on error."""
-
-    fileSize = handle.seek(0, 2)
-
-    if fileSize < 16:
-        return None
-
-    # get fields from header
-    handle.seek(0)
-    (id_, prgSize, chrSize, flags6, flags7) = struct.unpack("4s4B8x", handle.read(16))
-
-    # get sizes in bytes
-    prgSize = (prgSize if prgSize else 256) * 16 * 1024
-    chrSize = chrSize * 8 * 1024
-    trainerSize = bool(flags6 & 0x04) * 512
-
-    # validate id and file size
-    if id_ != b"NES\x1a" or fileSize < 16 + trainerSize + prgSize + chrSize:
-        return None
-
-    return 16 + trainerSize + prgSize
-
 def read_file_slice(handle, bytesLeft):
     """Generate bytesLeft bytes from file in chunks."""
 
@@ -78,29 +55,6 @@ def read_file_slice(handle, bytesLeft):
         chunkSize = min(bytesLeft, 2 ** 20)
         yield handle.read(chunkSize)
         bytesLeft -= chunkSize
-
-def decode_tile_slice(loByte, hiByte):
-    """Decode 8*1 pixels of one tile.
-    loByte, hiByte: low/high bitplane (8 bits each)
-    return: eight 2-bit big-endian ints"""
-
-    pixels = []
-    for i in range(8):
-        pixels.append((loByte & 1) | ((hiByte & 1) << 1))
-        loByte >>= 1
-        hiByte >>= 1
-    return pixels[::-1]
-
-def encode_tile_slice(pixels):
-    """Encode 8*1 pixels of one tile.
-    pixels: eight 2-bit big-endian ints
-    return: 8-bit ints: (low_bitplane, high_bitplane)"""
-
-    loByte = hiByte = 0
-    for pixel in pixels:
-        loByte = (loByte << 1) | (pixel &  1)
-        hiByte = (hiByte << 1) | (pixel >> 1)
-    return (loByte, hiByte)
 
 def swap_colors(chunk, colors):
     """Replace colors 0...3 in NES CHR data chunk with new colors."""
@@ -114,25 +68,22 @@ def swap_colors(chunk, colors):
             loPos = charPos + y
             hiPos = charPos + 8 + y
             # decode pixels, replace colors, reencode pixels
-            (chunk[loPos], chunk[hiPos]) = encode_tile_slice(
+            (chunk[loPos], chunk[hiPos]) = qneslib.tile_slice_encode(
                 colors[color] for color
-                in decode_tile_slice(chunk[loPos], chunk[hiPos])
+                in qneslib.tile_slice_decode(chunk[loPos], chunk[hiPos])
             )
 
     return chunk
 
-def create_output_data(source, chrAddr, args):
+def create_output_data(source, args):
     """Read input file, modify specified tiles, generate output data as chunks."""
 
-    fileSize = source.seek(0, 2)
+    fileInfo = qneslib.ines_header_decode(source)
 
     # length of address range to modify and ranges before/after it
-    beforeLen = chrAddr + args.first_tile * 16
-    if args.tile_count:
-        modifyLen = args.tile_count * 16
-    else:
-        modifyLen = fileSize - beforeLen
-    afterLen = fileSize - beforeLen - modifyLen
+    beforeLen = fileInfo["chrStart"] + args.first_tile * 16
+    modifyLen = args.tile_count * 16 if args.tile_count else fileInfo["chrSize"]
+    afterLen = fileInfo["chrSize"] - modifyLen
 
     source.seek(0)
 
@@ -149,11 +100,12 @@ def main():
 
     try:
         with open(args.input_file, "rb") as source:
-            chrAddr = get_ines_chr_address(source)
-            if chrAddr is None:
+            fileInfo = qneslib.ines_header_decode(source)
+            if fileInfo is None:
                 sys.exit("Invalid iNES ROM file.")
 
-            chrSize = source.seek(0, 2) - chrAddr
+            chrSize = fileInfo["chrSize"]
+
             if chrSize == 0:
                 sys.exit("Input file has no CHR ROM.")
             if args.first_tile * 16 >= chrSize:
@@ -165,7 +117,7 @@ def main():
             try:
                 with open(args.output_file, "wb") as target:
                     target.seek(0)
-                    for chunk in create_output_data(source, chrAddr, args):
+                    for chunk in create_output_data(source, args):
                         target.write(chunk)
             except OSError:
                 sys.exit("Error copying data.")

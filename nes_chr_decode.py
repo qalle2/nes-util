@@ -3,62 +3,27 @@
 import argparse
 import itertools
 import os
-import struct
 import sys
-from PIL import Image  # Pillow
-
-def get_ines_chr_info(handle):
-    """Get (CHR_ROM_address, CHR_ROM_size) of an iNES ROM file.
-    On error, return None."""
-
-    fileSize = handle.seek(0, 2)
-    if fileSize < 16:
-        return None
-
-    # extract fields from header
-    handle.seek(0)
-    (fileId, prgSize, chrSize, flags6, flags7) = struct.unpack("4s4B8x", handle.read(16))
-
-    # get size of PRG ROM, CHR ROM and trainer in bytes
-    prgSize = (prgSize if prgSize else 256) * 16 * 1024
-    chrSize = chrSize * 8 * 1024
-    trainerSize = bool(flags6 & 0x04) * 512
-
-    # validate id and file size
-    if fileId != b"NES\x1a" or fileSize < 16 + trainerSize + prgSize + chrSize:
-        return None
-
-    return (16 + trainerSize + prgSize, chrSize)
+from PIL import Image  # Pillow, https://python-pillow.org
+import qneslib  # qalle's NES library, https://github.com/qalle2/nes-util
 
 def get_chr_addr_and_size(handle):
     """Get (address, size) of CHR ROM data in file."""
 
     if handle.name.lower().endswith(".nes"):
         # iNES ROM
-        chrInfo = get_ines_chr_info(handle)
-        if chrInfo is None:
+        fileInfo = qneslib.ines_header_decode(handle)
+        if fileInfo is None:
             sys.exit("Not a valid iNES ROM file.")
-        if chrInfo[1] == 0:
+        if fileInfo["chrSize"] == 0:
             sys.exit("iNES ROM file has no CHR ROM.")
-        return chrInfo
+        return (fileInfo["chrStart"], fileInfo["chrSize"])
 
     # raw CHR data
     fileSize = handle.seek(0, 2)
     if fileSize == 0 or fileSize % 256:
         sys.exit("Raw CHR data file must be a multiple of 256 bytes.")
     return (0, fileSize)
-
-def decode_tile_slice(lo, hi):
-    """Decode 8*1 pixels of one tile.
-    lo, hi: low/high bitplane (eight bits each)
-    return: eight two-bit big-endian ints"""
-
-    pixels = []
-    for i in range(8):
-        pixels.append((lo & 1) | ((hi & 1) << 1))
-        lo >>= 1
-        hi >>= 1
-    return pixels[::-1]
 
 def decode_pixel_rows(handle, charRowCount):
     """Generate one pixel row (128 two-bit values) per call from NES CHR data."""
@@ -73,7 +38,7 @@ def decode_pixel_rows(handle, charRowCount):
                 # decode two bytes (bitplanes) into eight pixels
                 loPos = (charX << 4) | pixY
                 hiPos = (charX << 4) | 8 | pixY
-                pixelRow.extend(decode_tile_slice(charRow[loPos], charRow[hiPos]))
+                pixelRow.extend(qneslib.tile_slice_decode(charRow[loPos], charRow[hiPos]))
             yield pixelRow
 
 def chr_data_to_png(handle, palette):
