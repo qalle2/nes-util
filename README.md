@@ -133,23 +133,36 @@ optional arguments:
 ```
 
 ## nes_blaster_mapext.py
-Note: does not work at the moment because of changes to qneslib.py.
 ```
-usage: nes_blaster_mapext.py [-h] [-j] [-m MAP] [--usb USB] [--sb SB] [--blocks BLOCKS] input_file output_file
+usage: nes_blaster_mapext.py [-h] [-j] [-n MAP_NUMBER]
+                             [-u ULTRA_SUBBLOCK_IMAGE] [-s SUBBLOCK_IMAGE]
+                             [-b BLOCK_IMAGE] [-m MAP_IMAGE] [-v]
+                             input_file
 
-Extract world maps from NES Blaster Master to PNG files.
+Extract world maps from NES Blaster Master to PNG files. Notes: specify at
+least one of -u/-s/-b/-m; all addresses printed are hexadecimal.
 
 positional arguments:
-  input_file         Blaster Master ROM file in iNES format (.nes, US/US prototype/EUR/JP; see also --japan).
-  output_file        The PNG image file to write.
+  input_file            Blaster Master ROM file in iNES format (.nes, US/US
+                        prototype/EUR/JP; see also --japan).
 
 optional arguments:
-  -h, --help         show this help message and exit
-  -j, --japan        Input file is Japanese version (Chou-Wakusei Senki - MetaFight).
-  -m MAP, --map MAP  Map to extract: 0-7=tank view of area 1-8, 8-15=overhead view of area 1-8. Default=0.
-  --usb USB          Save ultra-subblocks as PNG file (256*256 px).
-  --sb SB            Save subblocks as PNG file (512*512 px).
-  --blocks BLOCKS    Save blocks as PNG file (1024*1024 px).
+  -h, --help            show this help message and exit
+  -j, --japan           Input file is Japanese version (Chou-Wakusei Senki -
+                        MetaFight).
+  -n MAP_NUMBER, --map-number MAP_NUMBER
+                        Map to extract: 0...7 = side view of area 1...8,
+                        8...15 = overhead view of area 1...8. Default=0.
+  -u ULTRA_SUBBLOCK_IMAGE, --ultra-subblock-image ULTRA_SUBBLOCK_IMAGE
+                        Save ultra-subblocks as PNG file (256*256 px).
+  -s SUBBLOCK_IMAGE, --subblock-image SUBBLOCK_IMAGE
+                        Save subblocks as PNG file (512*512 px).
+  -b BLOCK_IMAGE, --block-image BLOCK_IMAGE
+                        Save blocks as PNG file (1024*1024 px).
+  -m MAP_IMAGE, --map-image MAP_IMAGE
+                        Save map as PNG file (up to 2048*2048 px). You
+                        probably want this.
+  -v, --verbose         Print more information.
 ```
 
 ## nes_chr_decode.py

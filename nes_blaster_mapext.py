@@ -8,6 +8,7 @@ but subblocks, blocks and map differ).
 import argparse
 import itertools
 import os
+import struct
 import sys
 from PIL import Image  # Pillow, https://python-pillow.org
 import qneslib  # qalle's NES library, https://github.com/qalle2/nes-util
@@ -33,45 +34,7 @@ MAP_DATA_ADDRESSES = {
     15: (2, 3 * 4, 17),
 }
 
-def parse_arguments():
-    """Parse command line arguments using argparse."""
-
-    parser = argparse.ArgumentParser(
-        description="Extract world maps from NES Blaster Master to PNG files."
-    )
-
-    parser.add_argument(
-        "-j", "--japan", action="store_true",
-        help="Input file is Japanese version (Chou-Wakusei Senki - MetaFight)."
-    )
-    parser.add_argument(
-        "-m", "--map", type=int, default=0,
-        help="Map to extract: 0-7=tank view of area 1-8, 8-15=overhead view of area 1-8. Default=0."
-    )
-    parser.add_argument("--usb", help="Save ultra-subblocks as PNG file (256*256 px).")
-    parser.add_argument("--sb", help="Save subblocks as PNG file (512*512 px).")
-    parser.add_argument("--blocks", help="Save blocks as PNG file (1024*1024 px).")
-    parser.add_argument(
-        "input_file",
-        help="Blaster Master ROM file in iNES format (.nes, US/US prototype/EUR/JP; see also "
-        "--japan)."
-    )
-    parser.add_argument("output_file", help="The PNG image file to write.")
-
-    args = parser.parse_args()
-
-    if not 0 <= args.map <= 15:
-        sys.exit("Invalid map number.")
-    if args.usb is not None and os.path.exists(args.usb):
-        sys.exit("USB output file already exists.")
-    if not os.path.isfile(args.input_file):
-        sys.exit("Input file not found.")
-    if os.path.exists(args.output_file):
-        sys.exit("Output file already exists.")
-
-    return args
-
-# --------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------
 
 def is_blaster_master(fileInfo):
     """Is the file likely Blaster Master? (Don't validate too accurately because the file may be
@@ -79,33 +42,43 @@ def is_blaster_master(fileInfo):
     fileInfo: from qneslib.ines_header_decode()"""
 
     return (
-        fileInfo["prgSize"] == 128 * 1024
+        fileInfo["prgSize"]     == 128 * 1024
         and fileInfo["chrSize"] == 128 * 1024
-        and fileInfo["mapper"] == 1
+        and fileInfo["mapper"]  == 1
     )
 
 def decode_offset(bytes_):
     """Decode address, convert into offset within bank."""
 
-    addr = bytes_[0] | bytes_[1] << 8  # decode little-endian unsigned short
+    addr = struct.unpack("<H", bytes_)[0]  # little-endian unsigned short
     assert 0x8000 <= addr <= 0xbfff
     return addr & 0x3fff  # convert into offset
 
-# --- image creation - ultra-subblocks -------------------------------------------------------------
+def decode_tile(data):
+    """Decode an NES tile.
+    data: 16 bytes
+    return: 64 2-bit big-endian integers"""
 
-def create_image_palette(image, NESColors):
-    """Add NES colors to Pillow Image palette.
-    return: table for converting NESColors index into image palette index"""
+    pixels = []
+    for (loByte, hiByte) in zip(data[0:8], data[8:16]):
+        pixels.extend(qneslib.tile_slice_decode(loByte, hiByte))
+    return tuple(pixels)
 
-    RGBPalette = sorted(set(neslib.PALETTE[color] for color in NESColors))
+# --- image creation - ultra-subblocks ------------------------------------------------------------
+
+def create_image_palette(image, nesColors):
+    """Add NES colors to image palette.
+    return: table for converting nesColors index into image palette index"""
+
+    RGBPalette = sorted(set(qneslib.PALETTE[color] for color in nesColors))
     image.putpalette(itertools.chain.from_iterable(RGBPalette))  # RGBRGB...
-    return tuple(RGBPalette.index(neslib.PALETTE[color]) for color in NESColors)
+    return tuple(RGBPalette.index(qneslib.PALETTE[color]) for color in nesColors)
 
 def get_pixel_coords(usbIndex, tileIndex, pixelIndex):
     """Get target coordinates for pixel in ultra-subblock image."""
 
     x = usbIndex << 4 & 0xf0 | tileIndex << 3 & 0x08 | pixelIndex & 0x07
-    y = usbIndex & 0xf0 | tileIndex << 2 & 0x08 | pixelIndex >> 3
+    y = usbIndex      & 0xf0 | tileIndex << 2 & 0x08 | pixelIndex >> 3
     return (x, y)
 
 def create_ultra_subblock_image(usbData, usbAttrData, tileData, worldPalette):
@@ -123,12 +96,12 @@ def create_ultra_subblock_image(usbData, usbAttrData, tileData, worldPalette):
                 image.putpixel(get_pixel_coords(usbIndex, tileIndex, pixelIndex), color)
     return image
 
-# --- image creation - subblocks, blocks, map ------------------------------------------------------
+# --- image creation - subblocks, blocks, map -----------------------------------------------------
 
-def set_image_palette(image, NESColors):
+def set_image_palette(image, nesColors):
     """Add NES colors to Pillow Image palette."""
 
-    RGBPalette = sorted(set(neslib.PALETTE[color] for color in NESColors))
+    RGBPalette = sorted(set(qneslib.PALETTE[color] for color in nesColors))
     image.putpalette(itertools.chain.from_iterable(RGBPalette))  # RGBRGB...
 
 def get_ultra_subblock_image_coords(usb):
@@ -202,49 +175,36 @@ def create_map_image(mapData, blockData, sbData, usbImg, worldPalette):
                 outImg.paste(inImg, get_map_image_coords(blockIndex, sbIndex, usbIndex))
     return outImg
 
-# --------------------------------------------------------------------------------------------------
-
-def decode_tile(data):
-    """Decode an NES tile.
-    data: 16 bytes
-    return: 64 2-bit big-endian integers"""
-
-    data = []
-    for (loByte, hiByte) in zip(data[0:8], data[8:16]):
-        data.extend(tile_slice_decode(loByte, hiByte))
-    return tuple(data)
+# -------------------------------------------------------------------------------------------------
 
 def convert_map(sourceHnd, args):
     """Convert one map into PNG."""
 
     # parse iNES header
-    try:
-        fileInfo = qneslib.parse_ines_header(sourceHnd)
-    except ineslib.iNESError as error:
-        sys.exit("iNES error: " + str(error))
+    fileInfo = qneslib.ines_header_decode(sourceHnd)
+    if fileInfo is None:
+        sys.exit("Not a valid iNES ROM file.")
 
     if not is_blaster_master(fileInfo):
         sys.exit("The file doesn't look like Blaster Master.")
 
-    (prgBank, worldPtr, chrBank) = MAP_DATA_ADDRESSES[args.map]
+    (prgBank, worldPtr, chrBank) = MAP_DATA_ADDRESSES[args.map_number]
     prgBank = 4 if prgBank == 2 and args.japan else prgBank  # the only version difference
     scrollPtr = worldPtr + 2
 
-    print(f"Map: {args.map:d}")
-    print(f"Banks: PRG (16 KiB) = {prgBank:d}, CHR (4 KiB) = {chrBank:d}")
-    print(f"Pointer offsets within PRG bank: world=0x{worldPtr:04x}, scroll=0x{scrollPtr:04x}")
-
-    # read PRG bank data
+    # read PRG bank
     sourceHnd.seek(fileInfo["prgStart"] + prgBank * 16 * 1024)
     prgBankData = sourceHnd.read(16 * 1024)
 
-    # After the pointers, the order of data sections varies.
-    # The first ones are always: palette, ultra-subblocks, subblocks, blocks, map.
-    # The last two are USB attributes and scroll, in either order.
-
-    worldAddr = decode_offset(prgBankData[worldPtr:worldPtr+2])
+    worldAddr  = decode_offset(prgBankData[worldPtr :worldPtr +2])
     scrollAddr = decode_offset(prgBankData[scrollPtr:scrollPtr+2])
-    print(f"Data offsets within PRG ROM bank: world=0x{worldAddr:04x}, scroll=0x{scrollAddr:04x}")
+
+    if args.verbose:
+        print(f"Map: {args.map_number:d}, PRG bank: {prgBank}, CHR bank: {chrBank}")
+        print(f"World data at {worldAddr:04x}, scroll data at {scrollAddr:04x}")
+
+    # The first data sections are always: palette, ultra-subblocks, subblocks, blocks, map.
+    # The last two are USB attributes and scroll, in either order.
 
     palAddr = decode_offset(prgBankData[worldAddr+0:worldAddr+0+2])
     usbAttrAddr = decode_offset(prgBankData[worldAddr+2:worldAddr+2+2])
@@ -253,18 +213,20 @@ def convert_map(sourceHnd, args):
     blockAddr = decode_offset(prgBankData[worldAddr+8:worldAddr+8+2])
     mapAddr = decode_offset(prgBankData[worldAddr+10:worldAddr+10+2])
 
-    print(
-        "World data section offsets within PRG bank: "
-        f"palette=0x{palAddr:04x}, "
-        f"ultra-subblocks=0x{usbAddr:04x}, "
-        f"subblocks=0x{sbAddr:04x}, "
-        f"blocks=0x{blockAddr:04x}, "
-        f"map=0x{mapAddr:04x}, "
-        f"ultra-subblock attributes = 0x{usbAttrAddr:04x}"
-    )
+    if args.verbose:
+        print(
+            "Section addresses: "
+            f"palette: {palAddr:04x}, "
+            f"USBs: {usbAddr:04x}, "
+            f"SBs: {sbAddr:04x}, "
+            f"blocks: {blockAddr:04x}, "
+            f"map: {mapAddr:04x}, "
+            f"USB attributes: {usbAttrAddr:04x}"
+        )
 
     # read this world's palette (always 4*4 bytes, contains duplicate NES colors)
     worldPalette = prgBankData[palAddr:palAddr+16]
+    assert max(worldPalette) <= 0x3f
 
     # read ultra-subblock data
     assert sbAddr - usbAddr in range(4, 256 * 4, 4)
@@ -288,8 +250,11 @@ def convert_map(sourceHnd, args):
 
     # read ultra-subblock attribute data (1 byte/ultra-subblock)
     if usbAttrAddr <= scrollAddr < usbAttrAddr + len(usbData):
-        # map 3 of JP version
-        print("Warning: scroll data overlaps with ultra-subblock attribute data.", file=sys.stderr)
+        print(
+            "Warning: scroll data overlaps with ultra-subblock attribute data. "
+            "(This is expected for map 3 of Japanese version.)",
+            file=sys.stderr
+        )
     usbAttrData = prgBankData[usbAttrAddr:usbAttrAddr+len(usbData)]
 
     # read and decode tile data
@@ -297,36 +262,99 @@ def convert_map(sourceHnd, args):
     chrBankData = sourceHnd.read(4 * 1024)
     tileData = tuple(decode_tile(chrBankData[i*16:(i+1)*16]) for i in range(256))
 
-    # create image with ultra-subblocks, optionally save
+    # create ultra-subblock image (needed for creating all other images)
     usbImg = create_ultra_subblock_image(usbData, usbAttrData, tileData, worldPalette)
-    if args.usb is not None:
-        with open(args.usb, "wb") as target:
+    if args.ultra_subblock_image is not None:
+        # save ultra-subblock image
+        with open(args.ultra_subblock_image, "wb") as target:
             usbImg.save(target)
 
-    # optionally create and save image with subblocks
-    if args.sb is not None:
+    if args.subblock_image is not None:
+        # create and save subblock image
         sbImg = create_subblock_image(sbData, usbImg, worldPalette)
-        with open(args.sb, "wb") as target:
+        with open(args.subblock_image, "wb") as target:
             sbImg.save(target)
 
-    # optionally create and save image with blocks
-    if args.blocks is not None:
+    if args.block_image is not None:
+        # create and save block image
         blockImg = create_block_image(blockData, sbData, usbImg, worldPalette)
-        with open(args.blocks, "wb") as target:
+        with open(args.block_image, "wb") as target:
             blockImg.save(target)
 
-    # create main output image and save it
-    mapImg = create_map_image(mapData, blockData, sbData, usbImg, worldPalette)
-    with open(args.output_file, "wb") as target:
-        target.seek(0)
-        mapImg.save(target)
+    if args.map_image is not None:
+        # create and save map image
+        mapImg = create_map_image(mapData, blockData, sbData, usbImg, worldPalette)
+        with open(args.map_image, "wb") as target:
+            target.seek(0)
+            mapImg.save(target)
 
-# --------------------------------------------------------------------------------------------------
+# --- main, argument parsing ----------------------------------------------------------------------
+
+def parse_arguments():
+    """Parse command line arguments using argparse."""
+
+    parser = argparse.ArgumentParser(
+        description="Extract world maps from NES Blaster Master to PNG files. "
+        "Notes: specify at least one of -u/-s/-b/-m; all addresses printed are hexadecimal."
+    )
+
+    parser.add_argument(
+        "-j", "--japan", action="store_true",
+        help="Input file is Japanese version (Chou-Wakusei Senki - MetaFight)."
+    )
+    parser.add_argument(
+        "-n", "--map-number", type=int, default=0,
+        help="Map to extract: 0...7 = side view of area 1...8, "
+        "8...15 = overhead view of area 1...8. Default=0."
+    )
+    parser.add_argument(
+        "-u", "--ultra-subblock-image",
+        help="Save ultra-subblocks as PNG file (256*256 px)."
+    )
+    parser.add_argument(
+        "-s", "--subblock-image",
+        help="Save subblocks as PNG file (512*512 px)."
+    )
+    parser.add_argument(
+        "-b", "--block-image",
+        help="Save blocks as PNG file (1024*1024 px)."
+    )
+    parser.add_argument(
+        "-m", "--map-image",
+        help="Save map as PNG file (up to 2048*2048 px). You probably want this."
+    )
+    parser.add_argument(
+        "-v", "--verbose", action="store_true",
+        help="Print more information."
+    )
+
+    parser.add_argument(
+        "input_file",
+        help="Blaster Master ROM file in iNES format (.nes, US/US prototype/EUR/JP; see also "
+        "--japan)."
+    )
+
+    args = parser.parse_args()
+
+    if not 0 <= args.map_number <= 15:
+        sys.exit("Invalid map number.")
+
+    if not os.path.isfile(args.input_file):
+        sys.exit("Input file not found.")
+
+    outputFiles = (
+        args.ultra_subblock_image, args.subblock_image, args.block_image, args.map_image
+    )
+    if all(file_ is None for file_ in outputFiles):
+        print("Warning: you didn't specify any output files.", file=sys.stderr)
+    if any(file_ is not None and os.path.exists(file_) for file_ in outputFiles):
+        sys.exit("Some of the output files already exist.")
+
+    return args
 
 def main():
-    """The main function."""
-
     args = parse_arguments()
+
     try:
         with open(args.input_file, "rb") as sourceHnd:
             convert_map(sourceHnd, args)
