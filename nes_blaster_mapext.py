@@ -284,7 +284,7 @@ def parse_arguments():
 
     parser = argparse.ArgumentParser(
         description="Extract world maps from NES Blaster Master to PNG files. "
-        "Notes: specify at least one of -u/-s/-b/-m; all addresses printed are hexadecimal."
+        "Note: specify at least one of -u/-s/-b/-m."
     )
 
     parser.add_argument(
@@ -314,7 +314,7 @@ def parse_arguments():
     )
     parser.add_argument(
         "-v", "--verbose", action="store_true",
-        help="Print more information."
+        help="Print more information. Note: all addresses are hexadecimal."
     )
 
     parser.add_argument(

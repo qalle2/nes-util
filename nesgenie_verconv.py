@@ -24,7 +24,7 @@ def parse_arguments():
         "-s", "--slice-length", type=int, default=4,
         help="How many PRG ROM bytes to compare both before and after the relevant byte (that is, "
         "total number of bytes compared is twice this value, plus one). Fewer bytes will be "
-        "compared if the relevant byte is too close to start or end of PRG ROM.) 1 to 20, "
+        "compared if the relevant byte is too close to start or end of PRG ROM. 1 to 20, "
         "default=4. Decrease to get more results."
     )
     parser.add_argument(
@@ -168,10 +168,10 @@ def main():
     if args.verbose:
         print_decoded_code(args.code)
 
-    # needed throughout the program; if None, replaced with a fake value later
+    # needed throughout the program
     compareValue = qneslib.game_genie_decode(args.code)[2]
 
-    # read file1
+    # get PRG addresses, PRG slices and optionally a fake compare value from file1
     try:
         with open(args.file1, "rb") as handle:
             fileInfo = qneslib.ines_header_decode(handle)
@@ -181,12 +181,6 @@ def main():
             prgAddresses = get_prg_addresses(handle, args.code)
             if not prgAddresses:
                 sys.exit("Your code seems to affect file1 in no way.")
-            if args.verbose:
-                print(
-                    "PRG addresses affected in file1:",
-                    ", ".join(f"{addr:04x}" for addr in sorted(prgAddresses))
-                )
-
             slices = set(get_prg_slices(handle, prgAddresses, args.slice_length))
 
             if compareValue is None:
@@ -195,34 +189,38 @@ def main():
         sys.exit("Error reading file1.")
 
     if args.verbose:
+        print(
+            "PRG addresses affected in file1:",
+            ", ".join(f"{addr:04x}" for addr in sorted(prgAddresses))
+        )
         print_slices(slices, compareValue)
 
-    # read file2
+    # find PRG addresses in file2
     try:
         with open(args.file2, "rb") as handle:
             fileInfo = qneslib.ines_header_decode(handle)
             if fileInfo is None:
                 sys.exit("file2 is not a valid iNES ROM file.")
-
             prgAddresses = set(find_slices_in_prg(handle, slices, compareValue, args))
-            if not prgAddresses:
-                sys.exit("file2 contains nothing similar to what your code affects in file1.")
-
-            cpuAddresses = set()
-            prgBankSize = qneslib.min_prg_bank_size(fileInfo["prgSize"], fileInfo["mapper"])
-            for prgAddr in prgAddresses:
-                cpuAddresses.update(qneslib.prg_address_to_cpu_addresses(prgAddr, prgBankSize))
-
-            if args.verbose:
-                print("Matching addresses in file2:")
-                print("    PRG:", ", ".join(f"{addr:04x}" for addr in sorted(prgAddresses)))
-                print("    CPU:", ", ".join(f"{addr:04x}" for addr in sorted(cpuAddresses)))
-
-            # if file2 not bankswitched, discard compare value to output six-letter codes
-            if not qneslib.is_prg_bankswitched(fileInfo["prgSize"], fileInfo["mapper"]):
-                compareValue = None
     except OSError:
         sys.exit("Error reading file2.")
+
+    if not prgAddresses:
+        sys.exit("file2 contains nothing similar to what your code affects in file1.")
+    cpuAddresses = set()
+    prgBankSize = qneslib.min_prg_bank_size(fileInfo["prgSize"], fileInfo["mapper"])
+    for prgAddr in prgAddresses:
+        cpuAddresses.update(qneslib.prg_address_to_cpu_addresses(prgAddr, prgBankSize))
+
+    if args.verbose:
+        print("Matching addresses in file2:")
+        print("    PRG:", ", ".join(f"{addr:04x}" for addr in sorted(prgAddresses)))
+        print("    CPU:", ", ".join(f"{addr:04x}" for addr in sorted(cpuAddresses)))
+
+    # if file2 not bankswitched, discard compare value to output six-letter codes
+    if not qneslib.is_prg_bankswitched(fileInfo["prgSize"], fileInfo["mapper"]):
+        compareValue = None
+
 
     print_results(cpuAddresses, args.code, compareValue)
 

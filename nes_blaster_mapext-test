@@ -25,10 +25,9 @@ do
 done
 echo
 
-echo "=== These should cause five errors ==="
+echo "=== These should cause four errors ==="
 echo
 python3 nes_blaster_mapext.py test-in/nonexistent.nes
-python3 nes_blaster_mapext.py test-in/blastermaster.nes
 python3 nes_blaster_mapext.py -m test-out/default.png test-in/blastermaster.nes
 echo
 python3 nes_blaster_mapext.py -n 9 -m test-out/error1.png test-in/blastermaster-j.nes

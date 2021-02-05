@@ -139,8 +139,8 @@ usage: nes_blaster_mapext.py [-h] [-j] [-n MAP_NUMBER]
                              [-b BLOCK_IMAGE] [-m MAP_IMAGE] [-v]
                              input_file
 
-Extract world maps from NES Blaster Master to PNG files. Notes: specify at
-least one of -u/-s/-b/-m; all addresses printed are hexadecimal.
+Extract world maps from NES Blaster Master to PNG files. Note: specify at
+least one of -u/-s/-b/-m.
 
 positional arguments:
   input_file            Blaster Master ROM file in iNES format (.nes, US/US
@@ -162,7 +162,8 @@ optional arguments:
   -m MAP_IMAGE, --map-image MAP_IMAGE
                         Save map as PNG file (up to 2048*2048 px). You
                         probably want this.
-  -v, --verbose         Print more information.
+  -v, --verbose         Print more information. Note: all addresses are
+                        hexadecimal.
 ```
 
 ## nes_chr_decode.py
@@ -277,7 +278,7 @@ optional arguments:
                         after the relevant byte (that is, total number of
                         bytes compared is twice this value, plus one). Fewer
                         bytes will be compared if the relevant byte is too
-                        close to start or end of PRG ROM.) 1 to 20, default=4.
+                        close to start or end of PRG ROM. 1 to 20, default=4.
                         Decrease to get more results.
   -d MAX_DIFFERENT_BYTES, --max-different-bytes MAX_DIFFERENT_BYTES
                         Maximum number of non-matching bytes allowed in each
