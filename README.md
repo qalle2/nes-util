@@ -10,11 +10,11 @@ NAME
     qneslib - qalle's NES library (Nintendo Entertainment System stuff).
 
 FUNCTIONS
-    cpu_address_to_prg_addresses(handle, cpuAddr, compareValue=None)
+    cpu_address_to_prg_addresses(handle, cpuAddr, comp=None)
         Generate PRG ROM addresses that may correspond to the CPU address.
-        handle: handle of a valid iNES file (.nes)
-        cpuAddr: CPU ROM address (0x8000-0xffff)
-        compareValue: 0x00-0xff or None
+        handle: valid iNES file
+        cpuAddr: CPU address (0x8000...0xffff)
+        comp: compare value (0x00...0xff or None)
 
     game_genie_decode(code)
         Decode a Game Genie code.
@@ -249,36 +249,44 @@ Convert a 6-letter NES Game Genie code into 8 letters using the iNES ROM file (.
 Find the PRG ROM addresses affected by an NES Game Genie code in an iNES ROM file (.nes). Args: file code
 
 ## nesgenie_verconv.py
-Note: does not work at the moment because of changes to qneslib.py.
 ```
-usage: nesgenie_verconv.py [-h] [-b SLICE_LENGTH_BEFORE] [-a SLICE_LENGTH_AFTER] [-d MAX_DIFFERENT_BYTES]
+usage: nesgenie_verconv.py [-h] [-s SLICE_LENGTH] [-d MAX_DIFFERENT_BYTES]
+                           [-v]
                            code file1 file2
 
-Read two versions (e.g. Japanese and US) of the same NES game in iNES format (.nes) and a Game Genie code for one of
-the versions. Output the equivalent code for the other version of the game. Technical explanation: decode the code;
-find out PRG ROM addresses affected in file1; see what's in and around them; look for similar bytestrings in file2's
-PRG ROM; convert the addresses back into CPU addresses; encode them into codes.
+Read two versions (e.g. Japanese and US) of the same NES game in iNES format
+(.nes) and a Game Genie code for one of the versions. Output the equivalent
+code for the other version of the game. Technical explanation: decode the
+code; find out PRG ROM addresses affected in file1; see what's in and around
+them; look for similar bytestrings in file2's PRG ROM; convert the addresses
+back into CPU addresses; encode them into codes.
 
 positional arguments:
-  code                  An NES Game Genie code that is known to work with file1. Six-letter codes are not allowed if
-                        file1 uses PRG ROM bankswitching.
-  file1                 An iNES ROM file (.nes) to read. The game your code is known to work with.
-  file2                 Another iNES ROM file (.nes) to read. The equivalent code for this game will be searched for.
+  code                  An NES Game Genie code that is known to work with
+                        file1. Six-letter codes are not allowed if file1 uses
+                        PRG ROM bankswitching.
+  file1                 An iNES ROM file (.nes) to read. The game your code is
+                        known to work with.
+  file2                 Another iNES ROM file (.nes) to read. The equivalent
+                        code for this game will be searched for.
 
 optional arguments:
   -h, --help            show this help message and exit
-  -b SLICE_LENGTH_BEFORE, --slice-length-before SLICE_LENGTH_BEFORE
-                        Length of PRG ROM slice to compare before the relevant byte. (Fewer bytes will be compared if
-                        the relevant byte is too close to the start of the PRG ROM.) 0 to 20, default=4. Decrease to
-                        get more results.
-  -a SLICE_LENGTH_AFTER, --slice-length-after SLICE_LENGTH_AFTER
-                        Length of PRG ROM slice to compare after the relevant byte. (Fewer bytes will be compared if
-                        the relevant byte is too close to the end of the PRG ROM.) 0 to 20, default=4. Decrease to get
-                        more results.
+  -s SLICE_LENGTH, --slice-length SLICE_LENGTH
+                        How many PRG ROM bytes to compare both before and
+                        after the relevant byte (that is, total number of
+                        bytes compared is twice this value, plus one). Fewer
+                        bytes will be compared if the relevant byte is too
+                        close to start or end of PRG ROM.) 1 to 20, default=4.
+                        Decrease to get more results.
   -d MAX_DIFFERENT_BYTES, --max-different-bytes MAX_DIFFERENT_BYTES
-                        Maximum number of non-matching bytes allowed in each pair of PRG ROM slices to compare. (The
-                        relevant byte must always match.) Minimum=0, default=1, maximum=sum of --slice-length-before
-                        and --slice-length-after, minus one. Increase to get more results.
+                        Maximum number of non-matching bytes allowed in each
+                        pair of PRG ROM slices to compare. (The relevant byte
+                        must always match.) Minimum=0, default=1,
+                        maximum=twice --slice-length, minus one. Increase to
+                        get more results.
+  -v, --verbose         Print more information. Note: all printed numbers are
+                        hexadecimal.
 ```
 
 ## nes.asm

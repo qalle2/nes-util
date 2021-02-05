@@ -3,25 +3,25 @@ clear
 rm -f test-out/*.nes
 rm -f test-out/*.png
 
-echo "=== Default settings, US version ==="
-python3 nes_blaster_mapext.py -m test-out/default1.png test-in/blastermaster.nes
+echo "=== Default settings, US ==="
+python3 nes_blaster_mapext.py -m test-out/default.png test-in/blastermaster.nes
 echo
 
-echo "=== Default settings, US version, verbose ==="
-python3 nes_blaster_mapext.py -v -m test-out/default2.png test-in/blastermaster.nes
+echo "=== USB/SB/blocks (no map) of map 0, US, verbose ==="
+python3 nes_blaster_mapext.py -v -u test-out/usb0.png -s test-out/sb0.png -b test-out/blocks0.png test-in/blastermaster.nes
 echo
 
-echo "=== All maps, USB/SB/blocks output, US version ==="
+echo "=== All maps, map only, US ==="
 for ((i = 0; i < 16; i++))
 do
-    python3 nes_blaster_mapext.py -n $i -u test-out/usb$i.png -s test-out/sb$i.png -b test-out/blocks$i.png -m test-out/map$i.png test-in/blastermaster.nes
+    python3 nes_blaster_mapext.py -n $i -m test-out/map$i.png test-in/blastermaster.nes
 done
 echo
 
-echo "=== All maps, USB/SB/blocks output, Japanese version ==="
+echo "=== All maps, map only, Japanese ==="
 for ((i = 0; i < 16; i++))
 do
-    python3 nes_blaster_mapext.py -j -n $i -u test-out/usb$[i]j.png -s test-out/sb$[i]j.png -b test-out/blocks$[i]j.png -m test-out/map$[i]j.png test-in/blastermaster-j.nes
+    python3 nes_blaster_mapext.py -j -n $i -m test-out/map$[i]j.png test-in/blastermaster-j.nes
 done
 echo
 
@@ -29,7 +29,7 @@ echo "=== These should cause five errors ==="
 echo
 python3 nes_blaster_mapext.py test-in/nonexistent.nes
 python3 nes_blaster_mapext.py test-in/blastermaster.nes
-python3 nes_blaster_mapext.py -m test-out/default1.png test-in/blastermaster.nes
+python3 nes_blaster_mapext.py -m test-out/default.png test-in/blastermaster.nes
 echo
 python3 nes_blaster_mapext.py -n 9 -m test-out/error1.png test-in/blastermaster-j.nes
 echo

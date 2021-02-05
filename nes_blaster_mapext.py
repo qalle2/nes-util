@@ -16,16 +16,16 @@ import qneslib  # qalle's NES library, https://github.com/qalle2/nes-util
 # addresses of maps: (16-KiB PRG ROM bank, pointer address within PRG ROM bank, 4-KiB CHR ROM bank)
 # note: JP version uses PRG bank 4 instead of 2
 MAP_DATA_ADDRESSES = {
-    0: (0, 0 * 4, 8),
-    1: (0, 1 * 4, 9),
-    2: (0, 2 * 4, 10),
-    3: (0, 3 * 4, 11),
-    4: (0, 4 * 4, 12),
-    5: (1, 0 * 4, 13),
-    6: (1, 1 * 4, 14),
-    7: (1, 2 * 4, 15),
-    8: (1, 3 * 4, 17),
-    9: (2, 1 * 4, 19),
+    0:  (0, 0 * 4,  8),
+    1:  (0, 1 * 4,  9),
+    2:  (0, 2 * 4, 10),
+    3:  (0, 3 * 4, 11),
+    4:  (0, 4 * 4, 12),
+    5:  (1, 0 * 4, 13),
+    6:  (1, 1 * 4, 14),
+    7:  (1, 2 * 4, 15),
+    8:  (1, 3 * 4, 17),
+    9:  (2, 1 * 4, 19),
     10: (1, 4 * 4, 18),
     11: (2, 4 * 4, 20),
     12: (2, 0 * 4, 18),
@@ -54,125 +54,117 @@ def decode_offset(bytes_):
     assert 0x8000 <= addr <= 0xbfff
     return addr & 0x3fff  # convert into offset
 
-def decode_tile(data):
-    """Decode an NES tile.
-    data: 16 bytes
-    return: 64 2-bit big-endian integers"""
+def get_tile_data(handle):
+    """Read a bank of CHR data. Generate one tile (64 2-bit big-endian integers) per call."""
 
+    chrData = handle.read(4 * 1024)
     pixels = []
-    for (loByte, hiByte) in zip(data[0:8], data[8:16]):
-        pixels.extend(qneslib.tile_slice_decode(loByte, hiByte))
-    return tuple(pixels)
 
-# --- image creation - ultra-subblocks ------------------------------------------------------------
+    for pos in range(0, 4096, 16):
+        pixels.clear()
+        for bitplanes in zip(chrData[pos:pos+8], chrData[pos+8:pos+16]):
+            pixels.extend(qneslib.tile_slice_decode(*bitplanes))
+        yield tuple(pixels)
 
-def create_image_palette(image, nesColors):
-    """Add NES colors to image palette.
-    return: table for converting nesColors index into image palette index"""
+# --- image creation ------------------------------------------------------------------------------
 
-    RGBPalette = sorted(set(qneslib.PALETTE[color] for color in nesColors))
-    image.putpalette(itertools.chain.from_iterable(RGBPalette))  # RGBRGB...
-    return tuple(RGBPalette.index(qneslib.PALETTE[color]) for color in nesColors)
-
-def get_pixel_coords(usbIndex, tileIndex, pixelIndex):
-    """Get target coordinates for pixel in ultra-subblock image."""
-
-    x = usbIndex << 4 & 0xf0 | tileIndex << 3 & 0x08 | pixelIndex & 0x07
-    y = usbIndex      & 0xf0 | tileIndex << 2 & 0x08 | pixelIndex >> 3
-    return (x, y)
-
-def create_ultra_subblock_image(usbData, usbAttrData, tileData, worldPalette):
-    """Create Pillow Image with 16 * 16 ultra-subblocks, each 16 * 16 pixels."""
+def create_ultra_subblock_image(usbData, usbAttrData, tileData, worldPal):
+    """Create Pillow Image with 16 * 16 ultra-subblocks, each 16 * 16 pixels.
+    worldPal: world palette (16 NES colors)"""
 
     image = Image.new("P", (16 * 16, 16 * 16), 0)  # indexed color
-    worldPalToImgPal = create_image_palette(image, worldPalette)
 
-    # for each USB, draw 2 * 2 tiles with correct palette
-    for (usbIndex, usbTiles) in enumerate(usbData):
-        paletteMask = usbAttrData[usbIndex] << 2 & 0x0c  # 2 LSBs in attrs = subpalette
-        for (tileIndex, tile) in enumerate(usbTiles):
+    # convert world palette into RGB
+    worldPal = [qneslib.PALETTE[color] for color in worldPal]
+    # set image palette, create palette conversion table
+    imgPal = sorted(set(worldPal))
+    image.putpalette(itertools.chain.from_iterable(imgPal))
+    worldPalToImgPal = tuple(imgPal.index(color) for color in worldPal)
+
+    # for each USB, draw 2*2 tiles with correct palette
+    for (usbIndex, usb) in enumerate(usbData):
+        palMask = (usbAttrData[usbIndex] & 3) << 2  # subpalette
+        for (tileIndex, tile) in enumerate(usb):
             for (pixelIndex, pixel) in enumerate(tileData[tile]):
-                color = worldPalToImgPal[paletteMask | pixel]
-                image.putpixel(get_pixel_coords(usbIndex, tileIndex, pixelIndex), color)
+                # bits: usbIndex = UUUUuuuu, tileIndex = Tt, pixelIndex = PPPppp
+                # -> y = UUUUTPPP, x = uuuutppp
+                y = usbIndex & 0xf0       | (tileIndex & 2) << 2 | pixelIndex >> 3
+                x = (usbIndex & 0xf) << 4 | (tileIndex & 1) << 3 | pixelIndex & 7
+                image.putpixel((x, y), worldPalToImgPal[palMask|pixel])
     return image
 
-# --- image creation - subblocks, blocks, map -----------------------------------------------------
+def world_palette_into_image_palette(worldPal):
+    """16 NES colors -> generate sorted unique colors as R,G,B,R,G,B,..."""
 
-def set_image_palette(image, nesColors):
-    """Add NES colors to Pillow Image palette."""
+    yield from itertools.chain.from_iterable(
+        sorted(set(qneslib.PALETTE[color] for color in worldPal))
+    )
 
-    RGBPalette = sorted(set(qneslib.PALETTE[color] for color in nesColors))
-    image.putpalette(itertools.chain.from_iterable(RGBPalette))  # RGBRGB...
-
-def get_ultra_subblock_image_coords(usb):
-    """Get source coordinates for ultra-subblock in ultra-subblock image."""
-
-    x = usb << 4 & 0xf0
-    y = usb & 0xf0
-    return (x, y, x + 16, y + 16)
-
-def get_subblock_image_coords(sbIndex, usbIndex):
-    """Get target coordinates for ultra-subblock in subblock image."""
-
-    x = sbIndex << 5 & 0x1e0 | usbIndex << 4 & 0x10
-    y = sbIndex << 1 & 0x1e0 | usbIndex << 3 & 0x10
-    return (x, y)
-
-def create_subblock_image(sbData, usbImg, worldPalette):
+def create_subblock_image(sbData, usbImg, worldPal):
     """Create Pillow Image with 16 * 16 subblocks, each 32 * 32 pixels."""
 
     outImg = Image.new("P", (16 * 32, 16 * 32), 0)  # indexed color
-    set_image_palette(outImg, worldPalette)
+    outImg.putpalette(world_palette_into_image_palette(worldPal))
 
     for (sbIndex, usbs) in enumerate(sbData):
         for (usbIndex, usb) in enumerate(usbs):
-            # copy USB from another image
-            inImg = usbImg.crop(get_ultra_subblock_image_coords(usb))
-            outImg.paste(inImg, get_subblock_image_coords(sbIndex, usbIndex))
+            # copy USB from source image
+            # bits: usb = UUUUuuuu -> y = UUUU0000, x = uuuu0000
+            y = usb & 0xf0
+            x = (usb & 0x0f) << 4
+            inImg = usbImg.crop((x, y, x + 16, y + 16))
+            # paste USB into target image
+            # bits: sbIndex = SSSSssss, usbIndex = Uu
+            # -> y = SSSSU0000, x = ssssu0000
+            y = (sbIndex & 0xf0) << 1 | (usbIndex & 2) << 3
+            x = (sbIndex & 0xf)  << 5 | (usbIndex & 1) << 4
+            outImg.paste(inImg, (x, y))
     return outImg
 
-def get_block_image_coords(blockIndex, sbIndex, usbIndex):
-    """Get target coordinates for ultra-subblock in block image."""
-
-    x = blockIndex << 6 & 0x3c0 | sbIndex << 5 & 0x20 | usbIndex << 4 & 0x10
-    y = blockIndex << 2 & 0x3c0 | sbIndex << 4 & 0x20 | usbIndex << 3 & 0x10
-    return (x, y)
-
-def create_block_image(blockData, sbData, usbImg, worldPalette):
+def create_block_image(blockData, sbData, usbImg, worldPal):
     """Create Pillow Image with 16 * 16 blocks, each 64 * 64 pixels."""
 
     outImg = Image.new("P", (16 * 64, 16 * 64), 0)  # indexed color
-    set_image_palette(outImg, worldPalette)
+    outImg.putpalette(world_palette_into_image_palette(worldPal))
 
-    for (blockIndex, sbs) in enumerate(blockData):
-        for (sbIndex, sb) in enumerate(sbs):
+    for (blockIndex, block) in enumerate(blockData):
+        for (sbIndex, sb) in enumerate(block):
             for (usbIndex, usb) in enumerate(sbData[sb]):
-                # copy USB from another image
-                inImg = usbImg.crop(get_ultra_subblock_image_coords(usb))
-                outImg.paste(inImg, get_block_image_coords(blockIndex, sbIndex, usbIndex))
+                # copy USB from source image
+                # bits: usb = UUUUuuuu -> y = UUUU0000, x = uuuu0000
+                y = usb & 0xf0
+                x = (usb & 0x0f) << 4
+                inImg = usbImg.crop((x, y, x + 16, y + 16))
+                # paste USB into target image
+                # bits: blockIndex = BBBBbbbb, sbIndex = Ss, usbIndex = Uu
+                # -> y = BBBBSU0000, x = bbbbsu0000
+                y = (blockIndex & 0xf0) << 2 | (sbIndex & 2) << 4 | (usbIndex & 2) << 3
+                x = (blockIndex & 0xf)  << 6 | (sbIndex & 1) << 5 | (usbIndex & 1) << 4
+                outImg.paste(inImg, (x, y))
     return outImg
 
-def get_map_image_coords(blockIndex, sbIndex, usbIndex):
-    """Get target coordinates for ultra-subblock in map image."""
-
-    x = blockIndex << 6 & 0x7c0 | sbIndex << 5 & 0x20 | usbIndex << 4 & 0x10
-    y = blockIndex << 1 & 0x7c0 | sbIndex << 4 & 0x20 | usbIndex << 3 & 0x10
-    return (x, y)
-
-def create_map_image(mapData, blockData, sbData, usbImg, worldPalette):
+def create_map_image(mapData, blockData, sbData, usbImg, worldPal):
     """Create Pillow Image of entire map with 32 * 32 blocks, each 64 * 64 pixels."""
 
     outImg = Image.new("P", (32 * 64, len(mapData) * 2), 0)  # indexed color
-    set_image_palette(outImg, worldPalette)
+    outImg.putpalette(world_palette_into_image_palette(worldPal))
 
     # world = 32*? blocks, block = 2*2 subblocks, subblock = 2*2 ultra-subblocks,
     # ultra-subblock = 2*2 tiles, tile = 8*8 pixels
     for (blockIndex, block) in enumerate(mapData):
         for (sbIndex, sb) in enumerate(blockData[block]):
             for (usbIndex, usb) in enumerate(sbData[sb]):
-                # copy USB from another image
-                inImg = usbImg.crop(get_ultra_subblock_image_coords(usb))
-                outImg.paste(inImg, get_map_image_coords(blockIndex, sbIndex, usbIndex))
+                # copy USB from source image
+                # bits: usb = UUUUuuuu -> y = UUUU0000, x = uuuu0000
+                y = usb & 0xf0
+                x = (usb & 0x0f) << 4
+                inImg = usbImg.crop((x, y, x + 16, y + 16))
+                # paste USB into target image
+                # bits: blockIndex = BBBBBbbbbb, sbIndex = Ss, usbIndex = Uu
+                # -> y = BBBBBSU0000, x = bbbbbsu0000
+                y = (blockIndex & 0x3e0) << 1 | (sbIndex & 2) << 4 | (usbIndex & 2) << 3
+                x = (blockIndex & 0x1f)  << 6 | (sbIndex & 1) << 5 | (usbIndex & 1) << 4
+                outImg.paste(inImg, (x, y))
     return outImg
 
 # -------------------------------------------------------------------------------------------------
@@ -206,12 +198,10 @@ def convert_map(sourceHnd, args):
     # The first data sections are always: palette, ultra-subblocks, subblocks, blocks, map.
     # The last two are USB attributes and scroll, in either order.
 
-    palAddr = decode_offset(prgBankData[worldAddr+0:worldAddr+0+2])
-    usbAttrAddr = decode_offset(prgBankData[worldAddr+2:worldAddr+2+2])
-    usbAddr = decode_offset(prgBankData[worldAddr+4:worldAddr+4+2])
-    sbAddr = decode_offset(prgBankData[worldAddr+6:worldAddr+6+2])
-    blockAddr = decode_offset(prgBankData[worldAddr+8:worldAddr+8+2])
-    mapAddr = decode_offset(prgBankData[worldAddr+10:worldAddr+10+2])
+    (palAddr, usbAttrAddr, usbAddr, sbAddr, blockAddr, mapAddr) = (
+        decode_offset(prgBankData[pos:pos+2])
+        for pos in range(worldAddr, worldAddr + 12, 2)
+    )
 
     if args.verbose:
         print(
@@ -259,8 +249,7 @@ def convert_map(sourceHnd, args):
 
     # read and decode tile data
     sourceHnd.seek(fileInfo["chrStart"] + chrBank * 4 * 1024)
-    chrBankData = sourceHnd.read(4 * 1024)
-    tileData = tuple(decode_tile(chrBankData[i*16:(i+1)*16]) for i in range(256))
+    tileData = list(get_tile_data(sourceHnd))
 
     # create ultra-subblock image (needed for creating all other images)
     usbImg = create_ultra_subblock_image(usbData, usbAttrData, tileData, worldPalette)

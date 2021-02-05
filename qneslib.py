@@ -140,26 +140,25 @@ def prg_address_to_cpu_addresses(prgAddr, prgBankSize):
     offset = prgAddr & (prgBankSize - 1)  # within each bank
     yield from (origin | offset for origin in range(0x8000, 0x10000, prgBankSize))
 
-def cpu_address_to_prg_addresses(handle, cpuAddr, compareValue=None):
+def cpu_address_to_prg_addresses(handle, cpuAddr, comp=None):
     """Generate PRG ROM addresses that may correspond to the CPU address.
-    handle: handle of a valid iNES file (.nes)
-    cpuAddr: CPU ROM address (0x8000-0xffff)
-    compareValue: 0x00-0xff or None"""
+    handle: valid iNES file
+    cpuAddr: CPU address (0x8000...0xffff)
+    comp: compare value (0x00...0xff or None)"""
 
-    # TODO: args should be minimal
     fileInfo = ines_header_decode(handle)
     prgBankSize = min_prg_bank_size(fileInfo["prgSize"], fileInfo["mapper"])
     offset = cpuAddr & (prgBankSize - 1)  # address within each bank
 
     prgAddrRange = range(offset, fileInfo["prgSize"], prgBankSize)
 
-    if compareValue is None:
+    if comp is None:
         for prgAddr in prgAddrRange:
             yield prgAddr
     else:
         for prgAddr in prgAddrRange:
             handle.seek(fileInfo["prgStart"] + prgAddr)
-            if handle.read(1)[0] == compareValue:
+            if handle.read(1)[0] == comp:
                 yield prgAddr
 
 def tile_slice_decode(loByte, hiByte):
