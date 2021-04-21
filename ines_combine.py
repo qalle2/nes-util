@@ -29,8 +29,8 @@ def parse_arguments():
         help="Type of name table mirroring: h=horizontal (default), v=vertical, f=four-screen."
     )
     parser.add_argument(
-        "-s", "--save-ram", action="store_true",
-        help="The game contains battery-backed PRG RAM at $6000...$7fff."
+        "-x", "--extra-ram", action="store_true",
+        help="The game contains extra RAM at $6000...$7fff."
     )
     parser.add_argument(
         "outputFile",
@@ -81,7 +81,7 @@ def main():
         chrSize=chrSize,
         mapper=args.mapper,
         mirroring=args.mirroring,
-        saveRam=args.save_ram,
+        extraRam=args.extra_ram,
     )
 
     try:

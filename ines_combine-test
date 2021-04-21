@@ -6,7 +6,7 @@ echo "=== Creating iNES files ==="
 python3 ines_combine.py --prg-rom test-in/blastermaster.prg --chr-rom test-in/blastermaster.chr --mapper 1 --mirroring h test-out/blastermaster.nes
 python3 ines_combine.py --prg-rom test-in/smb1.prg --chr-rom test-in/smb1.chr --mapper 0 --mirroring v test-out/smb1.nes
 python3 ines_combine.py --prg-rom test-in/videomation.prg --mapper 13 --mirroring v test-out/videomation.nes
-python3 ines_combine.py --prg-rom test-in/zelda1.prg --chr-rom test-in/empty.chr --mapper 1 --mirroring h --save-ram test-out/zelda1.nes
+python3 ines_combine.py --prg-rom test-in/zelda1.prg --chr-rom test-in/empty.chr --mapper 1 --mirroring h --extra-ram test-out/zelda1.nes
 echo
 
 echo "=== Validating iNES files ==="

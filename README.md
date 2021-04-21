@@ -10,67 +10,81 @@ NAME
     qneslib - qalle's NES library (Nintendo Entertainment System stuff).
 
 FUNCTIONS
-    cpu_address_to_prg_addresses(handle, cpuAddr, comp=None)
-        Generate PRG ROM addresses that may correspond to the CPU address.
+    cpu_address_to_prg_addresses(handle, cpuAddr, compare=None)
+        Get PRG ROM addresses from a CPU ROM address.
         handle: valid iNES file
-        cpuAddr: CPU address (0x8000...0xffff)
-        comp: compare value (0x00...0xff or None)
+        cpuAddr: CPU ROM address (0x8000-0xffff)
+        compare: compare value (0x00-0xff/None)
+        generate: PRG ROM addresses
 
     game_genie_decode(code)
         Decode a Game Genie code.
         code: 6 or 8 letters from GAME_GENIE_LETTERS
         return:
-            if invalid  code: None
-            if 6-letter code: (CPU_address, replacement_value, None)
-            if 8-letter code: (CPU_address, replacement_value, compare_value)
+            if invalid code: None
+            otherwise: (CPU_address, replacement_value, compare_value):
+                CPU_address: 0x8000-0xffff
+                replacement_value: 0x00-0xff
+                compare_value: None if 6-letter code, 0x00-0xff if 8-letter code
 
     game_genie_encode(addr, repl, comp=None)
         Encode a Game Genie code.
-        addr: CPU address (0...0xffff; MSB ignored)
-        repl: replacement value (0...0xff)
-        comp: compare value (0...0xff or None)
+        addr: CPU address (0x0000-0xffff; MSB ignored)
+        repl: replacement value (0x00-0xff)
+        comp: compare value (0x00-0xff/None)
         return:
             if invalid arguments  : None
             if compare is None    : 6-letter code
             if compare is not None: 8-letter code
 
     ines_header_decode(handle)
-        Parse the header from an iNES ROM file. Return a dict or None on error.
+        Parse the header of an iNES ROM file.
+        handle: iNES ROM file
+        return: dict or None on error
 
-    ines_header_encode(prgSize, chrSize, mapper=0, mirroring='h', saveRam=False)
-        Return a 16-byte iNES header.
+    ines_header_encode(prgSize, chrSize, mapper=0, mirroring='h', extraRam=False)
+        Create an iNES file header.
         prgSize: PRG ROM size
         chrSize: CHR ROM size
-        mapper: iNES mapper number
-        mirroring: name table mirroring ('h'/'v'/'f')
-        saveRam: does the game have save RAM
+        mapper: iNES mapper number (0x00-0xff)
+        mirroring: name table mirroring (h=horizontal, v=vertical, f=four-screen)
+        extraRam: does the game have extra RAM
+        return: 16 bytes
 
     is_prg_bankswitched(prgSize, mapper)
-        Does the game use PRG ROM bankswitching? (May give false positives.)
-        prgSize: PRG ROM size, mapper: iNES mapper number
+        Does the game use PRG ROM bankswitching? (May give false positives, especially if the
+        mapper is unknown. Should not give false negatives.)
+        prgSize: PRG ROM size
+        mapper: iNES mapper number (0x00-0xff)
+        return: bool
 
     min_prg_bank_size(prgSize, mapper)
-        Get the smallest possible PRG ROM bank size the game may use (8/16/32 KiB).
-        The result may be too small.
-        prgSize: PRG ROM size, mapper: iNES mapper number
+        Get the smallest PRG ROM bank size a game may use.
+        prgSize: PRG ROM size
+        mapper: iNES mapper number (0x00-0xff)
+        return: 8_192/16_384/32_768 (8_192 if unknown mapper)
 
     min_prg_bank_size_for_mapper(mapper)
-        Get the smallest PRG ROM bank size supported by the iNES mapper number
-        (8/16/32 KiB; 8 KiB if unknown).
+        Get the smallest PRG ROM bank size supported by the mapper.
+        mapper: iNES mapper number (0x00-0xff)
+        return: 8_192/16_384/32_768 (8_192 if unknown mapper)
 
     prg_address_to_cpu_addresses(prgAddr, prgBankSize)
-        Generate CPU ROM addresses (0x8000...0xffff) from PRG ROM address.
-        prgBankSize: PRG ROM bank size (8/16/32 KiB)
+        Get CPU ROM addresses from a PRG ROM address.
+        prgAddr: PRG ROM address
+        prgBankSize: PRG ROM bank size (8_192/16_384/32_768)
+        generate: CPU ROM addresses (0x8000-0xffff)
 
     tile_slice_decode(loByte, hiByte)
         Decode 8*1 pixels of one tile.
-        loByte, hiByte: low/high bitplane (8 bits each)
-        return: eight 2-bit big-endian ints
+        loByte: low bitplane (0x00-0xff)
+        hiByte: high bitplane (0x00-0xff)
+        return: eight 2-bit ints
 
     tile_slice_encode(pixels)
         Encode 8*1 pixels of one tile.
-        pixels: eight 2-bit big-endian ints
-        return: 8-bit ints: (low_bitplane, high_bitplane)
+        pixels: eight 2-bit ints
+        return: (low_bitplane, high_bitplane); both 0x00-0xff
 
 DATA
     GAME_GENIE_LETTERS = 'APZLGITYEOXUKSVN'
@@ -81,9 +95,7 @@ DATA
 
 ## ines_combine.py
 ```
-usage: ines_combine.py [-h] -p PRG_ROM [-c CHR_ROM] [-m MAPPER] [-n {h,v,f}]
-                       [-s]
-                       outputFile
+usage: ines_combine.py [-h] -p PRG_ROM [-c CHR_ROM] [-m MAPPER] [-n {h,v,f}] [-x] outputFile
 
 Create an iNES ROM file (.nes) from PRG ROM and CHR ROM data files.
 
@@ -93,22 +105,19 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   -p PRG_ROM, --prg-rom PRG_ROM
-                        PRG ROM data file. Required. Size: 16...4096 KiB and a
-                        multiple of 16 KiB.
+                        PRG ROM data file. Required. Size: 16...4096 KiB and a multiple of 16 KiB.
   -c CHR_ROM, --chr-rom CHR_ROM
-                        CHR ROM data file. Optional. Size: 0...2040 KiB and a
-                        multiple of 8 KiB.
+                        CHR ROM data file. Optional. Size: 0...2040 KiB and a multiple of 8 KiB.
   -m MAPPER, --mapper MAPPER
                         Mapper number (0...255). Default=0 (NROM).
   -n {h,v,f}, --mirroring {h,v,f}
-                        Type of name table mirroring: h=horizontal (default),
-                        v=vertical, f=four-screen.
-  -s, --save-ram        The game contains battery-backed PRG RAM at
-                        $6000...$7fff.
+                        Type of name table mirroring: h=horizontal (default), v=vertical, f=four-
+                        screen.
+  -x, --extra-ram       The game contains extra RAM at $6000...$7fff.
 ```
 
 ## ines_info.py
-Print information of an iNES ROM file (.nes) in CSV format. Argument: file. Output fields: "file","size","PRG ROM size","CHR ROM size","mapper","name table mirroring","has save RAM?","trainer size","file CRC32","PRG ROM CRC32","CHR ROM CRC32"
+Print information of an iNES ROM file (.nes) in CSV format. Argument: file. Output fields: "file","size","PRG ROM size","CHR ROM size","mapper","name table mirroring","has extra RAM?","trainer size","file CRC32","PRG ROM CRC32","CHR ROM CRC32"
 
 Example:
 ```

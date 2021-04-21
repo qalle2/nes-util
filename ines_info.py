@@ -50,7 +50,7 @@ def print_file_info(fileInfo):
 
     # field names in fileInfo (note: make sure the help text is up to date)
     fields = (
-        "file", "size", "prgSize", "chrSize", "mapper", "mirroring", "saveRam", "trainerSize",
+        "file", "size", "prgSize", "chrSize", "mapper", "mirroring", "extraRam", "trainerSize",
         "fileChecksum", "prgChecksum", "chrChecksum"
     )
     print(",".join(format_output_value(fileInfo[field]) for field in fields))
@@ -61,7 +61,7 @@ def main():
     if len(sys.argv) != 2:
         fields = (
             "file", "size", "PRG ROM size", "CHR ROM size", "mapper", "name table mirroring",
-            "has save RAM?", "trainer size", "file CRC32", "PRG ROM CRC32", "CHR ROM CRC32"
+            "has extra RAM?", "trainer size", "file CRC32", "PRG ROM CRC32", "CHR ROM CRC32"
         )
         sys.exit(
             "Print information of an iNES ROM file (.nes) in CSV format. Argument: file. Output "
