@@ -117,19 +117,18 @@ optional arguments:
 ```
 
 ## ines_info.py
-Print information of an iNES ROM file (.nes) in CSV format. Argument: file. Output fields: "file","size","PRG ROM size","CHR ROM size","mapper","name table mirroring","has extra RAM?","trainer size","file CRC32","PRG ROM CRC32","CHR ROM CRC32"
+Print information of an iNES ROM file (.nes) in CSV format. Argument: file. Output fields: "file","size","prgSize","chrSize","mapper","mirroring","extraRam","trainerSize","checksum","prgChecksum","chrChecksum". prg=PRG ROM, chr=CHR ROM, mirroring=name table mirroring (h=horizontal, v=vertical, f=four-screen), checksum=CRC32 (zlib).
 
 Example:
 ```
-"smb1.nes",40976,32768,8192,0,"vertical","no",0,"3337ec46","5cf548d3","867b51ad"
+"smb1.nes",40976,32768,8192,0,"v","no",0,"3337ec46","5cf548d3","867b51ad"
 ```
 
 ## ines_split.py
 ```
 usage: ines_split.py [-h] [-p PRG] [-c CHR] input_file
 
-Extract PRG ROM and/or CHR ROM data from an iNES ROM file (.nes). Specify at
-least one output file.
+Extract PRG ROM and/or CHR ROM data from an iNES ROM file (.nes).
 
 positional arguments:
   input_file         iNES ROM file (.nes) to read.
@@ -137,8 +136,7 @@ positional arguments:
 optional arguments:
   -h, --help         show this help message and exit
   -p PRG, --prg PRG  File to write PRG ROM data to.
-  -c CHR, --chr CHR  File to write CHR ROM data to. Not written if there is no
-                     data.
+  -c CHR, --chr CHR  File to write CHR ROM data to. Not written if there is no data.
 ```
 
 ## nes_blaster_mapext.py
