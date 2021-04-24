@@ -1,13 +1,13 @@
-"""Print information of an iNES ROM file (.nes)."""
-
-import os
-import sys
-import zlib
+import os, sys, zlib
 import qneslib  # qalle's NES library, https://github.com/qalle2/nes-util
 
-def file_slice_checksum(handle, bytesLeft):
-    """Compute the CRC32 checksum of a slice of the file, starting from current position."""
+OUTPUT_FIELDS = (
+    "file", "size", "prgSize", "chrSize", "mapper", "mirroring", "extraRam", "trainerSize",
+    "checksum", "prgChecksum", "chrChecksum"
+)
 
+def file_slice_checksum(handle, bytesLeft):
+    # compute CRC32 checksum starting from current file position
     checksum = 0
     while bytesLeft:
         chunkSize = min(bytesLeft, 2 ** 20)
@@ -16,69 +16,55 @@ def file_slice_checksum(handle, bytesLeft):
     return format(checksum, "08x")
 
 def get_ines_info(handle):
-    """Process an iNES file."""
+    # get information of an iNES ROM file
 
     fileInfo = qneslib.ines_header_decode(handle)
     if fileInfo is None:
-        sys.exit(os.path.basename(handle.name) + ": invalid iNES ROM file")
+        sys.exit(f"{handle.name}: invalid iNES ROM file")
 
     fileSize = handle.seek(0, 2)
 
+    # file checksum
     handle.seek(0)
-    fileChecksum = file_slice_checksum(handle, fileSize)
+    checksum = file_slice_checksum(handle, fileSize)
+    # PRG ROM checksum
     handle.seek(fileInfo["prgStart"])
     prgChecksum = file_slice_checksum(handle, fileInfo["prgSize"])
+    # CHR ROM checksum
     handle.seek(fileInfo["chrStart"])
     chrChecksum = file_slice_checksum(handle, fileInfo["chrSize"])
 
     fileInfo.update({
         "file": os.path.basename(handle.name),
         "size": fileSize,
-        "fileChecksum": fileChecksum,
+        "checksum": checksum,
         "prgChecksum": prgChecksum,
         "chrChecksum": chrChecksum,
     })
     return fileInfo
 
 def format_output_value(value):
+    # format a value (bool/int/str) for output
     if isinstance(value, bool):
         value = ["no", "yes"][value]
     return f'{value}' if isinstance(value, int) else f'"{value}"'
 
-def print_file_info(fileInfo):
-    """Print file info."""
-
-    # field names in fileInfo (note: make sure the help text is up to date)
-    fields = (
-        "file", "size", "prgSize", "chrSize", "mapper", "mirroring", "extraRam", "trainerSize",
-        "fileChecksum", "prgChecksum", "chrChecksum"
+if len(sys.argv) != 2:
+    sys.exit(
+        "Print information of an iNES ROM file (.nes) in CSV format. Argument: file. Output "
+        "fields: " + ",".join(f'"{f}"' for f in OUTPUT_FIELDS) + ". prg=PRG ROM, chr=CHR ROM, "
+        "mirroring=name table mirroring (h=horizontal, v=vertical, f=four-screen), "
+        "checksum=CRC32 (zlib)."
     )
-    print(",".join(format_output_value(fileInfo[field]) for field in fields))
 
-def main():
-    """The main function."""
+inputFile = sys.argv[1]
+if not os.path.isfile(inputFile):
+    sys.exit("File not found.")
 
-    if len(sys.argv) != 2:
-        fields = (
-            "file", "size", "PRG ROM size", "CHR ROM size", "mapper", "name table mirroring",
-            "has extra RAM?", "trainer size", "file CRC32", "PRG ROM CRC32", "CHR ROM CRC32"
-        )
-        sys.exit(
-            "Print information of an iNES ROM file (.nes) in CSV format. Argument: file. Output "
-            "fields: " + ",".join(f'"{f}"' for f in fields)
-        )
+try:
+    with open(inputFile, "rb") as handle:
+        fileInfo = get_ines_info(handle)
+except OSError:
+    sys.exit("Error reading the file.")
 
-    inputFile = sys.argv[1]
-    if not os.path.isfile(inputFile):
-        sys.exit("File not found.")
-
-    try:
-        with open(inputFile, "rb") as handle:
-            fileInfo = get_ines_info(handle)
-    except OSError:
-        sys.exit("Error reading the file.")
-
-    print_file_info(fileInfo)
-
-if __name__ == "__main__":
-    main()
+print(",".join(format_output_value(fileInfo[f]) for f in OUTPUT_FIELDS))
