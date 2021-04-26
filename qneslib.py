@@ -131,6 +131,9 @@ _INES_ID = b"NES\x1a"
 GAME_GENIE_LETTERS = "APZLGITYEOXUKSVN"
 _GAME_GENIE_DECODE_KEY = (3, 5, 2, 4, 1, 0, 7, 6)  # at 0x0eb6 in Game Genie PRG ROM
 
+class QneslibError(Exception):
+    pass
+
 # --- Misc NES stuff ------------------------------------------------------------------------------
 
 def min_prg_bank_size_for_mapper(mapper):
@@ -265,18 +268,19 @@ def ines_header_encode(prgSize, chrSize, mapper=0, mirroring="h", extraRam=False
     mapper: iNES mapper number (0x00-0xff)
     mirroring: name table mirroring (h=horizontal, v=vertical, f=four-screen)
     extraRam: does the game have extra RAM
-    return: 16 bytes"""
+    return: 16 bytes
+    on error: raise QneslibError"""
 
     # get PRG ROM size in 16-KiB units (256 = 0)
     (prgSize, remainder) = divmod(prgSize, 16 * 1024)
     if remainder or not 1 <= prgSize <= 256:
-        sys.exit("Invalid PRG ROM size.")
+        raise QneslibError("invalid PRG ROM size")
     prgSize %= 256
 
     # get CHR ROM size in 8-KiB units
     (chrSize, remainder) = divmod(chrSize, 8 * 1024)
     if remainder or chrSize > 255:
-        sys.exit("Invalid CHR ROM size.")
+        raise QneslibError("invalid CHR ROM size")
 
     # encode flags
     flags6 = (mapper & 0x0f) << 4

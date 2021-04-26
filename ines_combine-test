@@ -16,4 +16,9 @@ diff -q test-in/videomation.nes test-out/videomation.nes
 diff -q test-in/zelda1.nes test-out/zelda1.nes
 echo
 
+echo "=== These should cause two errors ==="
+python3 ines_combine.py --prg-rom test-in/smb1.nes test-out/invalid1.nes
+python3 ines_combine.py --prg-rom test-in/smb1.prg --chr-rom test-in/smb1.nes test-out/invalid2.nes
+echo
+
 rm -f test-out/*.nes
