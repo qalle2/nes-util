@@ -1,12 +1,8 @@
-"""Swap colors in the graphics data (CHR ROM) of an iNES ROM file (.nes)."""
-
-import argparse
-import os
-import sys
+import argparse, os, sys
 import qneslib  # qalle's NES library, https://github.com/qalle2/nes-util
 
 def parse_arguments():
-    """Parse command line arguments using argparse."""
+    # parse command line arguments using argparse
 
     parser = argparse.ArgumentParser(
         description="Swap colors in the graphics data (CHR ROM) of an iNES ROM file (.nes)."
@@ -26,12 +22,10 @@ def parse_arguments():
         help="Number of tiles to change. 0 (default) = all starting from --first-tile."
     )
     parser.add_argument(
-        "input_file",
-        help="iNES ROM file (.nes) to read."
+        "input_file", help="iNES ROM file (.nes) to read."
     )
     parser.add_argument(
-        "output_file",
-        help="iNES ROM file (.nes) to write."
+        "output_file", help="iNES ROM file (.nes) to write."
     )
 
     args = parser.parse_args()
@@ -44,85 +38,70 @@ def parse_arguments():
     if not os.path.isfile(args.input_file):
         sys.exit("Input file not found.")
     if os.path.exists(args.output_file):
-        sys.exit("Target file already exists.")
+        sys.exit("Output file already exists.")
 
     return args
 
 def read_file_slice(handle, bytesLeft):
-    """Generate bytesLeft bytes from file in chunks."""
-
+    # generate bytesLeft bytes from file
     while bytesLeft:
         chunkSize = min(bytesLeft, 2 ** 20)
         yield handle.read(chunkSize)
         bytesLeft -= chunkSize
 
 def swap_colors(chunk, colors):
-    """Replace colors 0...3 in NES CHR data chunk with new colors."""
+    # replace colors 0...3 in NES CHR data chunk (16n bytes) with new colors (four ints)
 
     chunk = bytearray(chunk)
 
     for charPos in range(0, len(chunk), 16):
-        for y in range(8):
+        for pixelY in range(8):
             # process 8*1 pixels of one tile
             # position of low/high bitplane (byte)
-            loPos = charPos + y
-            hiPos = charPos + 8 + y
+            loPos = charPos + pixelY
+            hiPos = charPos + 8 + pixelY
             # decode pixels, replace colors, reencode pixels
             (chunk[loPos], chunk[hiPos]) = qneslib.tile_slice_encode(
-                colors[color] for color
-                in qneslib.tile_slice_decode(chunk[loPos], chunk[hiPos])
+                colors[color] for color in qneslib.tile_slice_decode(chunk[loPos], chunk[hiPos])
             )
 
     return chunk
 
-def create_output_data(source, args):
-    """Read input file, modify specified tiles, generate output data as chunks."""
+args = parse_arguments()
 
-    fileInfo = qneslib.ines_header_decode(source)
+try:
+    with open(args.input_file, "rb") as source:
+        fileInfo = qneslib.ines_header_decode(source)
+        if fileInfo is None:
+            sys.exit("Invalid iNES ROM file.")
+        if fileInfo["chrSize"] == 0:
+            sys.exit("Input file has no CHR ROM.")
 
-    # length of address range to modify and ranges before/after it
-    beforeLen = fileInfo["chrStart"] + args.first_tile * 16
-    modifyLen = args.tile_count * 16 if args.tile_count else fileInfo["chrSize"]
-    afterLen = fileInfo["chrSize"] - modifyLen
+        # length of CHR data before the tiles to modify
+        beforeLen = args.first_tile * 16
+        if beforeLen >= fileInfo["chrSize"]:
+            sys.exit("--first-tile is too large.")
 
-    source.seek(0)
-
-    # data before tiles to modify
-    yield from read_file_slice(source, beforeLen)
-    # tiles to modify
-    for chunk in read_file_slice(source, modifyLen):
-        yield swap_colors(chunk, args.colors)
-    # data after tiles to modify
-    yield from read_file_slice(source, afterLen)
-
-def main():
-    args = parse_arguments()
-
-    try:
-        with open(args.input_file, "rb") as source:
-            fileInfo = qneslib.ines_header_decode(source)
-            if fileInfo is None:
-                sys.exit("Invalid iNES ROM file.")
-
-            chrSize = fileInfo["chrSize"]
-
-            if chrSize == 0:
-                sys.exit("Input file has no CHR ROM.")
-            if args.first_tile * 16 >= chrSize:
-                sys.exit("--first-tile is too large.")
-            if args.tile_count and (args.first_tile + args.tile_count) * 16 > chrSize:
+        # length of CHR data at/after the tiles to modify
+        if args.tile_count:
+            modifyLen = args.tile_count * 16
+            afterLen = fileInfo["chrSize"] - beforeLen - modifyLen
+            if afterLen < 0:
                 sys.exit("Sum of --first-tile and --tile-count is too large.")
+        else:
+            afterLen = 0
+            modifyLen = fileInfo["chrSize"] - beforeLen - afterLen
 
-            # copy input file to output file
-            try:
-                with open(args.output_file, "wb") as target:
-                    target.seek(0)
-                    for chunk in create_output_data(source, args):
-                        target.write(chunk)
-            except OSError:
-                sys.exit("Error copying data.")
-    except OSError:
-        sys.exit("Error reading input file.")
-
-if __name__ == "__main__":
-    main()
+        # copy input file to output file
+        source.seek(0)
+        with open(args.output_file, "wb") as target:
+            target.seek(0)
+            # copy data before/at/after the tiles to be modified
+            for chunk in read_file_slice(source, fileInfo["chrStart"] + beforeLen):
+                target.write(chunk)
+            for chunk in read_file_slice(source, modifyLen):
+                target.write(swap_colors(chunk, args.colors))
+            for chunk in read_file_slice(source, afterLen):
+                target.write(chunk)
+except OSError:
+    sys.exit("Error reading/writing files.")
