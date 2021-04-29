@@ -160,8 +160,16 @@ def is_prg_bankswitched(prgSize, mapper):
 
     return min_prg_bank_size_for_mapper(mapper) < prgSize
 
-def prg_address_to_cpu_addresses(prgAddr, prgBankSize):
-    """Get CPU ROM addresses from a PRG ROM address.
+def is_mapper_known(mapper):
+    """Is the mapper known by this program? (If not, mapper functions are more likely to return
+    incorrect info.)
+    mapper: iNES mapper number (0x00-0xff)
+    return: bool"""
+
+    return mapper in _MIN_PRG_BANK_SIZES
+
+def address_prg_to_cpu(prgAddr, prgBankSize):
+    """Convert a PRG ROM address into possible CPU ROM addresses.
     prgAddr: PRG ROM address
     prgBankSize: PRG ROM bank size (8_192/16_384/32_768)
     generate: CPU ROM addresses (0x8000-0xffff)"""
@@ -169,25 +177,15 @@ def prg_address_to_cpu_addresses(prgAddr, prgBankSize):
     offset = prgAddr & (prgBankSize - 1)  # within each bank
     yield from (origin | offset for origin in range(0x8000, 0x10000, prgBankSize))
 
-def cpu_address_to_prg_addresses(handle, cpuAddr, compare=None):
-    """Get PRG ROM addresses from a CPU ROM address.
-    handle: valid iNES file
+def address_cpu_to_prg(cpuAddr, prgBankSize, prgSize):
+    """Convert a CPU ROM address into possible PRG ROM addresses.
     cpuAddr: CPU ROM address (0x8000-0xffff)
-    compare: compare value (0x00-0xff/None)
+    prgBankSize: PRG ROM bank size (8_192/16_384/32_768)
+    prgSize: PRG ROM size
     generate: PRG ROM addresses"""
 
-    fileInfo = ines_header_decode(handle)
-    prgBankSize = min_prg_bank_size(fileInfo["prgSize"], fileInfo["mapper"])
     offset = cpuAddr & (prgBankSize - 1)  # within each bank
-    prgAddrRange = range(offset, fileInfo["prgSize"], prgBankSize)
-
-    if compare is None:
-        yield from prgAddrRange
-    else:
-        for prgAddr in prgAddrRange:
-            handle.seek(fileInfo["prgStart"] + prgAddr)
-            if handle.read(1)[0] == compare:
-                yield prgAddr
+    yield from range(offset, prgSize, prgBankSize)
 
 def tile_slice_decode(loByte, hiByte):
     """Decode 8*1 pixels of one tile.

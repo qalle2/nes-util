@@ -10,12 +10,18 @@ NAME
     qneslib - qalle's NES library (Nintendo Entertainment System stuff).
 
 FUNCTIONS
-    cpu_address_to_prg_addresses(handle, cpuAddr, compare=None)
-        Get PRG ROM addresses from a CPU ROM address.
-        handle: valid iNES file
+    address_cpu_to_prg(cpuAddr, prgBankSize, prgSize)
+        Convert a CPU ROM address into possible PRG ROM addresses.
         cpuAddr: CPU ROM address (0x8000-0xffff)
-        compare: compare value (0x00-0xff/None)
+        prgBankSize: PRG ROM bank size (8_192/16_384/32_768)
+        prgSize: PRG ROM size
         generate: PRG ROM addresses
+
+    address_prg_to_cpu(prgAddr, prgBankSize)
+        Convert a PRG ROM address into possible CPU ROM addresses.
+        prgAddr: PRG ROM address
+        prgBankSize: PRG ROM bank size (8_192/16_384/32_768)
+        generate: CPU ROM addresses (0x8000-0xffff)
 
     game_genie_decode(code)
         Decode a Game Genie code.
@@ -50,6 +56,13 @@ FUNCTIONS
         mirroring: name table mirroring (h=horizontal, v=vertical, f=four-screen)
         extraRam: does the game have extra RAM
         return: 16 bytes
+        on error: raise QneslibError
+
+    is_mapper_known(mapper)
+        Is the mapper known by this program? (If not, mapper functions are more likely to return
+        incorrect info.)
+        mapper: iNES mapper number (0x00-0xff)
+        return: bool
 
     is_prg_bankswitched(prgSize, mapper)
         Does the game use PRG ROM bankswitching? (May give false positives, especially if the
@@ -68,12 +81,6 @@ FUNCTIONS
         Get the smallest PRG ROM bank size supported by the mapper.
         mapper: iNES mapper number (0x00-0xff)
         return: 8_192/16_384/32_768 (8_192 if unknown mapper)
-
-    prg_address_to_cpu_addresses(prgAddr, prgBankSize)
-        Get CPU ROM addresses from a PRG ROM address.
-        prgAddr: PRG ROM address
-        prgBankSize: PRG ROM bank size (8_192/16_384/32_768)
-        generate: CPU ROM addresses (0x8000-0xffff)
 
     tile_slice_decode(loByte, hiByte)
         Decode 8*1 pixels of one tile.
@@ -141,25 +148,22 @@ optional arguments:
 
 ## nes_blaster_mapext.py
 ```
-usage: nes_blaster_mapext.py [-h] [-j] [-n MAP_NUMBER]
-                             [-u ULTRA_SUBBLOCK_IMAGE] [-s SUBBLOCK_IMAGE]
-                             [-b BLOCK_IMAGE] [-m MAP_IMAGE] [-v]
+usage: nes_blaster_mapext.py [-h] [-j] [-n MAP_NUMBER] [-u ULTRA_SUBBLOCK_IMAGE]
+                             [-s SUBBLOCK_IMAGE] [-b BLOCK_IMAGE] [-m MAP_IMAGE] [-v]
                              input_file
 
-Extract world maps from NES Blaster Master to PNG files. Note: specify at
-least one of -u/-s/-b/-m.
+Extract world maps from NES Blaster Master to PNG files.
 
 positional arguments:
-  input_file            Blaster Master ROM file in iNES format (.nes, US/US
-                        prototype/EUR/JP; see also --japan).
+  input_file            Blaster Master ROM file in iNES format (.nes, US/US prototype/EUR/JP; see
+                        also --japan).
 
 optional arguments:
   -h, --help            show this help message and exit
-  -j, --japan           Input file is Japanese version (Chou-Wakusei Senki -
-                        MetaFight).
+  -j, --japan           Input file is Japanese version (Chou-Wakusei Senki - MetaFight).
   -n MAP_NUMBER, --map-number MAP_NUMBER
-                        Map to extract: 0...7 = side view of area 1...8,
-                        8...15 = overhead view of area 1...8. Default=0.
+                        Map to extract: 0...7 = side view of area 1...8, 8...15 = overhead view of
+                        area 1...8. Default=0.
   -u ULTRA_SUBBLOCK_IMAGE, --ultra-subblock-image ULTRA_SUBBLOCK_IMAGE
                         Save ultra-subblocks as PNG file (256*256 px).
   -s SUBBLOCK_IMAGE, --subblock-image SUBBLOCK_IMAGE
@@ -167,10 +171,8 @@ optional arguments:
   -b BLOCK_IMAGE, --block-image BLOCK_IMAGE
                         Save blocks as PNG file (1024*1024 px).
   -m MAP_IMAGE, --map-image MAP_IMAGE
-                        Save map as PNG file (up to 2048*2048 px). You
-                        probably want this.
-  -v, --verbose         Print more information. Note: all addresses are
-                        hexadecimal.
+                        Save map as PNG file (up to 2048*2048 px).
+  -v, --verbose         Print more information. Note: all addresses are hexadecimal.
 ```
 
 ## nes_chr_decode.py
@@ -217,8 +219,8 @@ optional arguments:
 
 ## nes_color_swap.py
 ```
-usage: nes_color_swap.py [-h] [-c {0,1,2,3} {0,1,2,3} {0,1,2,3} {0,1,2,3}]
-                         [-f FIRST_TILE] [-n TILE_COUNT]
+usage: nes_color_swap.py [-h] [-c {0,1,2,3} {0,1,2,3} {0,1,2,3} {0,1,2,3}] [-f FIRST_TILE]
+                         [-n TILE_COUNT]
                          input_file output_file
 
 Swap colors in the graphics data (CHR ROM) of an iNES ROM file (.nes).
@@ -230,21 +232,24 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   -c {0,1,2,3} {0,1,2,3} {0,1,2,3} {0,1,2,3}, --colors {0,1,2,3} {0,1,2,3} {0,1,2,3} {0,1,2,3}
-                        Change original colors 0...3 to these colors. Four
-                        colors (each 0...3) separated by spaces. Default: 0 2
-                        3 1
+                        Change original colors 0...3 to these colors. Four colors (each 0...3)
+                        separated by spaces. Default: 0 2 3 1
   -f FIRST_TILE, --first-tile FIRST_TILE
                         First tile to change (0 or greater, default=0).
   -n TILE_COUNT, --tile-count TILE_COUNT
-                        Number of tiles to change. 0 (default) = all starting
-                        from --first-tile.
+                        Number of tiles to change. 0 (default) = all starting from --first-tile.
 ```
 
 ## nes_cpuaddr.py
-Convert an NES PRG ROM address into possible CPU addresses using the iNES ROM file (.nes). Args: file address_in_hexadecimal
+Convert an NES PRG ROM address into possible CPU addresses using the iNES ROM file (.nes). Args: file PRG_ROM_address_in_hexadecimal
 
 ## nesgenie.py
 Encode and decode NES Game Genie codes. Argument: six-letter code, eight-letter code, AAAA RR or AAAA RR CC (AAAA = address in hexadecimal, RR = replacement value in hexadecimal, CC = compare value in hexadecimal).
+
+Example:
+```
+SXIOPO: CPU address = 0x91d9, replace value = 0xad, compare value = none
+```
 
 ## nesgenie_6to8.py
 Convert a 6-letter NES Game Genie code into 8 letters using the iNES ROM file (.nes). Args: file code
@@ -254,43 +259,33 @@ Find the PRG ROM addresses affected by an NES Game Genie code in an iNES ROM fil
 
 ## nesgenie_verconv.py
 ```
-usage: nesgenie_verconv.py [-h] [-s SLICE_LENGTH] [-d MAX_DIFFERENT_BYTES]
-                           [-v]
-                           code file1 file2
+usage: nesgenie_verconv.py [-h] [-s SLICE_LENGTH] [-d MAX_DIFFERENT_BYTES] [-v] code file1 file2
 
-Read two versions (e.g. Japanese and US) of the same NES game in iNES format
-(.nes) and a Game Genie code for one of the versions. Output the equivalent
-code for the other version of the game. Technical explanation: decode the
-code; find out PRG ROM addresses affected in file1; see what's in and around
-them; look for similar bytestrings in file2's PRG ROM; convert the addresses
+Convert an NES Game Genie code from one version of a game to another using both iNES ROM files
+(.nes). Technical explanation: decode the code; find out PRG ROM addresses affected in file1; see
+what's in and around them; look for similar bytestrings in file2's PRG ROM; convert the addresses
 back into CPU addresses; encode them into codes.
 
 positional arguments:
-  code                  An NES Game Genie code that is known to work with
-                        file1. Six-letter codes are not allowed if file1 uses
-                        PRG ROM bankswitching.
-  file1                 An iNES ROM file (.nes) to read. The game your code is
-                        known to work with.
-  file2                 Another iNES ROM file (.nes) to read. The equivalent
-                        code for this game will be searched for.
+  code                  An NES Game Genie code that is known to work with file1. Six-letter codes
+                        are not allowed if file1 uses PRG ROM bankswitching.
+  file1                 An iNES ROM file (.nes) to read. The game your code is known to work with.
+  file2                 Another iNES ROM file (.nes) to read. The equivalent code for this game
+                        will be searched for.
 
 optional arguments:
   -h, --help            show this help message and exit
   -s SLICE_LENGTH, --slice-length SLICE_LENGTH
-                        How many PRG ROM bytes to compare both before and
-                        after the relevant byte (that is, total number of
-                        bytes compared is twice this value, plus one). Fewer
-                        bytes will be compared if the relevant byte is too
-                        close to start or end of PRG ROM. 1 to 20, default=4.
-                        Decrease to get more results.
+                        How many PRG ROM bytes to compare both before and after the relevant byte
+                        (that is, total number of bytes compared is twice this value, plus one).
+                        Fewer bytes will be compared if the relevant byte is too close to start or
+                        end of PRG ROM. 1 to 20, default=4. Decrease to get more results.
   -d MAX_DIFFERENT_BYTES, --max-different-bytes MAX_DIFFERENT_BYTES
-                        Maximum number of non-matching bytes allowed in each
-                        pair of PRG ROM slices to compare. (The relevant byte
-                        must always match.) Minimum=0, default=1,
-                        maximum=twice --slice-length, minus one. Increase to
-                        get more results.
-  -v, --verbose         Print more information. Note: all printed numbers are
-                        hexadecimal.
+                        Maximum number of non-matching bytes allowed in each pair of PRG ROM
+                        slices to compare. (The relevant byte must always match.) Minimum=0,
+                        default=1, maximum=twice --slice-length, minus one. Increase to get more
+                        results.
+  -v, --verbose         Print more information. Note: all printed numbers are hexadecimal.
 ```
 
 ## nes.asm
