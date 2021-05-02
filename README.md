@@ -241,7 +241,10 @@ optional arguments:
 ```
 
 ## nes_cpuaddr.py
-Convert an NES PRG ROM address into possible CPU addresses using the iNES ROM file (.nes). Args: file PRG_ROM_address_in_hexadecimal
+Convert an NES PRG ROM address into possible CPU addresses using the iNES ROM file (.nes). Args: file address_in_hexadecimal
+
+## nes_prgbyte.py
+Get byte value at specified PRG ROM address in an iNES ROM file (.nes). Args: file address_in_hexadecimal
 
 ## nesgenie.py
 Encode and decode NES Game Genie codes. Argument: six-letter code, eight-letter code, AAAA RR or AAAA RR CC (AAAA = address in hexadecimal, RR = replacement value in hexadecimal, CC = compare value in hexadecimal).
