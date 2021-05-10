@@ -9,29 +9,33 @@ Does not do anything by itself but is needed by many other programs in this repo
 NAME
     qneslib - qalle's NES library (Nintendo Entertainment System stuff).
 
+CLASSES
+    builtins.Exception(builtins.BaseException)
+        QneslibError
+
 FUNCTIONS
     address_cpu_to_prg(cpuAddr, prgBankSize, prgSize)
         Convert a CPU ROM address into possible PRG ROM addresses.
-        cpuAddr: CPU ROM address (0x8000-0xffff)
+        cpuAddr:     CPU ROM address (0x8000-0xffff)
         prgBankSize: PRG ROM bank size (8_192/16_384/32_768)
-        prgSize: PRG ROM size
-        generate: PRG ROM addresses
+        prgSize:     PRG ROM size
+        generate:    PRG ROM addresses
 
     address_prg_to_cpu(prgAddr, prgBankSize)
         Convert a PRG ROM address into possible CPU ROM addresses.
-        prgAddr: PRG ROM address
+        prgAddr:     PRG ROM address
         prgBankSize: PRG ROM bank size (8_192/16_384/32_768)
-        generate: CPU ROM addresses (0x8000-0xffff)
+        generate:    CPU ROM addresses (0x8000-0xffff)
 
     game_genie_decode(code)
         Decode a Game Genie code.
         code: 6 or 8 letters from GAME_GENIE_LETTERS
         return:
             if invalid code: None
-            otherwise: (CPU_address, replacement_value, compare_value):
-                CPU_address: 0x8000-0xffff
+            otherwise:       (CPU_address, replacement_value, compare_value):
+                CPU_address:       0x8000-0xffff
                 replacement_value: 0x00-0xff
-                compare_value: None if 6-letter code, 0x00-0xff if 8-letter code
+                compare_value:     None if 6-letter code, 0x00-0xff if 8-letter code
 
     game_genie_encode(addr, repl, comp=None)
         Encode a Game Genie code.
@@ -39,24 +43,33 @@ FUNCTIONS
         repl: replacement value (0x00-0xff)
         comp: compare value (0x00-0xff/None)
         return:
-            if invalid arguments  : None
-            if compare is None    : 6-letter code
-            if compare is not None: 8-letter code
+            if invalid arguments: None
+            if comp is None     : 6-letter code
+            if comp is not None : 8-letter code
 
     ines_header_decode(handle)
         Parse the header of an iNES ROM file.
         handle: iNES ROM file
-        return: dict or None on error
+        return: None on error, otherwise a dict with the following keys:
+            trainerStart: trainer address
+            trainerSize:  trainer size
+            prgStart:     PRG ROM address
+            prgSize:      PRG ROM size
+            chrStart:     CHR ROM address
+            chrSize:      CHR ROM size
+            mapper:       iNES mapper number (0x00-0xff)
+            mirroring:    name table mirroring ('h'=horizontal, 'v'=vertical, 'f'=four-screen)
+            extraRam:     does the game have extra RAM? (bool)
 
     ines_header_encode(prgSize, chrSize, mapper=0, mirroring='h', extraRam=False)
         Create an iNES file header.
-        prgSize: PRG ROM size
-        chrSize: CHR ROM size
-        mapper: iNES mapper number (0x00-0xff)
+        prgSize:   PRG ROM size
+        chrSize:   CHR ROM size
+        mapper:    iNES mapper number (0x00-0xff)
         mirroring: name table mirroring (h=horizontal, v=vertical, f=four-screen)
-        extraRam: does the game have extra RAM
-        return: 16 bytes
-        on error: raise QneslibError
+        extraRam:  does the game have extra RAM (bool)
+        return:    16 bytes
+        raise:     QneslibError on error
 
     is_mapper_known(mapper)
         Is the mapper known by this program? (If not, mapper functions are more likely to return
@@ -68,14 +81,14 @@ FUNCTIONS
         Does the game use PRG ROM bankswitching? (May give false positives, especially if the
         mapper is unknown. Should not give false negatives.)
         prgSize: PRG ROM size
-        mapper: iNES mapper number (0x00-0xff)
-        return: bool
+        mapper:  iNES mapper number (0x00-0xff)
+        return:  bool
 
     min_prg_bank_size(prgSize, mapper)
         Get the smallest PRG ROM bank size a game may use.
         prgSize: PRG ROM size
-        mapper: iNES mapper number (0x00-0xff)
-        return: 8_192/16_384/32_768 (8_192 if unknown mapper)
+        mapper:  iNES mapper number (0x00-0xff)
+        return:  8_192/16_384/32_768 (8_192 if unknown mapper)
 
     min_prg_bank_size_for_mapper(mapper)
         Get the smallest PRG ROM bank size supported by the mapper.
@@ -83,13 +96,13 @@ FUNCTIONS
         return: 8_192/16_384/32_768 (8_192 if unknown mapper)
 
     tile_slice_decode(loByte, hiByte)
-        Decode 8*1 pixels of one tile.
+        Decode 8*1 pixels of one tile of CHR data.
         loByte: low bitplane (0x00-0xff)
         hiByte: high bitplane (0x00-0xff)
         return: eight 2-bit ints
 
     tile_slice_encode(pixels)
-        Encode 8*1 pixels of one tile.
+        Encode 8*1 pixels of one tile of CHR data.
         pixels: eight 2-bit ints
         return: (low_bitplane, high_bitplane); both 0x00-0xff
 

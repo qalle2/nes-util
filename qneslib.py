@@ -146,8 +146,8 @@ def min_prg_bank_size_for_mapper(mapper):
 def min_prg_bank_size(prgSize, mapper):
     """Get the smallest PRG ROM bank size a game may use.
     prgSize: PRG ROM size
-    mapper: iNES mapper number (0x00-0xff)
-    return: 8_192/16_384/32_768 (8_192 if unknown mapper)"""
+    mapper:  iNES mapper number (0x00-0xff)
+    return:  8_192/16_384/32_768 (8_192 if unknown mapper)"""
 
     return min(min_prg_bank_size_for_mapper(mapper), prgSize)
 
@@ -155,8 +155,8 @@ def is_prg_bankswitched(prgSize, mapper):
     """Does the game use PRG ROM bankswitching? (May give false positives, especially if the
     mapper is unknown. Should not give false negatives.)
     prgSize: PRG ROM size
-    mapper: iNES mapper number (0x00-0xff)
-    return: bool"""
+    mapper:  iNES mapper number (0x00-0xff)
+    return:  bool"""
 
     return min_prg_bank_size_for_mapper(mapper) < prgSize
 
@@ -170,25 +170,25 @@ def is_mapper_known(mapper):
 
 def address_prg_to_cpu(prgAddr, prgBankSize):
     """Convert a PRG ROM address into possible CPU ROM addresses.
-    prgAddr: PRG ROM address
+    prgAddr:     PRG ROM address
     prgBankSize: PRG ROM bank size (8_192/16_384/32_768)
-    generate: CPU ROM addresses (0x8000-0xffff)"""
+    generate:    CPU ROM addresses (0x8000-0xffff)"""
 
     offset = prgAddr & (prgBankSize - 1)  # within each bank
     yield from (origin | offset for origin in range(0x8000, 0x10000, prgBankSize))
 
 def address_cpu_to_prg(cpuAddr, prgBankSize, prgSize):
     """Convert a CPU ROM address into possible PRG ROM addresses.
-    cpuAddr: CPU ROM address (0x8000-0xffff)
+    cpuAddr:     CPU ROM address (0x8000-0xffff)
     prgBankSize: PRG ROM bank size (8_192/16_384/32_768)
-    prgSize: PRG ROM size
-    generate: PRG ROM addresses"""
+    prgSize:     PRG ROM size
+    generate:    PRG ROM addresses"""
 
     offset = cpuAddr & (prgBankSize - 1)  # within each bank
     yield from range(offset, prgSize, prgBankSize)
 
 def tile_slice_decode(loByte, hiByte):
-    """Decode 8*1 pixels of one tile.
+    """Decode 8*1 pixels of one tile of CHR data.
     loByte: low bitplane (0x00-0xff)
     hiByte: high bitplane (0x00-0xff)
     return: eight 2-bit ints"""
@@ -201,7 +201,7 @@ def tile_slice_decode(loByte, hiByte):
     return pixels[::-1]
 
 def tile_slice_encode(pixels):
-    """Encode 8*1 pixels of one tile.
+    """Encode 8*1 pixels of one tile of CHR data.
     pixels: eight 2-bit ints
     return: (low_bitplane, high_bitplane); both 0x00-0xff"""
 
@@ -216,7 +216,16 @@ def tile_slice_encode(pixels):
 def ines_header_decode(handle):
     """Parse the header of an iNES ROM file.
     handle: iNES ROM file
-    return: dict or None on error"""
+    return: None on error, otherwise a dict with the following keys:
+        trainerStart: trainer address
+        trainerSize:  trainer size
+        prgStart:     PRG ROM address
+        prgSize:      PRG ROM size
+        chrStart:     CHR ROM address
+        chrSize:      CHR ROM size
+        mapper:       iNES mapper number (0x00-0xff)
+        mirroring:    name table mirroring ('h'=horizontal, 'v'=vertical, 'f'=four-screen)
+        extraRam:     does the game have extra RAM? (bool)"""
 
     fileSize = handle.seek(0, 2)
 
@@ -227,47 +236,44 @@ def ines_header_decode(handle):
     handle.seek(0)
     (id_, prgSize, chrSize, flags6, flags7) = struct.unpack("4s4B8x", handle.read(16))
 
-    # PRG ROM / CHR ROM / trainer size in bytes (PRG ROM size 0 = 256)
+    # PRG ROM / CHR ROM / trainer size in bytes (note: PRG ROM size 0 = 256)
     prgSize = (prgSize if prgSize else 256) * 16 * 1024
     chrSize = chrSize * 8 * 1024
     trainerSize = bool(flags6 & 0x04) * 512
 
-    # validate id and file size (accept files that are too large)
+    # validate id and file size (note: accept files that are too large)
     if id_ != _INES_ID or fileSize < 16 + trainerSize + prgSize + chrSize:
         return None
 
     # type of name table mirroring
     if flags6 & 0x08:
-        mirroring = "f"  # four-screen
+        mirroring = "f"
     elif flags6 & 0x01:
-        mirroring = "v"  # vertical
+        mirroring = "v"
     else:
-        mirroring = "h"  # horizontal
-
-    mapper = (flags7 & 0xf0) | (flags6 >> 4)  # iNES mapper number
-    extraRam = bool(flags6 & 0x02)            # has extra RAM?
+        mirroring = "h"
 
     return {
-        "trainerStart": 16,                      # trainer address
-        "trainerSize": trainerSize,              # trainer size
-        "prgStart": 16 + trainerSize,            # PRG ROM address
-        "prgSize": prgSize,                      # PRG ROM size
-        "chrStart": 16 + trainerSize + prgSize,  # CHR ROM address
-        "chrSize": chrSize,                      # CHR ROM size
-        "mapper": mapper,                        # mapper number
-        "mirroring": mirroring,                  # name table mirroring (f/v/h)
-        "extraRam": extraRam,                    # has extra RAM?
+        "trainerStart": 16,
+        "trainerSize": trainerSize,
+        "prgStart": 16 + trainerSize,
+        "prgSize": prgSize,
+        "chrStart": 16 + trainerSize + prgSize,
+        "chrSize": chrSize,
+        "mapper": (flags7 & 0xf0) | (flags6 >> 4),
+        "mirroring": mirroring,
+        "extraRam": bool(flags6 & 0x02),
     }
 
 def ines_header_encode(prgSize, chrSize, mapper=0, mirroring="h", extraRam=False):
     """Create an iNES file header.
-    prgSize: PRG ROM size
-    chrSize: CHR ROM size
-    mapper: iNES mapper number (0x00-0xff)
-    mirroring: name table mirroring (h=horizontal, v=vertical, f=four-screen)
-    extraRam: does the game have extra RAM
-    return: 16 bytes
-    on error: raise QneslibError"""
+    prgSize:   PRG ROM size
+    chrSize:   CHR ROM size
+    mapper:    iNES mapper number (0x00-0xff)
+    mirroring: name table mirroring ('h'=horizontal, 'v'=vertical, 'f'=four-screen)
+    extraRam:  does the game have extra RAM? (bool)
+    return:    16 bytes
+    raise:     QneslibError on error"""
 
     # get PRG ROM size in 16-KiB units (256 = 0)
     (prgSize, remainder) = divmod(prgSize, 16 * 1024)
@@ -299,10 +305,10 @@ def game_genie_decode(code):
     code: 6 or 8 letters from GAME_GENIE_LETTERS
     return:
         if invalid code: None
-        otherwise: (CPU_address, replacement_value, compare_value):
-            CPU_address: 0x8000-0xffff
+        otherwise:       (CPU_address, replacement_value, compare_value):
+            CPU_address:       0x8000-0xffff
             replacement_value: 0x00-0xff
-            compare_value: None if 6-letter code, 0x00-0xff if 8-letter code"""
+            compare_value:     None if 6-letter code, 0x00-0xff if 8-letter code"""
 
     # validate
     if len(code) not in (6, 8) or set(code.upper()) - set(GAME_GENIE_LETTERS):
@@ -341,9 +347,9 @@ def game_genie_encode(addr, repl, comp=None):
     repl: replacement value (0x00-0xff)
     comp: compare value (0x00-0xff/None)
     return:
-        if invalid arguments  : None
-        if compare is None    : 6-letter code
-        if compare is not None: 8-letter code"""
+        if invalid arguments: None
+        if comp is None     : 6-letter code
+        if comp is not None : 8-letter code"""
 
     # validate
     if not 0 <= addr <= 0xffff or not 0 <= repl <= 0xff \
