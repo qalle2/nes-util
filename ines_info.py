@@ -1,10 +1,38 @@
-import os, sys, zlib
+import argparse, collections, os, sys, zlib
 import qneslib  # qalle's NES library, https://github.com/qalle2/nes-util
 
-OUTPUT_FIELDS = (
-    "file", "size", "prgSize", "chrSize", "mapper", "mirroring", "extraRam", "trainerSize",
-    "checksum", "prgChecksum", "chrChecksum"
-)
+OUTPUT_FIELDS = collections.OrderedDict((
+    ("file",        "file name"),
+    ("size",        "file size"),
+    ("trainerSize", "trainer size"),
+    ("prgSize",     "PRG ROM size"),
+    ("chrSize",     "CHR ROM size"),
+    ("mapper",      "iNES mapper number"),
+    ("mirroring",   "name table mirroring"),
+    ("extraRam",    "extra RAM"),
+    ("checksum",    "file checksum"),
+    ("prgChecksum", "PRG ROM checksum"),
+    ("chrChecksum", "CHR ROM checksum"),
+))
+
+def parse_arguments():
+    # parse and validate command line arguments using argparse
+
+    parser = argparse.ArgumentParser(
+        description="Print information of an iNES ROM file (.nes). Note: all checksums are CRC32 "
+        "(zlib) in decimal."
+    )
+    parser.add_argument("input_file", help="File to read.")
+    parser.add_argument(
+        "-c", "--csv", action="store_true",
+        help="Output in CSV format. Fields: " + ",".join(f'"{f}"' for f in OUTPUT_FIELDS)
+    )
+    args = parser.parse_args()
+
+    if not os.path.isfile(args.input_file):
+        sys.exit("Input file not found.")
+
+    return args
 
 def file_slice_checksum(handle, bytesLeft):
     # compute CRC32 checksum starting from current file position
@@ -13,14 +41,14 @@ def file_slice_checksum(handle, bytesLeft):
         chunkSize = min(bytesLeft, 2 ** 20)
         checksum = zlib.crc32(handle.read(chunkSize), checksum)
         bytesLeft -= chunkSize
-    return format(checksum, "08x")
+    return checksum
 
 def get_ines_info(handle):
     # get information of an iNES ROM file
 
     fileInfo = qneslib.ines_header_decode(handle)
     if fileInfo is None:
-        sys.exit(f"{handle.name}: invalid iNES ROM file")
+        sys.exit(f"{os.path.basename(handle.name)}: invalid iNES ROM file")
 
     fileSize = handle.seek(0, 2)
 
@@ -43,28 +71,31 @@ def get_ines_info(handle):
     })
     return fileInfo
 
-def format_output_value(value):
+def format_csv_output_value(value):
     # format a value (bool/int/str) for output
     if isinstance(value, bool):
         value = ["no", "yes"][value]
     return f'{value}' if isinstance(value, int) else f'"{value}"'
 
-if len(sys.argv) != 2:
-    sys.exit(
-        "Print information of an iNES ROM file (.nes) in CSV format. Argument: file. Output "
-        "fields: " + ",".join(f'"{f}"' for f in OUTPUT_FIELDS) + ". prg=PRG ROM, chr=CHR ROM, "
-        "mirroring=name table mirroring (h=horizontal, v=vertical, f=four-screen), "
-        "checksum=CRC32 (zlib)."
-    )
+def main():
+    args = parse_arguments()
 
-inputFile = sys.argv[1]
-if not os.path.isfile(inputFile):
-    sys.exit("File not found.")
+    try:
+        with open(args.input_file, "rb") as handle:
+            fileInfo = get_ines_info(handle)
+    except OSError:
+        sys.exit("Error reading the file.")
 
-try:
-    with open(inputFile, "rb") as handle:
-        fileInfo = get_ines_info(handle)
-except OSError:
-    sys.exit("Error reading the file.")
+    if args.csv:
+        print(",".join(format_csv_output_value(fileInfo[f]) for f in OUTPUT_FIELDS))
+    else:
+        for field in OUTPUT_FIELDS:
+            value = fileInfo[field]
+            if isinstance(value, bool):
+                value = ["no", "yes"][value]
+            elif field == "mirroring":
+                value = {"h": "horizontal", "v": "vertical", "f": "four-screen"}[value]
+            print(f"{OUTPUT_FIELDS[field]}: {value}")
 
-print(",".join(format_output_value(fileInfo[f]) for f in OUTPUT_FIELDS))
+if __name__ == "__main__":
+    main()

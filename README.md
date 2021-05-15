@@ -137,11 +137,33 @@ optional arguments:
 ```
 
 ## ines_info.py
-Print information of an iNES ROM file (.nes) in CSV format. Argument: file. Output fields: "file","size","prgSize","chrSize","mapper","mirroring","extraRam","trainerSize","checksum","prgChecksum","chrChecksum". prg=PRG ROM, chr=CHR ROM, mirroring=name table mirroring (h=horizontal, v=vertical, f=four-screen), checksum=CRC32 (zlib).
+```
+usage: ines_info.py [-h] [-c] input_file
+
+Print information of an iNES ROM file (.nes). Note: all checksums are CRC32 (zlib) in decimal.
+
+positional arguments:
+  input_file  File to read.
+
+optional arguments:
+  -h, --help  show this help message and exit
+  -c, --csv   Output in CSV format. Fields: "file","size","trainerSize","prgSize","chrSize","mappe
+              r","mirroring","extraRam","checksum","prgChecksum","chrChecksum"
+```
 
 Example:
 ```
-"smb1.nes",40976,32768,8192,0,"v","no",0,"3337ec46","5cf548d3","867b51ad"
+file name: smb1.nes
+file size: 40976
+trainer size: 0
+PRG ROM size: 32768
+CHR ROM size: 8192
+iNES mapper number: 0
+name table mirroring: vertical
+extra RAM: no
+file checksum: 859302982
+PRG ROM checksum: 1559578835
+CHR ROM checksum: 2256228781
 ```
 
 ## ines_split.py
@@ -195,8 +217,8 @@ usage: nes_chr_decode.py [-h] [-p PALETTE PALETTE PALETTE PALETTE] input_file ou
 Convert NES CHR (graphics) data into a PNG file.
 
 positional arguments:
-  input_file            File to read. An iNES ROM file (.nes) or raw CHR data (the size must be a
-                        multiple of 256 bytes).
+  input_file            File to read. An iNES ROM file (.nes) or raw CHR data. The size of a raw
+                        CHR data file must be a multiple of 256 bytes (16 tiles).
   output_file           PNG file to write. Always 128 pixels (16 tiles) wide.
 
 optional arguments:
@@ -209,14 +231,13 @@ optional arguments:
 
 ## nes_chr_encode.py
 ```
-usage: nes_chr_encode.py [-h] [-p PALETTE PALETTE PALETTE PALETTE] [-v] input_file output_file
+usage: nes_chr_encode.py [-h] [-p PALETTE PALETTE PALETTE PALETTE] input_file output_file
 
 Convert an image file into an NES CHR (graphics) data file.
 
 positional arguments:
   input_file            Image file to read. Width must be 128 pixels (16 tiles). Height must be a
                         multiple of 8 pixels (1 tile). There must be four unique colors or less.
-                        See also --palette.
   output_file           NES CHR data file to write. The size will be a multiple of 256 bytes (16
                         tiles).
 
@@ -227,7 +248,6 @@ optional arguments:
                         hexadecimal RRGGBB color codes separated by spaces. Must be all distinct
                         and include every unique color in the input file. May contain colors not
                         present in the input file. Default: 000000 555555 aaaaaa ffffff
-  -v, --verbose         Print more info.
 ```
 
 ## nes_color_swap.py

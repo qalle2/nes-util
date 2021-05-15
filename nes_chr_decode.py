@@ -1,8 +1,16 @@
-"""Convert NES CHR data into a PNG file."""
-
 import argparse, itertools, os, sys
 from PIL import Image  # Pillow, https://python-pillow.org
 import qneslib  # qalle's NES library, https://github.com/qalle2/nes-util
+
+def decode_color_code(color):
+    # decode a hexadecimal RRGGBB color code into (red, green, blue)
+    if len(color) != 6:
+        sys.exit("Each color code must be 6 hexadecimal digits.")
+    try:
+        color = int(color, 16)
+    except ValueError:
+        sys.exit("Color codes must be hexadecimal.")
+    return (color >> 16, (color >> 8) & 0xff, color & 0xff)
 
 def parse_arguments():
     # parse command line arguments using argparse
@@ -10,7 +18,6 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Convert NES CHR (graphics) data into a PNG file."
     )
-
     parser.add_argument(
         "-p", "--palette", nargs=4, default=("000000", "555555", "aaaaaa", "ffffff"),
         help="Output palette (which image colors correspond to CHR colors 0...3). Four hexadecimal "
@@ -18,15 +25,15 @@ def parse_arguments():
     )
     parser.add_argument(
         "input_file",
-        help="File to read. An iNES ROM file (.nes) or raw CHR data (the size must be a multiple "
-        "of 256 bytes)."
+        help="File to read. An iNES ROM file (.nes) or raw CHR data. The size of a raw CHR data "
+        "file must be a multiple of 256 bytes (16 tiles)."
     )
     parser.add_argument(
         "output_file", help="PNG file to write. Always 128 pixels (16 tiles) wide."
     )
-
     args = parser.parse_args()
 
+    [decode_color_code(c) for c in args.palette]  # validate
     if not os.path.isfile(args.input_file):
         sys.exit("Input file not found.")
     if os.path.exists(args.output_file):
@@ -34,22 +41,8 @@ def parse_arguments():
 
     return args
 
-def decode_color_code(color):
-    # decode a hexadecimal RRGGBB color code into (red, green, blue)
-
-    if len(color) != 6:
-        sys.exit("Each color code must be 6 hexadecimal digits.")
-
-    try:
-        color = int(color, 16)
-    except ValueError:
-        sys.exit("Color codes must be hexadecimal.")
-
-    return (color >> 16, (color >> 8) & 0xff, color & 0xff)
-
 def get_chr_addr_and_size(handle):
     # detect file type and get (address, size) of CHR ROM data
-
     fileInfo = qneslib.ines_header_decode(handle)
     if fileInfo is not None:
         # iNES ROM file
@@ -64,51 +57,49 @@ def get_chr_addr_and_size(handle):
         return (0, fileSize)
 
 def decode_pixel_rows(handle, charRowCount):
-    # generate one pixel row (128 two-bit values) per call from NES CHR data
-
+    # generate 128*1 pixels (two-bit ints) per call from NES CHR data;
+    # note: a tile is 8 bytes of low bitplane from top to bottom, same for high bitplane
     pixelRow = []
     for i in range(charRowCount):
-        # read 16*1 characters (16 bytes or 8*8 pixels each)
-        charRow = handle.read(256)
-        for pixY in range(8):
+        charRow = handle.read(256)  # 16*1 tiles (128*8 pixels)
+        for y in range(8):
             pixelRow.clear()
-            for charX in range(16):
-                # decode two bytes (bitplanes) into eight pixels
-                loPos = (charX << 4) | pixY
-                hiPos = (charX << 4) | 8 | pixY
-                pixelRow.extend(qneslib.tile_slice_decode(charRow[loPos], charRow[hiPos]))
+            for x in range(16):
+                # decode 2 bytes (8 bytes apart) into 8*1 pixels
+                pixelRow.extend(
+                    qneslib.tile_slice_decode(charRow[x * 16 + y], charRow[x * 16 + y + 8])
+                )
             yield pixelRow
 
-def chr_data_to_png(handle, palette):
+def chr_data_to_png(handle, args):
     # convert CHR data into a PNG image using Pillow
 
     (chrAddr, chrSize) = get_chr_addr_and_size(handle)
     charRowCount = chrSize // 256
 
     image = Image.new("P", (16 * 8, charRowCount * 8))
-    image.putpalette(itertools.chain.from_iterable(palette))
+    image.putpalette(itertools.chain.from_iterable(decode_color_code(c) for c in args.palette))
 
     handle.seek(chrAddr)
     for (y, pixelRow) in enumerate(decode_pixel_rows(handle, charRowCount)):
-        for (x, value) in enumerate(pixelRow):
-            image.putpixel((x, y), value)
+        for (x, colorIndex) in enumerate(pixelRow):
+            image.putpixel((x, y), colorIndex)
 
     return image
 
-args = parse_arguments()
-palette = tuple(decode_color_code(color) for color in args.palette)
+def main():
+    args = parse_arguments()
 
-# convert CHR data into an image
-try:
-    with open(args.input_file, "rb") as handle:
-        image = chr_data_to_png(handle, palette)
-except OSError:
-    sys.exit("Error reading input file.")
+    try:
+        # convert CHR data into an image
+        with open(args.input_file, "rb") as handle:
+            image = chr_data_to_png(handle, args)
+        # save image
+        with open(args.output_file, "wb") as handle:
+            handle.seek(0)
+            image.save(handle, "png")
+    except OSError:
+        sys.exit("Error reading/writing files.")
 
-# save image
-try:
-    with open(args.output_file, "wb") as handle:
-        handle.seek(0)
-        image.save(handle, "png")
-except OSError:
-    sys.exit("Error writing output file.")
+if __name__ == "__main__":
+    main()
