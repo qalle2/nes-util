@@ -4,20 +4,17 @@ import qneslib  # qalle's NES library, https://github.com/qalle2/nes-util
 def parse_arguments():
     """Parse command line arguments using argparse."""
 
-    parser = argparse.ArgumentParser(
-        description="Create an iNES ROM file (.nes) from PRG ROM and CHR ROM data files."
-    )
-
+    parser = argparse.ArgumentParser(description="Create an iNES ROM file (.nes).")
     parser.add_argument(
         "-p", "--prg-rom", required=True,
-        help="PRG ROM data file. Required. Size: 16...4096 KiB and a multiple of 16 KiB."
+        help="PRG ROM data file to read. Required. Size: 16-4096 KiB and a multiple of 16 KiB."
     )
     parser.add_argument(
         "-c", "--chr-rom",
-        help="CHR ROM data file. Size: 0...2040 KiB and a multiple of 8 KiB."
+        help="CHR ROM data file to read. Size: 0-2040 KiB and a multiple of 8 KiB."
     )
     parser.add_argument(
-        "-m", "--mapper", type=int, default=0, help="Mapper number (0...255). Default=0 (NROM)."
+        "-m", "--mapper", type=int, default=0, help="iNES mapper number (0-255). Default=0 (NROM)."
     )
     parser.add_argument(
         "-n", "--mirroring", choices=("h", "v", "f"), default="h",
@@ -25,12 +22,9 @@ def parse_arguments():
     )
     parser.add_argument(
         "-x", "--extra-ram", action="store_true",
-        help="The game contains extra RAM at $6000...$7fff."
+        help="The game contains extra RAM at $6000-$7fff."
     )
-    parser.add_argument(
-        "outputFile", help="The iNES ROM file (.nes) to write."
-    )
-
+    parser.add_argument("outputFile", help="The iNES ROM file (.nes) to write.")
     args = parser.parse_args()
 
     if not os.path.isfile(args.prg_rom):
@@ -53,33 +47,37 @@ def copy_file(source, target):
         target.write(source.read(chunkSize))
         bytesLeft -= chunkSize
 
-args = parse_arguments()
+def main():
+    args = parse_arguments()
 
-# get PRG/CHR ROM size
-try:
-    prgSize = os.path.getsize(args.prg_rom)
-    chrSize = 0 if args.chr_rom is None else os.path.getsize(args.chr_rom)
-except OSError:
-    sys.exit("Error getting PRG/CHR ROM file size.")
+    # get PRG/CHR ROM size
+    try:
+        prgSize = os.path.getsize(args.prg_rom)
+        chrSize = 0 if args.chr_rom is None else os.path.getsize(args.chr_rom)
+    except OSError:
+        sys.exit("Error getting PRG/CHR ROM file size.")
 
-# create iNES header
-try:
-    header = qneslib.ines_header_encode(
-        prgSize=prgSize, chrSize=chrSize, mapper=args.mapper, mirroring=args.mirroring,
-        extraRam=args.extra_ram
-    )
-except qneslib.QneslibError as error:
-    sys.exit(f"Error: {error}")
+    # create iNES header
+    try:
+        header = qneslib.ines_header_encode(
+            prgSize=prgSize, chrSize=chrSize, mapper=args.mapper, mirroring=args.mirroring,
+            extraRam=args.extra_ram
+        )
+    except qneslib.QneslibError as error:
+        sys.exit(f"Error: {error}")
 
-# write header and PRG/CHR ROM data to output file
-try:
-    with open(args.outputFile, "wb") as target:
-        target.seek(0)
-        target.write(header)
-        with open(args.prg_rom, "rb") as source:
-            copy_file(source, target)
-        if chrSize:
-            with open(args.chr_rom, "rb") as source:
+    # write header and PRG/CHR ROM data to output file
+    try:
+        with open(args.outputFile, "wb") as target:
+            target.seek(0)
+            target.write(header)
+            with open(args.prg_rom, "rb") as source:
                 copy_file(source, target)
-except OSError:
-    sys.exit("Error reading/writing files.")
+            if chrSize:
+                with open(args.chr_rom, "rb") as source:
+                    copy_file(source, target)
+    except OSError:
+        sys.exit("Error reading/writing files.")
+
+if __name__ == "__main__":
+    main()

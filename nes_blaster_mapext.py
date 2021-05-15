@@ -204,113 +204,113 @@ def create_map_image(mapData, blockData, sbData, usbImg, worldPal):
                 outImg.paste(inImg, (x, y))
     return outImg
 
-args = parse_arguments()
+def extract_map(sourceHnd, args):
+    # extract one ultra-subblock image, subblock image, block image and/or map image from the file
 
-try:
-    with open(args.input_file, "rb") as sourceHnd:
-        # parse iNES header
-        fileInfo = qneslib.ines_header_decode(sourceHnd)
-        if fileInfo is None:
-            sys.exit("Not a valid iNES ROM file.")
+    # parse iNES header
+    fileInfo = qneslib.ines_header_decode(sourceHnd)
+    if fileInfo is None:
+        sys.exit("Not a valid iNES ROM file.")
 
-        if not is_blaster_master(fileInfo):
-            sys.exit("The file doesn't look like Blaster Master.")
+    if not is_blaster_master(fileInfo):
+        sys.exit("The file doesn't look like Blaster Master.")
 
-        (prgBank, worldPtr, chrBank) = MAP_DATA_ADDRESSES[args.map_number]
-        prgBank = 4 if prgBank == 2 and args.japan else prgBank  # the only version difference
-        scrollPtr = worldPtr + 2
+    (prgBank, worldPtr, chrBank) = MAP_DATA_ADDRESSES[args.map_number]
+    prgBank = 4 if prgBank == 2 and args.japan else prgBank  # the only version difference
+    scrollPtr = worldPtr + 2
 
-        # read PRG bank
-        sourceHnd.seek(fileInfo["prgStart"] + prgBank * 16 * 1024)
-        prgBankData = sourceHnd.read(16 * 1024)
+    # read PRG bank
+    sourceHnd.seek(fileInfo["prgStart"] + prgBank * 16 * 1024)
+    prgBankData = sourceHnd.read(16 * 1024)
 
-        worldAddr  = decode_offset(prgBankData[worldPtr :worldPtr +2])
-        scrollAddr = decode_offset(prgBankData[scrollPtr:scrollPtr+2])
+    worldAddr  = decode_offset(prgBankData[worldPtr :worldPtr +2])
+    scrollAddr = decode_offset(prgBankData[scrollPtr:scrollPtr+2])
 
-        if args.verbose:
-            print(f"Map: {args.map_number:d}, PRG bank: {prgBank}, CHR bank: {chrBank}")
-            print(f"World data at {worldAddr:04x}, scroll data at {scrollAddr:04x}")
+    if args.verbose:
+        print(f"Map={args.map_number}, PRG bank={prgBank}, CHR bank={chrBank}")
+        print(f"World data @ {worldAddr:04x}, scroll data @ {scrollAddr:04x}")
 
-        # The first data sections are always: palette, ultra-subblocks, subblocks, blocks, map.
-        # The last two are USB attributes and scroll, in either order.
-
-        (palAddr, usbAttrAddr, usbAddr, sbAddr, blockAddr, mapAddr) = (
-            decode_offset(prgBankData[pos:pos+2])
-            for pos in range(worldAddr, worldAddr + 12, 2)
+    (palAddr, usbAttrAddr, usbAddr, sbAddr, blockAddr, mapAddr) = (
+        decode_offset(prgBankData[pos:pos+2])
+        for pos in range(worldAddr, worldAddr + 12, 2)
+    )
+    if args.verbose:
+        print(
+            f"Palette @ {palAddr:04x}, "
+            f"USBs @ {usbAddr:04x}, "
+            f"SBs @ {sbAddr:04x}, "
+            f"blocks @ {blockAddr:04x}, "
+            f"map @ {mapAddr:04x}, "
+            f"USB attributes @ {usbAttrAddr:04x}"
         )
+    assert worldAddr < palAddr < usbAddr < sbAddr < blockAddr < mapAddr \
+    < min(usbAttrAddr, scrollAddr)
 
-        if args.verbose:
-            print(
-                "Section addresses: "
-                f"palette: {palAddr:04x}, "
-                f"USBs: {usbAddr:04x}, "
-                f"SBs: {sbAddr:04x}, "
-                f"blocks: {blockAddr:04x}, "
-                f"map: {mapAddr:04x}, "
-                f"USB attributes: {usbAttrAddr:04x}"
-            )
+    # palette (4*4 NES color numbers)
+    worldPalette = prgBankData[palAddr:palAddr+16]
+    assert max(worldPalette) <= 0x3f and len(set(worldPalette)) <= 1 + 4 * 3
 
-        # read this world's palette (always 4*4 bytes, contains duplicate NES colors)
-        worldPalette = prgBankData[palAddr:palAddr+16]
-        assert max(worldPalette) <= 0x3f
+    # ultra-subblock data
+    assert sbAddr - usbAddr in range(76 * 4, 155 * 4, 4)
+    usbData = tuple(prgBankData[i:i+4] for i in range(usbAddr, sbAddr, 4))
 
-        # read ultra-subblock data
-        assert sbAddr - usbAddr in range(4, 256 * 4, 4)
-        usbData = tuple(prgBankData[i:i+4] for i in range(usbAddr, sbAddr, 4))
+    # subblock data
+    assert blockAddr - sbAddr in range(99 * 4, 245 * 4, 4)
+    sbData = tuple(prgBankData[i:i+4] for i in range(sbAddr, blockAddr, 4))
+    assert max(itertools.chain.from_iterable(sbData)) < len(usbData)
 
-        # read subblock data
-        assert blockAddr - sbAddr in range(4, 256 * 4, 4)
-        sbData = tuple(prgBankData[i:i+4] for i in range(sbAddr, blockAddr, 4))
-        assert max(itertools.chain.from_iterable(sbData)) < len(usbData)
+    # block data
+    assert mapAddr - blockAddr in range(108 * 4, 255 * 4, 4)
+    blockData = tuple(prgBankData[i:i+4] for i in range(blockAddr, mapAddr, 4))
+    assert max(itertools.chain.from_iterable(blockData)) < len(sbData)
 
-        # read block data
-        assert mapAddr - blockAddr in range(4, 256 * 4, 4)
-        blockData = tuple(prgBankData[i:i+4] for i in range(blockAddr, mapAddr, 4))
-        assert max(itertools.chain.from_iterable(blockData)) < len(sbData)
+    # map data
+    mapEnd = min(usbAttrAddr, scrollAddr)
+    assert mapEnd - mapAddr in range(25 * 32, 33 * 32, 32)
+    mapData = prgBankData[mapAddr:mapEnd]
+    assert max(set(mapData)) < len(blockData)
 
-        # read map data
-        mapEnd = min(usbAttrAddr, scrollAddr)
-        assert mapEnd - mapAddr in range(32, 32 * 32 + 1, 32)
-        mapData = prgBankData[mapAddr:mapEnd]
-        assert max(set(mapData)) < len(blockData)
+    # read ultra-subblock attribute data (1 byte/ultra-subblock)
+    usbAttrData = prgBankData[usbAttrAddr:usbAttrAddr+len(usbData)]
 
-        # read ultra-subblock attribute data (1 byte/ultra-subblock)
-        if usbAttrAddr <= scrollAddr < usbAttrAddr + len(usbData):
-            print(
-                "Warning: scroll data overlaps with ultra-subblock attribute data. "
-                "(This is expected for map 3 of Japanese version.)",
-                file=sys.stderr
-            )
-        usbAttrData = prgBankData[usbAttrAddr:usbAttrAddr+len(usbData)]
+    # read and decode tile data
+    sourceHnd.seek(fileInfo["chrStart"] + chrBank * 4 * 1024)
+    tileData = list(get_tile_data(sourceHnd))
 
-        # read and decode tile data
-        sourceHnd.seek(fileInfo["chrStart"] + chrBank * 4 * 1024)
-        tileData = list(get_tile_data(sourceHnd))
+    # create ultra-subblock image (needed for creating all other images)
+    usbImg = create_ultra_subblock_image(usbData, usbAttrData, tileData, worldPalette)
+    if args.ultra_subblock_image is not None:
+        # save ultra-subblock image
+        with open(args.ultra_subblock_image, "wb") as target:
+            usbImg.save(target)
 
-        # create ultra-subblock image (needed for creating all other images)
-        usbImg = create_ultra_subblock_image(usbData, usbAttrData, tileData, worldPalette)
-        if args.ultra_subblock_image is not None:
-            # save ultra-subblock image
-            with open(args.ultra_subblock_image, "wb") as target:
-                usbImg.save(target)
+    if args.subblock_image is not None:
+        # create and save subblock image
+        sbImg = create_subblock_image(sbData, usbImg, worldPalette)
+        with open(args.subblock_image, "wb") as target:
+            sbImg.save(target)
 
-        if args.subblock_image is not None:
-            # create and save subblock image
-            sbImg = create_subblock_image(sbData, usbImg, worldPalette)
-            with open(args.subblock_image, "wb") as target:
-                sbImg.save(target)
+    if args.block_image is not None:
+        # create and save block image
+        blockImg = create_block_image(blockData, sbData, usbImg, worldPalette)
+        with open(args.block_image, "wb") as target:
+            blockImg.save(target)
 
-        if args.block_image is not None:
-            # create and save block image
-            blockImg = create_block_image(blockData, sbData, usbImg, worldPalette)
-            with open(args.block_image, "wb") as target:
-                blockImg.save(target)
+    if args.map_image is not None:
+        # create and save map image
+        mapImg = create_map_image(mapData, blockData, sbData, usbImg, worldPalette)
+        with open(args.map_image, "wb") as target:
+            target.seek(0)
+            mapImg.save(target)
 
-        if args.map_image is not None:
-            # create and save map image
-            mapImg = create_map_image(mapData, blockData, sbData, usbImg, worldPalette)
-            with open(args.map_image, "wb") as target:
-                target.seek(0)
-                mapImg.save(target)
-except OSError:
-    sys.exit("Error reading/writing files.")
+def main():
+    args = parse_arguments()
+
+    try:
+        with open(args.input_file, "rb") as sourceHnd:
+            extract_map(sourceHnd, args)
+    except OSError:
+        sys.exit("Error reading/writing files.")
+
+if __name__ == "__main__":
+    main()

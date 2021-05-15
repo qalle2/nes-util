@@ -117,7 +117,7 @@ DATA
 ```
 usage: ines_combine.py [-h] -p PRG_ROM [-c CHR_ROM] [-m MAPPER] [-n {h,v,f}] [-x] outputFile
 
-Create an iNES ROM file (.nes) from PRG ROM and CHR ROM data files.
+Create an iNES ROM file (.nes).
 
 positional arguments:
   outputFile            The iNES ROM file (.nes) to write.
@@ -125,45 +125,29 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   -p PRG_ROM, --prg-rom PRG_ROM
-                        PRG ROM data file. Required. Size: 16...4096 KiB and a multiple of 16 KiB.
+                        PRG ROM data file to read. Required. Size: 16-4096 KiB and a multiple of
+                        16 KiB.
   -c CHR_ROM, --chr-rom CHR_ROM
-                        CHR ROM data file. Size: 0...2040 KiB and a multiple of 8 KiB.
+                        CHR ROM data file to read. Size: 0-2040 KiB and a multiple of 8 KiB.
   -m MAPPER, --mapper MAPPER
-                        Mapper number (0...255). Default=0 (NROM).
+                        iNES mapper number (0-255). Default=0 (NROM).
   -n {h,v,f}, --mirroring {h,v,f}
                         Type of name table mirroring: h=horizontal (default), v=vertical, f=four-
                         screen.
-  -x, --extra-ram       The game contains extra RAM at $6000...$7fff.
+  -x, --extra-ram       The game contains extra RAM at $6000-$7fff.
 ```
 
 ## ines_info.py
-```
-usage: ines_info.py [-h] [-c] input_file
-
-Print information of an iNES ROM file (.nes). Note: all checksums are CRC32 (zlib) in decimal.
-
-positional arguments:
-  input_file  File to read.
-
-optional arguments:
-  -h, --help  show this help message and exit
-  -c, --csv   Output in CSV format. Fields: "file","size","trainerSize","prgSize","chrSize","mappe
-              r","mirroring","extraRam","checksum","prgChecksum","chrChecksum"
-```
+Print information of an iNES ROM file (.nes).
 
 Example:
 ```
-file name: smb1.nes
-file size: 40976
 trainer size: 0
 PRG ROM size: 32768
 CHR ROM size: 8192
 iNES mapper number: 0
 name table mirroring: vertical
-extra RAM: no
-file checksum: 859302982
-PRG ROM checksum: 1559578835
-CHR ROM checksum: 2256228781
+has extra RAM: no
 ```
 
 ## ines_split.py
