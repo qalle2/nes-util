@@ -53,11 +53,11 @@ def reorder_palette(img, args):
     mapping = [decode_color_code(c) for c in args.palette]
 
     usedColors = {palette[c[1]] for c in img.getcolors()}  # {(R, G, B), ...}
-    unusedColors = usedColors - set(mapping)
-    if unusedColors:
+    undefinedColors = usedColors - set(mapping)
+    if undefinedColors:
         sys.exit(
             "Error: the image contains colors not specified by --palette: "
-            + ", ".join(bytes(c).hex() for c in sorted(unusedColors))
+            + ", ".join(bytes(c).hex() for c in sorted(undefinedColors))
         )
 
     return img.remap_palette(palette.index(c) for c in mapping)
