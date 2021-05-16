@@ -23,13 +23,16 @@ echo "=== Super Mario Bros. 3 - YELZUG (should find YEUZUGAA) ==="
 python3 ../nesgenie_6to8.py ../test-in/smb3.nes yelzug
 echo
 
+echo "=== SMB 1 - AAAAAA (should print a warning) ==="
+python3 ../nesgenie_6to8.py ../test-in/smb1.nes aaaaaa
+echo
+
 echo "=== Videomation - AAAAAA (should print a warning) ==="
 python3 ../nesgenie_6to8.py ../test-in/videomation.nes aaaaaa
 echo
 
-echo "=== These should cause four errors ==="
+echo "=== These should cause three errors ==="
 python3 ../nesgenie_6to8.py ../test-in/smb1.nes       dddddd
 python3 ../nesgenie_6to8.py ../test-in/smb1.nes       eaeaeaea
 python3 ../nesgenie_6to8.py ../test-in/invalid-id.nes aaaaaa
-python3 ../nesgenie_6to8.py ../test-in/smb1.nes       sxiopo
 echo

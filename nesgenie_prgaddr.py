@@ -9,33 +9,34 @@ if len(sys.argv) != 3:
     )
 (filename, code) = sys.argv[1:]
 
-if not os.path.isfile(filename):
-    sys.exit("File not found.")
-
 # decode the code
 values = qneslib.game_genie_decode(code)
 if values is None:
     sys.exit("Invalid code.")
-(cpuAddr, compareValue) = (values[0], values[2])
+(cpuAddr, replaceValue, compareValue) = values
+
+if not os.path.isfile(filename):
+    sys.exit("File not found.")
 
 try:
     with open(filename, "rb") as handle:
+        # get file info
         fileInfo = qneslib.ines_header_decode(handle)
         if fileInfo is None:
             sys.exit("Invalid iNES ROM file.")
-
         # get PRG ROM addresses
-        prgBankSize = qneslib.min_prg_bank_size(fileInfo["prgSize"], fileInfo["mapper"])
-        prgAddrGen = qneslib.address_cpu_to_prg(cpuAddr, prgBankSize, fileInfo["prgSize"])
-        if compareValue is None:
-            # 6-letter code
-            prgAddresses = list(prgAddrGen)
-        else:
-            # 8-letter code
-            prgAddresses = []
-            for prgAddr in prgAddrGen:
+        prgAddresses = []
+        if compareValue is None or compareValue != replaceValue:
+            if compareValue is None:
+                # 6-letter code (old value must not equal replace value)
+                validValues = set(range(0x100)) - {replaceValue,}  # 6-letter code
+            else:
+                # 8-letter code (old value must equal compare value)
+                validValues = {compareValue,}
+            prgBankSize = qneslib.min_prg_bank_size(fileInfo["prgSize"], fileInfo["mapper"])
+            for prgAddr in qneslib.address_cpu_to_prg(cpuAddr, prgBankSize, fileInfo["prgSize"]):
                 handle.seek(fileInfo["prgStart"] + prgAddr)
-                if handle.read(1)[0] == compareValue:
+                if handle.read(1)[0] in validValues:
                     prgAddresses.append(prgAddr)
 except OSError:
     sys.exit("Error reading the file.")

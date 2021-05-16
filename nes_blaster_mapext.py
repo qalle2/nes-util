@@ -32,37 +32,38 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Extract world maps from NES Blaster Master to PNG files."
     )
-
     parser.add_argument(
-        "-j", "--japan", action="store_true", help="Input file is Japanese version (Chou-Wakusei "
-        "Senki - MetaFight)."
+        "-j", "--japan", action="store_true",
+        help="Input file is Japanese version (Chou-Wakusei Senki - MetaFight)."
     )
     parser.add_argument(
-        "-n", "--map-number", type=int, default=0, help="Map to extract: 0...7 = side view of "
-        "area 1...8, 8...15 = overhead view of area 1...8. Default=0."
+        "-n", "--map-number", type=int, default=0,
+        help="Map to extract: 0-7 = side view of area 1-8, 8-15 = overhead view of area 1-8. "
+        "Default=0."
     )
     parser.add_argument(
-        "-u", "--ultra-subblock-image", help="Save ultra-subblocks as PNG file (256*256 px)."
+        "-u", "--ultra-subblock-image",
+        help="Save ultra-subblocks (16*16 px each) as PNG file (up to 256*256 px)."
     )
     parser.add_argument(
-        "-s", "--subblock-image", help="Save subblocks as PNG file (512*512 px)."
+        "-s", "--subblock-image",
+        help="Save subblocks (32*32 px each) as PNG file (up to 512*512 px)."
     )
     parser.add_argument(
-        "-b", "--block-image", help="Save blocks as PNG file (1024*1024 px)."
+        "-b", "--block-image", help="Save blocks (64*64 px each) as PNG file (up to 1024*1024 px)."
     )
     parser.add_argument(
-        "-m", "--map-image", help="Save map as PNG file (up to 2048*2048 px)."
+        "-m", "--map-image", help="Save map as PNG file (up to 32*32 blocks or 2048*2048 px)."
     )
     parser.add_argument(
-        "-v", "--verbose", action="store_true", help="Print more information. Note: all addresses "
-        "are hexadecimal."
+        "-v", "--verbose", action="store_true",
+        help="Print more information. Note: all addresses are hexadecimal."
     )
-
     parser.add_argument(
-        "input_file", help="Blaster Master ROM file in iNES format (.nes, US/US prototype/EUR/JP; "
-        "see also --japan)."
+        "input_file",
+        help="Blaster Master ROM file in iNES format (.nes, US/US prototype/EUR/JP; see also "
+        "--japan)."
     )
-
     args = parser.parse_args()
 
     if not 0 <= args.map_number <= 15:
@@ -107,10 +108,10 @@ def get_tile_data(handle):
         yield tuple(pixels)
 
 def create_ultra_subblock_image(usbData, usbAttrData, tileData, worldPal):
-    # create Pillow image with 16 * 16 ultra-subblocks, each 16 * 16 pixels; worldPal: world palette
-    # (16 NES colors)
+    # create Pillow image with up to 16 * 16 ultra-subblocks, each 16 * 16 pixels; worldPal: world
+    # palette (16 NES colors)
 
-    image = Image.new("P", (16 * 16, 16 * 16), 0)  # indexed color
+    image = Image.new("P", (16 * 16, (len(usbData) + 15) // 16 * 16), 0)  # indexed color
 
     # convert world palette into RGB
     worldPal = [qneslib.PALETTE[color] for color in worldPal]
@@ -138,9 +139,9 @@ def world_palette_into_image_palette(worldPal):
     )
 
 def create_subblock_image(sbData, usbImg, worldPal):
-    # create Pillow image with 16 * 16 subblocks, each 32 * 32 pixels
+    # create Pillow image with up to 16 * 16 subblocks, each 32 * 32 pixels
 
-    outImg = Image.new("P", (16 * 32, 16 * 32), 0)  # indexed color
+    outImg = Image.new("P", (16 * 32, (len(sbData) + 15) // 16 * 32), 0)  # indexed color
     outImg.putpalette(world_palette_into_image_palette(worldPal))
 
     for (sbIndex, usbs) in enumerate(sbData):
@@ -159,9 +160,9 @@ def create_subblock_image(sbData, usbImg, worldPal):
     return outImg
 
 def create_block_image(blockData, sbData, usbImg, worldPal):
-    # create Pillow Image with 16 * 16 blocks, each 64 * 64 pixels
+    # create Pillow image with up to 16 * 16 blocks, each 64 * 64 pixels
 
-    outImg = Image.new("P", (16 * 64, 16 * 64), 0)  # indexed color
+    outImg = Image.new("P", (16 * 64, (len(blockData) + 15) // 16 * 64), 0)  # indexed color
     outImg.putpalette(world_palette_into_image_palette(worldPal))
 
     for (blockIndex, block) in enumerate(blockData):
@@ -181,9 +182,9 @@ def create_block_image(blockData, sbData, usbImg, worldPal):
     return outImg
 
 def create_map_image(mapData, blockData, sbData, usbImg, worldPal):
-    # create Pillow Image of entire map with 32 * 32 blocks, each 64 * 64 pixels
+    # create Pillow image of entire map with up to 32 * 32 blocks, each 64 * 64 pixels
 
-    outImg = Image.new("P", (32 * 64, len(mapData) * 2), 0)  # indexed color
+    outImg = Image.new("P", (32 * 64, len(mapData) // 32 * 64), 0)  # indexed color
     outImg.putpalette(world_palette_into_image_palette(worldPal))
 
     # world = 32*? blocks, block = 2*2 subblocks, subblock = 2*2 ultra-subblocks,
@@ -248,25 +249,25 @@ def extract_map(sourceHnd, args):
 
     # palette (4*4 NES color numbers)
     worldPalette = prgBankData[palAddr:palAddr+16]
-    assert max(worldPalette) <= 0x3f and len(set(worldPalette)) <= 1 + 4 * 3
+    assert max(worldPalette) <= 0x3f
 
     # ultra-subblock data
-    assert sbAddr - usbAddr in range(76 * 4, 155 * 4, 4)
+    assert sbAddr - usbAddr in range(4, 257 * 4, 4)
     usbData = tuple(prgBankData[i:i+4] for i in range(usbAddr, sbAddr, 4))
 
     # subblock data
-    assert blockAddr - sbAddr in range(99 * 4, 245 * 4, 4)
+    assert blockAddr - sbAddr in range(4, 257 * 4, 4)
     sbData = tuple(prgBankData[i:i+4] for i in range(sbAddr, blockAddr, 4))
     assert max(itertools.chain.from_iterable(sbData)) < len(usbData)
 
     # block data
-    assert mapAddr - blockAddr in range(108 * 4, 255 * 4, 4)
+    assert mapAddr - blockAddr in range(4, 257 * 4, 4)
     blockData = tuple(prgBankData[i:i+4] for i in range(blockAddr, mapAddr, 4))
     assert max(itertools.chain.from_iterable(blockData)) < len(sbData)
 
     # map data
     mapEnd = min(usbAttrAddr, scrollAddr)
-    assert mapEnd - mapAddr in range(25 * 32, 33 * 32, 32)
+    assert mapEnd - mapAddr in range(32, 33 * 32, 32)
     mapData = prgBankData[mapAddr:mapEnd]
     assert max(set(mapData)) < len(blockData)
 

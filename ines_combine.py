@@ -4,7 +4,9 @@ import qneslib  # qalle's NES library, https://github.com/qalle2/nes-util
 def parse_arguments():
     """Parse command line arguments using argparse."""
 
-    parser = argparse.ArgumentParser(description="Create an iNES ROM file (.nes).")
+    parser = argparse.ArgumentParser(
+        description="Create an iNES ROM file (.nes)."
+    )
     parser.add_argument(
         "-p", "--prg-rom", required=True,
         help="PRG ROM data file to read. Required. Size: 16-4096 KiB and a multiple of 16 KiB."
@@ -24,7 +26,9 @@ def parse_arguments():
         "-x", "--extra-ram", action="store_true",
         help="The game contains extra RAM at $6000-$7fff."
     )
-    parser.add_argument("outputFile", help="The iNES ROM file (.nes) to write.")
+    parser.add_argument(
+        "outputFile", help="The iNES ROM file (.nes) to write."
+    )
     args = parser.parse_args()
 
     if not os.path.isfile(args.prg_rom):

@@ -7,7 +7,6 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Swap colors in the graphics data (CHR ROM) of an iNES ROM file (.nes)."
     )
-
     parser.add_argument(
         "-c", "--colors", nargs=4, type=int, choices=range(4), default=(0, 2, 3, 1),
         help="Change original colors 0...3 to these colors. Four colors (each 0...3) "
@@ -27,14 +26,12 @@ def parse_arguments():
     parser.add_argument(
         "output_file", help="iNES ROM file (.nes) to write."
     )
-
     args = parser.parse_args()
 
     if args.first_tile < 0:
         sys.exit("--first-tile must be 0 or greater.")
     if args.tile_count < 0:
         sys.exit("--tile-count must be 0 or greater.")
-
     if not os.path.isfile(args.input_file):
         sys.exit("Input file not found.")
     if os.path.exists(args.output_file):
@@ -67,41 +64,46 @@ def swap_colors(chunk, colors):
 
     return chunk
 
-args = parse_arguments()
+def main():
+    args = parse_arguments()
 
-try:
-    with open(args.input_file, "rb") as source:
-        fileInfo = qneslib.ines_header_decode(source)
-        if fileInfo is None:
-            sys.exit("Invalid iNES ROM file.")
-        if fileInfo["chrSize"] == 0:
-            sys.exit("Input file has no CHR ROM.")
+    try:
+        with open(args.input_file, "rb") as source:
+            # get file info
+            fileInfo = qneslib.ines_header_decode(source)
+            if fileInfo is None:
+                sys.exit("Invalid iNES ROM file.")
+            if fileInfo["chrSize"] == 0:
+                sys.exit("Input file has no CHR ROM.")
 
-        # length of CHR data before the tiles to modify
-        beforeLen = args.first_tile * 16
-        if beforeLen >= fileInfo["chrSize"]:
-            sys.exit("--first-tile is too large.")
+            # length of CHR data before the tiles to modify
+            beforeLen = args.first_tile * 16
+            if beforeLen >= fileInfo["chrSize"]:
+                sys.exit("--first-tile is too large.")
 
-        # length of CHR data at/after the tiles to modify
-        if args.tile_count:
-            modifyLen = args.tile_count * 16
-            afterLen = fileInfo["chrSize"] - beforeLen - modifyLen
-            if afterLen < 0:
-                sys.exit("Sum of --first-tile and --tile-count is too large.")
-        else:
-            afterLen = 0
-            modifyLen = fileInfo["chrSize"] - beforeLen - afterLen
+            # length of CHR data at/after the tiles to modify
+            if args.tile_count:
+                modifyLen = args.tile_count * 16
+                afterLen = fileInfo["chrSize"] - beforeLen - modifyLen
+                if afterLen < 0:
+                    sys.exit("Sum of --first-tile and --tile-count is too large.")
+            else:
+                afterLen = 0
+                modifyLen = fileInfo["chrSize"] - beforeLen - afterLen
 
-        # copy input file to output file
-        source.seek(0)
-        with open(args.output_file, "wb") as target:
-            target.seek(0)
-            # copy data before/at/after the tiles to be modified
-            for chunk in read_file_slice(source, fileInfo["chrStart"] + beforeLen):
-                target.write(chunk)
-            for chunk in read_file_slice(source, modifyLen):
-                target.write(swap_colors(chunk, args.colors))
-            for chunk in read_file_slice(source, afterLen):
-                target.write(chunk)
-except OSError:
-    sys.exit("Error reading/writing files.")
+            # copy input file to output file
+            source.seek(0)
+            with open(args.output_file, "wb") as target:
+                target.seek(0)
+                # copy data before/at/after the tiles to be modified
+                for chunk in read_file_slice(source, fileInfo["chrStart"] + beforeLen):
+                    target.write(chunk)
+                for chunk in read_file_slice(source, modifyLen):
+                    target.write(swap_colors(chunk, args.colors))
+                for chunk in read_file_slice(source, afterLen):
+                    target.write(chunk)
+    except OSError:
+        sys.exit("Error reading/writing files.")
+
+if __name__ == "__main__":
+    main()

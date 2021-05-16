@@ -9,7 +9,7 @@ if len(sys.argv) != 3:
     )
 (filename, prgAddr) = sys.argv[1:3]
 
-# get iNES file info
+# get file info
 if not os.path.isfile(filename):
     sys.exit("File not found.")
 try:

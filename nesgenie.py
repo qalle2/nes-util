@@ -21,13 +21,13 @@ elif 3 <= len(sys.argv) <= 4:
     values = qneslib.game_genie_decode(code)
 else:
     sys.exit(
-        "Encode and decode NES Game Genie codes. Argument: six-letter code, eight-letter "
-        "code, AAAA RR or AAAA RR CC (AAAA = address in hexadecimal, RR = replacement value "
-        "in hexadecimal, CC = compare value in hexadecimal)."
+        "Encode and decode NES Game Genie codes. Argument: six-letter code, eight-letter code, "
+        "AAAA RR or AAAA RR CC (AAAA = address in hexadecimal, RR = replacement value in "
+        "hexadecimal, CC = compare value in hexadecimal)."
     )
 
 comp = "none" if values[2] is None else f"0x{values[2]:02x}"
 print(
-    f"{code}: CPU address = 0x{values[0]:04x}, replace value = 0x{values[1]:02x}, "
-    f"compare value = {comp}"
+    f"{code}: CPU address = 0x{values[0]:04x}, replace value = 0x{values[1]:02x}, compare value = "
+    f"{comp}"
 )

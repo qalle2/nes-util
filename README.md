@@ -181,16 +181,16 @@ optional arguments:
   -h, --help            show this help message and exit
   -j, --japan           Input file is Japanese version (Chou-Wakusei Senki - MetaFight).
   -n MAP_NUMBER, --map-number MAP_NUMBER
-                        Map to extract: 0...7 = side view of area 1...8, 8...15 = overhead view of
-                        area 1...8. Default=0.
+                        Map to extract: 0-7 = side view of area 1-8, 8-15 = overhead view of area
+                        1-8. Default=0.
   -u ULTRA_SUBBLOCK_IMAGE, --ultra-subblock-image ULTRA_SUBBLOCK_IMAGE
-                        Save ultra-subblocks as PNG file (256*256 px).
+                        Save ultra-subblocks (16*16 px each) as PNG file (up to 256*256 px).
   -s SUBBLOCK_IMAGE, --subblock-image SUBBLOCK_IMAGE
-                        Save subblocks as PNG file (512*512 px).
+                        Save subblocks (32*32 px each) as PNG file (up to 512*512 px).
   -b BLOCK_IMAGE, --block-image BLOCK_IMAGE
-                        Save blocks as PNG file (1024*1024 px).
+                        Save blocks (64*64 px each) as PNG file (up to 1024*1024 px).
   -m MAP_IMAGE, --map-image MAP_IMAGE
-                        Save map as PNG file (up to 2048*2048 px).
+                        Save map as PNG file (up to 32*32 blocks or 2048*2048 px).
   -v, --verbose         Print more information. Note: all addresses are hexadecimal.
 ```
 
