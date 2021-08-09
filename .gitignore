@@ -1,3 +1,4 @@
 *.pyc
 test-in/*.*
 test-out/*.*
+nes_smb_mapext.py
