@@ -13,8 +13,6 @@ def decode_color_code(color):
     return (color >> 16, (color >> 8) & 0xff, color & 0xff)
 
 def parse_arguments():
-    # parse command line arguments using argparse
-
     parser = argparse.ArgumentParser(
         description="Convert NES CHR (graphics) data into a PNG file."
     )
@@ -71,9 +69,7 @@ def decode_pixel_rows(handle, charRowCount):
                 )
             yield pixelRow
 
-def chr_data_to_png(handle, args):
-    # convert CHR data into a PNG image using Pillow
-
+def chr_data_to_image(handle, args):
     (chrAddr, chrSize) = get_chr_addr_and_size(handle)
     charRowCount = chrSize // 256
 
@@ -90,16 +86,20 @@ def chr_data_to_png(handle, args):
 def main():
     args = parse_arguments()
 
+    # convert CHR data into an image
     try:
-        # convert CHR data into an image
         with open(args.input_file, "rb") as handle:
-            image = chr_data_to_png(handle, args)
-        # save image
+            image = chr_data_to_image(handle, args)
+    except OSError:
+        sys.exit("Error reading input file.")
+
+    # save image
+    try:
         with open(args.output_file, "wb") as handle:
             handle.seek(0)
             image.save(handle, "png")
     except OSError:
-        sys.exit("Error reading/writing files.")
+        sys.exit("Error writing output file.")
 
 if __name__ == "__main__":
     main()

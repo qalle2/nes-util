@@ -134,7 +134,7 @@ _GAME_GENIE_DECODE_KEY = (3, 5, 2, 4, 1, 0, 7, 6)  # at 0x0eb6 in Game Genie PRG
 class QneslibError(Exception):
     pass
 
-# --- Misc NES stuff ------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------
 
 def min_prg_bank_size_for_mapper(mapper):
     """Get the smallest PRG ROM bank size supported by the mapper.
@@ -211,7 +211,7 @@ def tile_slice_encode(pixels):
         hiByte = (hiByte << 1) | (pixel >> 1)
     return (loByte, hiByte)
 
-# --- iNES ROM files; see http://wiki.nesdev.com/w/index.php/INES ---------------------------------
+# -------------------------------------------------------------------------------------------------
 
 def ines_header_decode(handle):
     """Parse the header of an iNES ROM file.
@@ -236,7 +236,7 @@ def ines_header_decode(handle):
     handle.seek(0)
     (id_, prgSize, chrSize, flags6, flags7) = struct.unpack("4s4B8x", handle.read(16))
 
-    # PRG ROM / CHR ROM / trainer size in bytes (note: PRG ROM size 0 = 256)
+    # PRG ROM / CHR ROM / trainer size in bytes (note: PRG ROM size 0 -> 256)
     prgSize = (prgSize if prgSize else 256) * 16 * 1024
     chrSize = chrSize * 8 * 1024
     trainerSize = bool(flags6 & 0x04) * 512
@@ -275,7 +275,7 @@ def ines_header_encode(prgSize, chrSize, mapper=0, mirroring="h", extraRam=False
     return:    16 bytes
     raise:     QneslibError on error"""
 
-    # get PRG ROM size in 16-KiB units (256 = 0)
+    # get PRG ROM size in 16-KiB units (note: 256 -> 0)
     (prgSize, remainder) = divmod(prgSize, 16 * 1024)
     if remainder or not 1 <= prgSize <= 256:
         raise QneslibError("invalid PRG ROM size")
@@ -288,30 +288,29 @@ def ines_header_encode(prgSize, chrSize, mapper=0, mirroring="h", extraRam=False
 
     # encode flags
     flags6 = (mapper & 0x0f) << 4
-    if mirroring == "v":
-        flags6 |= 0x01
-    elif mirroring == "f":
-        flags6 |= 0x08
+    flags6 |= {"h": 0x00, "v": 0x01, "f": 0x08}[mirroring]
     if extraRam:
         flags6 |= 0x02
     flags7 = mapper & 0xf0
 
     return struct.pack("4s4B8s", _INES_ID, prgSize, chrSize, flags6, flags7, 8 * b"\x00")
 
-# --- Game Genie; see http://nesdev.com/nesgg.txt -------------------------------------------------
+# -------------------------------------------------------------------------------------------------
 
 def game_genie_decode(code):
     """Decode a Game Genie code.
     code: 6 or 8 letters from GAME_GENIE_LETTERS
     return:
         if invalid code: None
-        otherwise:       (CPU_address, replacement_value, compare_value):
-            CPU_address:       0x8000-0xffff
+        otherwise:       (cpu_address, replacement_value, compare_value):
+            cpu_address:       0x8000-0xffff
             replacement_value: 0x00-0xff
             compare_value:     None if 6-letter code, 0x00-0xff if 8-letter code"""
 
+    # see http://nesdev.com/nesgg.txt
+
     # validate
-    if len(code) not in (6, 8) or set(code.upper()) - set(GAME_GENIE_LETTERS):
+    if len(code) not in (6, 8) or not set(code.upper()).issubset(set(GAME_GENIE_LETTERS)):
         return None
     # convert letters into integers (0x0-0xf)
     code = [GAME_GENIE_LETTERS.index(letter) for letter in code.upper()]
@@ -326,6 +325,7 @@ def game_genie_decode(code):
     (addr, repl) = (bigint >> 8, bigint & 0xff)
     return (addr | 0x8000, repl, comp)
 
+assert game_genie_decode("baaaaa")   is None
 assert game_genie_decode("aaaaan")   == (0x8700, 0x08, None)
 assert game_genie_decode("aaaana")   == (0x8807, 0x00, None)
 assert game_genie_decode("aaanaa")   == (0xf008, 0x00, None)
@@ -351,12 +351,14 @@ def game_genie_encode(addr, repl, comp=None):
         if comp is None     : 6-letter code
         if comp is not None : 8-letter code"""
 
+    # see http://nesdev.com/nesgg.txt
+
     # validate
     if not 0 <= addr <= 0xffff or not 0 <= repl <= 0xff \
     or comp is not None and not 0 <= comp <= 0xff:
         return None
-    # combine args into a 24/32-bit integer; clear/set MSB of address to get correct 3rd
-    # letter later (one of APZLGITY for 6-letter codes, one of EOXUKSVN for 8-letter codes)
+    # combine args into a 24/32-bit integer; clear/set MSB of address to get correct 3rd letter
+    # later (one of APZLGITY for 6-letter codes, one of EOXUKSVN for 8-letter codes)
     if comp is None:
         codeLen = 6
         addr &= 0x7fff
@@ -375,6 +377,7 @@ def game_genie_encode(addr, repl, comp=None):
     # convert 4-bit ints into letters
     return "".join(GAME_GENIE_LETTERS[i] for i in encoded)
 
+assert game_genie_encode(-1,     0x00)       is None
 assert game_genie_encode(0x8000, 0x87)       == "NAAAAA"
 assert game_genie_encode(0x8070, 0x00)       == "AAYAAA"
 assert game_genie_encode(0x8080, 0x70)       == "ANAAAA"
