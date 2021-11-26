@@ -74,10 +74,10 @@ def get_prg_addresses(fileInfo, args, handle):
     if comp is None or comp != repl:
         if comp is None:
             # 6-letter code (old value must not equal replace value)
-            validValues = set(range(0x100)) - {repl,}
+            validValues = set(range(0x100)) - {repl}
         else:
             # 8-letter code (old value must equal compare value)
-            validValues = {comp,}
+            validValues = {comp}
         for prgAddr in qneslib.address_cpu_to_prg(cpuAddr, prgBankSize, fileInfo["prgSize"]):
             handle.seek(fileInfo["prgStart"] + prgAddr)
             if handle.read(1)[0] in validValues:
