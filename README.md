@@ -9,10 +9,6 @@ Does not do anything by itself but is needed by many other programs in this repo
 NAME
     qneslib - qalle's NES library (Nintendo Entertainment System stuff).
 
-CLASSES
-    builtins.Exception(builtins.BaseException)
-        QneslibError
-
 FUNCTIONS
     address_cpu_to_prg(cpuAddr, prgBankSize, prgSize)
         Convert a CPU ROM address into possible PRG ROM addresses.
@@ -32,8 +28,8 @@ FUNCTIONS
         code: 6 or 8 letters from GAME_GENIE_LETTERS
         return:
             if invalid code: None
-            otherwise:       (CPU_address, replacement_value, compare_value):
-                CPU_address:       0x8000-0xffff
+            otherwise:       (cpu_address, replacement_value, compare_value):
+                cpu_address:       0x8000-0xffff
                 replacement_value: 0x00-0xff
                 compare_value:     None if 6-letter code, 0x00-0xff if 8-letter code
 
@@ -66,10 +62,9 @@ FUNCTIONS
         prgSize:   PRG ROM size
         chrSize:   CHR ROM size
         mapper:    iNES mapper number (0x00-0xff)
-        mirroring: name table mirroring (h=horizontal, v=vertical, f=four-screen)
-        extraRam:  does the game have extra RAM (bool)
-        return:    16 bytes
-        raise:     QneslibError on error
+        mirroring: name table mirroring ('h'=horizontal, 'v'=vertical, 'f'=four-screen)
+        extraRam:  does the game have extra RAM? (bool)
+        return:    16 bytes or None on error
 
     is_mapper_known(mapper)
         Is the mapper known by this program? (If not, mapper functions are more likely to return

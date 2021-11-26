@@ -62,13 +62,12 @@ def main():
         sys.exit("Error getting PRG/CHR ROM file size.")
 
     # create iNES header
-    try:
-        header = qneslib.ines_header_encode(
-            prgSize=prgSize, chrSize=chrSize, mapper=args.mapper, mirroring=args.mirroring,
-            extraRam=args.extra_ram
-        )
-    except qneslib.QneslibError as error:
-        sys.exit(f"Error: {error}")
+    header = qneslib.ines_header_encode(
+        prgSize=prgSize, chrSize=chrSize, mapper=args.mapper, mirroring=args.mirroring,
+        extraRam=args.extra_ram
+    )
+    if header is None:
+        sys.exit("Invalid PRG/CHR ROM size.")
 
     # write header and PRG/CHR ROM data to output file
     try:
