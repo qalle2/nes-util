@@ -302,6 +302,3 @@ optional arguments:
                         results.
   -v, --verbose         Print more information. Note: all printed numbers are hexadecimal.
 ```
-
-## nes.asm
-NES assembly routines for [asm6f](https://github.com/freem/asm6f). Used by many of my projects.
