@@ -4,6 +4,7 @@ import qneslib  # qalle's NES library, https://github.com/qalle2/nes-util
 
 def decode_color_code(color):
     # decode a hexadecimal RRGGBB color code into (red, green, blue)
+
     if len(color) != 6:
         sys.exit("Each color code must be 6 hexadecimal digits.")
     try:
@@ -18,7 +19,7 @@ def parse_arguments():
     )
     parser.add_argument(
         "-p", "--palette", nargs=4, default=("000000", "555555", "aaaaaa", "ffffff"),
-        help="Output palette (which image colors correspond to CHR colors 0...3). Four hexadecimal "
+        help="Output palette (which image colors correspond to CHR colors 0-3). Four hexadecimal "
         "RRGGBB color codes separated by spaces. Default: 000000 555555 aaaaaa ffffff"
     )
     parser.add_argument(
@@ -41,12 +42,13 @@ def parse_arguments():
 
 def get_chr_addr_and_size(handle):
     # detect file type and get (address, size) of CHR ROM data
-    fileInfo = qneslib.ines_header_decode(handle)
-    if fileInfo is not None:
+
+    inesInfo = qneslib.ines_header_decode(handle)
+    if inesInfo is not None:
         # iNES ROM file
-        if fileInfo["chrSize"] == 0:
+        if inesInfo["chrSize"] == 0:
             sys.exit("The input file is an iNES ROM file but has no CHR ROM.")
-        return (fileInfo["chrStart"], fileInfo["chrSize"])
+        return (inesInfo["chrStart"], inesInfo["chrSize"])
     else:
         fileSize = handle.seek(0, 2)
         if fileSize == 0 or fileSize % 256:
@@ -56,26 +58,30 @@ def get_chr_addr_and_size(handle):
 
 def decode_pixel_rows(handle, charRowCount):
     # generate 128*1 pixels (two-bit ints) per call from NES CHR data;
-    # note: a tile is 8 bytes of low bitplane from top to bottom, same for high bitplane
+    # note: a tile is 8*8 pixels and 2 bitplanes, or 16 bytes; first low bitplane from top to
+    # bottom, then high bitplane from top to bottom; 1 byte is 8*1 pixels of one bitplane
+
     pixelRow = []
     for i in range(charRowCount):
-        charRow = handle.read(256)  # 16*1 tiles (128*8 pixels)
+        charRow = handle.read(16 * 16)  # 16*1 tiles (128*8 pixels), 16 bytes/tile
         for y in range(8):
             pixelRow.clear()
             for x in range(16):
                 # decode 2 bytes (8 bytes apart) into 8*1 pixels
-                pixelRow.extend(
-                    qneslib.tile_slice_decode(charRow[x * 16 + y], charRow[x * 16 + y + 8])
-                )
+                pixelRow.extend(qneslib.tile_slice_decode(charRow[x*16+y], charRow[x*16+y+8]))
             yield pixelRow
 
 def chr_data_to_image(handle, args):
-    (chrAddr, chrSize) = get_chr_addr_and_size(handle)
-    charRowCount = chrSize // 256
+    # read CHR data from a file, return a Pillow image
 
+    (chrAddr, chrSize) = get_chr_addr_and_size(handle)
+    charRowCount = chrSize // (16 * 16)  # 16 bytes/tile, 16 tiles/row
+
+    # create indexed image; get palette from command line argument
     image = Image.new("P", (16 * 8, charRowCount * 8))
     image.putpalette(itertools.chain.from_iterable(decode_color_code(c) for c in args.palette))
 
+    # convert CHR data into image data
     handle.seek(chrAddr)
     for (y, pixelRow) in enumerate(decode_pixel_rows(handle, charRowCount)):
         for (x, colorIndex) in enumerate(pixelRow):
@@ -101,5 +107,4 @@ def main():
     except OSError:
         sys.exit("Error writing output file.")
 
-if __name__ == "__main__":
-    main()
+main()

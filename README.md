@@ -115,7 +115,7 @@ usage: ines_combine.py [-h] -p PRG_ROM [-c CHR_ROM] [-m MAPPER] [-n {h,v,f}] [-x
 Create an iNES ROM file (.nes).
 
 positional arguments:
-  outputFile            The iNES ROM file (.nes) to write.
+  outputFile            iNES ROM file (.nes) to write.
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -203,7 +203,7 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   -p PALETTE PALETTE PALETTE PALETTE, --palette PALETTE PALETTE PALETTE PALETTE
-                        Output palette (which image colors correspond to CHR colors 0...3). Four
+                        Output palette (which image colors correspond to CHR colors 0-3). Four
                         hexadecimal RRGGBB color codes separated by spaces. Default: 000000 555555
                         aaaaaa ffffff
 ```
@@ -216,17 +216,17 @@ Convert an image file into an NES CHR (graphics) data file.
 
 positional arguments:
   input_file            Image file to read. Width must be 128 pixels (16 tiles). Height must be a
-                        multiple of 8 pixels (1 tile). There must be four unique colors or less.
+                        multiple of 8 pixels (1 tile). No more than 4 unique colors.
   output_file           NES CHR data file to write. The size will be a multiple of 256 bytes (16
                         tiles).
 
 optional arguments:
   -h, --help            show this help message and exit
   -p PALETTE PALETTE PALETTE PALETTE, --palette PALETTE PALETTE PALETTE PALETTE
-                        Input palette (which image colors correspond to CHR colors 0...3). Four
-                        hexadecimal RRGGBB color codes separated by spaces. Must be all distinct
-                        and include every unique color in the input file. May contain colors not
-                        present in the input file. Default: 000000 555555 aaaaaa ffffff
+                        Input palette (which image colors correspond to CHR colors 0-3). Four
+                        hexadecimal RRGGBB color codes separated by spaces. Must be all distinct.
+                        Must include every unique color in input file. May contain colors not
+                        present in input file. Default: 000000 555555 aaaaaa ffffff
 ```
 
 ## nes_color_swap.py

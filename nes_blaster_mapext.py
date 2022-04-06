@@ -313,5 +313,4 @@ def main():
     except OSError:
         sys.exit("Error reading/writing files.")
 
-if __name__ == "__main__":
-    main()
+main()

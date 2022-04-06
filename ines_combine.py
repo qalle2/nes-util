@@ -2,11 +2,10 @@ import argparse, os, sys
 import qneslib  # qalle's NES library, https://github.com/qalle2/nes-util
 
 def parse_arguments():
-    """Parse command line arguments using argparse."""
-
     parser = argparse.ArgumentParser(
         description="Create an iNES ROM file (.nes)."
     )
+
     parser.add_argument(
         "-p", "--prg-rom", required=True,
         help="PRG ROM data file to read. Required. Size: 16-4096 KiB and a multiple of 16 KiB."
@@ -27,8 +26,9 @@ def parse_arguments():
         help="The game contains extra RAM at $6000-$7fff."
     )
     parser.add_argument(
-        "outputFile", help="The iNES ROM file (.nes) to write."
+        "outputFile", help="iNES ROM file (.nes) to write."
     )
+
     args = parser.parse_args()
 
     if not os.path.isfile(args.prg_rom):
@@ -42,45 +42,44 @@ def parse_arguments():
 
     return args
 
-def copy_file(source, target):
-    # copy source file to current position in target file
-    bytesLeft = source.seek(0, 2)
-    source.seek(0)
-    while bytesLeft:
-        chunkSize = min(bytesLeft, 2 ** 20)
-        target.write(source.read(chunkSize))
-        bytesLeft -= chunkSize
-
 def main():
     args = parse_arguments()
 
-    # get PRG/CHR ROM size
+    # read input files
     try:
-        prgSize = os.path.getsize(args.prg_rom)
-        chrSize = 0 if args.chr_rom is None else os.path.getsize(args.chr_rom)
+        # PRG ROM
+        with open(args.prg_rom, "rb") as handle:
+            handle.seek(0)
+            prgData = handle.read()
+        # CHR ROM
+        if args.chr_rom is not None:
+            with open(args.chr_rom, "rb") as handle:
+                handle.seek(0)
+                chrData = handle.read()
+        else:
+            chrData = b""
     except OSError:
-        sys.exit("Error getting PRG/CHR ROM file size.")
+        sys.exit("Error reading input files.")
 
     # create iNES header
     header = qneslib.ines_header_encode(
-        prgSize=prgSize, chrSize=chrSize, mapper=args.mapper, mirroring=args.mirroring,
+        prgSize=len(prgData),
+        chrSize=len(chrData),
+        mapper=args.mapper,
+        mirroring=args.mirroring,
         extraRam=args.extra_ram
     )
     if header is None:
         sys.exit("Invalid PRG/CHR ROM size.")
 
-    # write header and PRG/CHR ROM data to output file
+    # write output file
     try:
         with open(args.outputFile, "wb") as target:
             target.seek(0)
             target.write(header)
-            with open(args.prg_rom, "rb") as source:
-                copy_file(source, target)
-            if chrSize:
-                with open(args.chr_rom, "rb") as source:
-                    copy_file(source, target)
+            target.write(prgData)
+            target.write(chrData)
     except OSError:
-        sys.exit("Error reading/writing files.")
+        sys.exit("Error writing output file.")
 
-if __name__ == "__main__":
-    main()
+main()

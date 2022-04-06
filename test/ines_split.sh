@@ -19,7 +19,7 @@ echo
 rm -f ../test-out/*.prg
 rm -f ../test-out/*.chr
 
-echo "=== These should cause four errors/warnings ==="
+echo "=== These should cause four errors ==="
 python3 ../ines_split.py --prg ../test-out/invalid1.prg ../test-in/invalid-id.nes
 python3 ../ines_split.py --prg ../test-in/smb1.nes      ../test-in/smb1.nes
 python3 ../ines_split.py --chr ../test-in/smb1.nes      ../test-in/smb1.nes

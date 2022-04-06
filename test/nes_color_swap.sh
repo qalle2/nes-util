@@ -13,7 +13,7 @@ echo
 rm -f ../test-out/*.nes
 
 echo === Swapping colors ===
-python3 ../nes_color_swap.py                                          ../test-in/smb1.nes          ../test-out/smb-default_settings.nes
+python3 ../nes_color_swap.py                                          ../test-in/smb1.nes          ../test-out/smb1-default_settings.nes
 python3 ../nes_color_swap.py --colors 0 1 2 3                         ../test-in/smb1.nes          ../test-out/smb1-colors0123.nes
 python3 ../nes_color_swap.py --colors 0 2 3 1                         ../test-in/smb1.nes          ../test-out/smb1-colors0231.nes
 python3 ../nes_color_swap.py --colors 0 3 1 2                         ../test-in/smb1.nes          ../test-out/smb1-colors0312.nes

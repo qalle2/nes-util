@@ -31,5 +31,3 @@ python3 ../nes_chr_encode.py --p 000000 111111 222222 000000 ../test-in/smb1-chr
 python3 ../nes_chr_encode.py --p 000000 696969 420420 ffffff ../test-in/smb1-chr.png ../test-out/invalid4.chr
 python3 ../nes_chr_encode.py                                 ../test-in/5colors.png  ../test-out/invalid5.chr
 echo
-
-rm -f ../test-out/*.chr
