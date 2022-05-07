@@ -267,7 +267,7 @@ SXIOPO: CPU address = 0x91d9, replace value = 0xad, compare value = none
 ```
 
 ## nesgenie_6to8.py
-Convert a 6-letter NES Game Genie code into 8 letters using the iNES ROM file (.nes). Args: file code
+Convert a 6-letter NES Game Genie code into 8 letters using the iNES ROM file (.nes). Can be useful if the 6-letter code has unintended side effects. Args: file code
 
 ## nesgenie_prgaddr.py
 Find the PRG ROM addresses affected by an NES Game Genie code in an iNES ROM file (.nes). Args: file code

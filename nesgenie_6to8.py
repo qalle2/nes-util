@@ -5,7 +5,7 @@ import qneslib  # qalle's NES library, https://github.com/qalle2/nes-util
 if len(sys.argv) != 3:
     sys.exit(
         "Convert a 6-letter NES Game Genie code into 8 letters using the iNES ROM file (.nes). "
-        "Args: file code"
+        "Can be useful if the 6-letter code has unintended side effects. Args: file code"
     )
 (filename, code) = sys.argv[1:]
 
