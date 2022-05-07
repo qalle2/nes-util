@@ -3,6 +3,22 @@ Various utilities related to the [Nintendo Entertainment System](http://en.wikip
 
 **Note**: many programs in this repo require the [Pillow](https://python-pillow.org) module and qneslib.py (immediately below).
 
+Table of contents:
+* [qneslib.py](#qneslibpy)
+* [ines_combine.py](#ines_combinepy)
+* [ines_info.py](#ines_infopy)
+* [ines_split.py](#ines_splitpy)
+* [nes_blaster_mapext.py](#nes_blaster_mapextpy)
+* [nes_chr_decode.py](#nes_chr_decodepy)
+* [nes_chr_encode.py](#nes_chr_encodepy)
+* [nes_color_swap.py](#nes_color_swappy)
+* [nes_cpuaddr.py](#nes_cpuaddrpy)
+* [nes_prgbyte.py](#nes_prgbytepy)
+* [nesgenie.py](#nesgeniepy)
+* [nesgenie_6to8.py](#nesgenie_6to8py)
+* [nesgenie_prgaddr.py](#nesgenie_prgaddrpy)
+* [nesgenie_verconv.py](#nesgenie_verconvpy)
+
 ## qneslib.py
 Does not do anything by itself but is needed by many other programs in this repo. Just copy this file to the same directory. Formerly known as neslib.py, ineslib.py and nesgenielib.py.
 ```
@@ -105,6 +121,8 @@ DATA
     GAME_GENIE_LETTERS = 'APZLGITYEOXUKSVN'
     PALETTE = {0: (116, 116, 116), 1: (36, 24, 140), 2: (0, 0, 168), 3: (6...
 ```
+
+NES Game Genie code format:
 
 ![NES Game Genie code format](nesgenieformat.png)
 
