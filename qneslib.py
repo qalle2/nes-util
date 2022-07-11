@@ -222,7 +222,7 @@ def tile_slice_encode(pixels):
 
 def ines_header_decode(handle):
     """Parse the header of an iNES ROM file.
-    Note: does not support VS Unisystem, PlayChoice-10 or NES 2.0.
+    Note: does not support VS System or PlayChoice-10 flags or NES 2.0 header.
     handle: iNES ROM file
     return: None on error, otherwise a dict with the following keys:
         trainerStart: trainer address
@@ -277,7 +277,7 @@ def ines_header_decode(handle):
 
 def ines_header_encode(prgSize, chrSize, mapper=0, mirroring="h", extraRam=False):
     """Create an iNES file header.
-    Note: does not support VS Unisystem, PlayChoice-10 or NES 2.0.
+    Note: does not support VS System or PlayChoice-10 flags or NES 2.0 header.
     prgSize:   PRG ROM size
     chrSize:   CHR ROM size
     mapper:    iNES mapper number (0x00-0xff)
