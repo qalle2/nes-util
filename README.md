@@ -61,6 +61,7 @@ FUNCTIONS
 
     ines_header_decode(handle)
         Parse the header of an iNES ROM file.
+        Note: does not support VS Unisystem, PlayChoice-10 or NES 2.0.
         handle: iNES ROM file
         return: None on error, otherwise a dict with the following keys:
             trainerStart: trainer address
@@ -75,6 +76,7 @@ FUNCTIONS
 
     ines_header_encode(prgSize, chrSize, mapper=0, mirroring='h', extraRam=False)
         Create an iNES file header.
+        Note: does not support VS Unisystem, PlayChoice-10 or NES 2.0.
         prgSize:   PRG ROM size
         chrSize:   CHR ROM size
         mapper:    iNES mapper number (0x00-0xff)
@@ -94,6 +96,11 @@ FUNCTIONS
         prgSize: PRG ROM size
         mapper:  iNES mapper number (0x00-0xff)
         return:  bool
+
+    mapper_name(mapper)
+        Get the name of the mapper.
+        mapper: iNES mapper number (0x00-0xff)
+        return: string ("(unknown)" if unknown mapper)
 
     min_prg_bank_size(prgSize, mapper)
         Get the smallest PRG ROM bank size a game may use.
@@ -159,6 +166,7 @@ trainer size: 0
 PRG ROM size: 32768
 CHR ROM size: 8192
 iNES mapper number: 0
+Mapper name: NROM
 name table mirroring: vertical
 has extra RAM: no
 ```

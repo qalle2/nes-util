@@ -71,59 +71,62 @@ PALETTE = {
     0x3f: (0x00, 0x00, 0x00),
 }
 
-# Smallest supported PRG ROM bank sizes for iNES mappers, in KiB (32 if no bankswitching).
-# Source: http://wiki.nesdev.com/w/index.php/List_of_mappers
-# Only includes mappers used by at least three games among my verified good dumps ("[!]").
-_MIN_PRG_BANK_SIZES = {
-    0:   32,  # NROM
-    1:   16,  # SxROM, MMC1
-    2:   16,  # UxROM
-    3:   32,  # CNROM
-    4:   8,   # TxROM, MMC3, MMC6
-    5:   8,   # ExROM, MMC5
-    7:   32,  # AxROM
-    9:   8,   # PxROM, MMC2
-    10:  16,  # FxROM, MMC4
-    11:  32,  # Color Dreams
-    15:  8,   # 100-in-1 Contra Function 16
-    16:  16,  # some Bandai FCG boards
-    18:  8,   # Jaleco SS8806
-    19:  8,   # Namco 163
-    23:  8,   # VRC2b, VRC4e
-    25:  8,   # VRC4b, VRC4d
-    33:  8,   # Taito TC0190
-    34:  32,  # BNROM, NINA-001
-    64:  8,   # RAMBO-1
-    66:  32,  # GxROM, MxROM
-    69:  8,   # FME-7, Sunsoft 5B
-    70:  16,  # (unnamed)
-    71:  16,  # Camerica/Codemasters
-    75:  8,   # VRC1
-    79:  32,  # NINA-003/NINA-006
-    80:  8,   # Taito X1-005
-    83:  8,   # Cony/Yoko
-    87:  32,  # (unnamed)
-    88:  8,   # (unnamed)
-    90:  8,   # J.Y. Company ASIC
-    91:  8,   # (unnamed)
-    99:  8,   # (used by Vs. System games)
-    112: 8,   # (unnamed)
-    113: 32,  # NINA-003/NINA-006??
-    115: 16,  # Kasheng SFC-02B/-03/-004
-    118: 8,   # TxSROM, MMC3
-    119: 8,   # TQROM, MMC3
-    139: 32,  # Sachen 8259
-    141: 32,  # Sachen 8259
-    146: 32,  # NINA-003-006
-    148: 32,  # Sachen SA-008-A / Tengen 800008
-    150: 32,  # Sachen SA-015/SA-630
-    163: 32,  # Nanjing
-    185: 32,  # CNROM with protection diodes
-    196: 8,   # MMC3 variant
-    209: 8,   # Jingtai / J.Y. Company ASIC
-    232: 16,  # Camerica/Codemasters Quattro
-    234: 32,  # Maxi 15 multicart
-    243: 32,  # Sachen SA-020A
+# mapper info
+# key = iNES mapper number, value = (smallest supported PRG ROM bank size, name)
+# notes:
+#   - bank size: in KiB; 32 = no bankswitching
+#   - only includes mappers used by at least three games among my verified good dumps ("[!]")
+# source: https://www.nesdev.org/wiki/List_of_mappers
+_MAPPER_INFO = {
+    0:   (32, "NROM"),
+    1:   (16, "SxROM, MMC1"),
+    2:   (16, "UxROM"),
+    3:   (32, "CNROM"),
+    4:   (8,  "TxROM, MMC3, MMC6"),
+    5:   (8,  "ExROM, MMC5"),
+    7:   (32, "AxROM"),
+    9:   (8,  "PxROM, MMC2"),
+    10:  (16, "FxROM, MMC4"),
+    11:  (32, "Color Dreams"),
+    15:  (8,  "100-in-1 Contra Function 16"),
+    16:  (16, "some Bandai FCG boards"),
+    18:  (8,  "Jaleco SS8806"),
+    19:  (8,  "Namco 163"),
+    23:  (8,  "VRC2b, VRC4e"),
+    25:  (8,  "VRC4b, VRC4d"),
+    33:  (8,  "Taito TC0190"),
+    34:  (32, "BNROM, NINA-001"),
+    64:  (8,  "RAMBO-1"),
+    66:  (32, "GxROM, MxROM"),
+    69:  (8,  "FME-7, Sunsoft 5B"),
+    70:  (16, "(unnamed)"),
+    71:  (16, "Camerica/Codemasters"),
+    75:  (8,  "VRC1"),
+    79:  (32, "NINA-003/NINA-006"),
+    80:  (8,  "Taito X1-005"),
+    83:  (8,  "Cony/Yoko"),
+    87:  (32, "(unnamed)"),
+    88:  (8,  "(unnamed)"),
+    90:  (8,  "J.Y. Company ASIC"),
+    91:  (8,  "(unnamed)"),
+    99:  (8,  "(used by Vs. System games)"),
+    112: (8,  "(unnamed)"),
+    113: (32, "NINA-003/NINA-006??"),
+    115: (16, "Kasheng SFC-02B/-03/-004"),
+    118: (8,  "TxSROM, MMC3"),
+    119: (8,  "TQROM, MMC3"),
+    139: (32, "Sachen 8259"),
+    141: (32, "Sachen 8259"),
+    146: (32, "NINA-003-006"),
+    148: (32, "Sachen SA-008-A / Tengen 800008"),
+    150: (32, "Sachen SA-015/SA-630"),
+    163: (32, "Nanjing"),
+    185: (32, "CNROM with protection diodes"),
+    196: (8,  "MMC3 variant"),
+    209: (8,  "Jingtai / J.Y. Company ASIC"),
+    232: (16, "Camerica/Codemasters Quattro"),
+    234: (32, "Maxi 15 multicart"),
+    243: (32, "Sachen SA-020A"),
 }
 
 _INES_ID = b"NES\x1a"
@@ -138,7 +141,7 @@ def min_prg_bank_size_for_mapper(mapper):
     mapper: iNES mapper number (0x00-0xff)
     return: 8_192/16_384/32_768 (8_192 if unknown mapper)"""
 
-    return _MIN_PRG_BANK_SIZES.get(mapper, 8) * 1024
+    return (_MAPPER_INFO[mapper][0] if mapper in _MAPPER_INFO else 8) * 1024
 
 def min_prg_bank_size(prgSize, mapper):
     """Get the smallest PRG ROM bank size a game may use.
@@ -157,13 +160,20 @@ def is_prg_bankswitched(prgSize, mapper):
 
     return min_prg_bank_size_for_mapper(mapper) < prgSize
 
+def mapper_name(mapper):
+    """Get the name of the mapper.
+    mapper: iNES mapper number (0x00-0xff)
+    return: string ("(unknown)" if unknown mapper)"""
+
+    return _MAPPER_INFO[mapper][1] if mapper in _MAPPER_INFO else "(unknown)"
+
 def is_mapper_known(mapper):
     """Is the mapper known by this program? (If not, mapper functions are more likely to return
     incorrect info.)
     mapper: iNES mapper number (0x00-0xff)
     return: bool"""
 
-    return mapper in _MIN_PRG_BANK_SIZES
+    return mapper in _MAPPER_INFO
 
 def address_prg_to_cpu(prgAddr, prgBankSize):
     """Convert a PRG ROM address into possible CPU ROM addresses.
@@ -212,6 +222,7 @@ def tile_slice_encode(pixels):
 
 def ines_header_decode(handle):
     """Parse the header of an iNES ROM file.
+    Note: does not support VS Unisystem, PlayChoice-10 or NES 2.0.
     handle: iNES ROM file
     return: None on error, otherwise a dict with the following keys:
         trainerStart: trainer address
@@ -223,6 +234,8 @@ def ines_header_decode(handle):
         mapper:       iNES mapper number (0x00-0xff)
         mirroring:    name table mirroring ('h'=horizontal, 'v'=vertical, 'f'=four-screen)
         extraRam:     does the game have extra RAM? (bool)"""
+
+    # see https://www.nesdev.org/wiki/INES
 
     fileSize = handle.seek(0, 2)
 
@@ -236,40 +249,43 @@ def ines_header_decode(handle):
     # PRG ROM / CHR ROM / trainer size in bytes (note: PRG ROM size 0 -> 256)
     prgSize = (prgSize if prgSize else 256) * 16 * 1024
     chrSize = chrSize * 8 * 1024
-    trainerSize = bool(flags6 & 0x04) * 512
+    trainerSize = bool(flags6 & 0b00000100) * 512
 
     # validate id and file size (note: accept files that are too large)
     if id_ != _INES_ID or fileSize < 16 + trainerSize + prgSize + chrSize:
         return None
 
     # type of name table mirroring
-    if flags6 & 0x08:
+    if flags6 & 0b00001000:
         mirroring = "f"
-    elif flags6 & 0x01:
+    elif flags6 & 0b00000001:
         mirroring = "v"
     else:
         mirroring = "h"
 
     return {
         "trainerStart": 16,
-        "trainerSize": trainerSize,
-        "prgStart": 16 + trainerSize,
-        "prgSize": prgSize,
-        "chrStart": 16 + trainerSize + prgSize,
-        "chrSize": chrSize,
-        "mapper": (flags7 & 0xf0) | (flags6 >> 4),
-        "mirroring": mirroring,
-        "extraRam": bool(flags6 & 0x02),
+        "trainerSize":  trainerSize,
+        "prgStart":     16 + trainerSize,
+        "prgSize":      prgSize,
+        "chrStart":     16 + trainerSize + prgSize,
+        "chrSize":      chrSize,
+        "mapper":       (flags7 & 0b11110000) | (flags6 >> 4),
+        "mirroring":    mirroring,
+        "extraRam":     bool(flags6 & 0b00000010),
     }
 
 def ines_header_encode(prgSize, chrSize, mapper=0, mirroring="h", extraRam=False):
     """Create an iNES file header.
+    Note: does not support VS Unisystem, PlayChoice-10 or NES 2.0.
     prgSize:   PRG ROM size
     chrSize:   CHR ROM size
     mapper:    iNES mapper number (0x00-0xff)
     mirroring: name table mirroring ('h'=horizontal, 'v'=vertical, 'f'=four-screen)
     extraRam:  does the game have extra RAM? (bool)
     return:    16 bytes or None on error"""
+
+    # see https://www.nesdev.org/wiki/INES
 
     # get PRG ROM size in 16-KiB units (note: 256 -> 0)
     (prgSize, remainder) = divmod(prgSize, 16 * 1024)
@@ -283,11 +299,11 @@ def ines_header_encode(prgSize, chrSize, mapper=0, mirroring="h", extraRam=False
         return None
 
     # encode flags
-    flags6 = (mapper & 0x0f) << 4
-    flags6 |= {"h": 0x00, "v": 0x01, "f": 0x08}[mirroring]
+    flags6 = (mapper & 0b00001111) << 4
+    flags6 |= {"h": 0b00000000, "v": 0b00000001, "f": 0b00001000}[mirroring]
     if extraRam:
-        flags6 |= 0x02
-    flags7 = mapper & 0xf0
+        flags6 |= 0b00000010
+    flags7 = mapper & 0b11110000
 
     return struct.pack("4s4B8s", _INES_ID, prgSize, chrSize, flags6, flags7, 8 * b"\x00")
 
@@ -303,7 +319,7 @@ def game_genie_decode(code):
             replacement_value: 0x00-0xff
             compare_value:     None if 6-letter code, 0x00-0xff if 8-letter code"""
 
-    # see http://nesdev.com/nesgg.txt
+    # see https://www.nesdev.org/nesgg.txt
 
     # validate
     if len(code) not in (6, 8) or not set(code.upper()).issubset(set(GAME_GENIE_LETTERS)):
@@ -347,7 +363,7 @@ def game_genie_encode(addr, repl, comp=None):
         if comp is None     : 6-letter code
         if comp is not None : 8-letter code"""
 
-    # see http://nesdev.com/nesgg.txt
+    # see https://www.nesdev.org/nesgg.txt
 
     # validate
     if not 0 <= addr <= 0xffff or not 0 <= repl <= 0xff \
@@ -367,8 +383,8 @@ def game_genie_encode(addr, repl, comp=None):
     encoded = codeLen * [0]
     for loPos in _GAME_GENIE_DECODE_KEY[codeLen-1::-1]:
         hiPos = (loPos - 1) % codeLen
-        encoded[loPos] |= bigint & 0x7
-        encoded[hiPos] |= bigint & 0x8
+        encoded[loPos] |= bigint & 0b0111
+        encoded[hiPos] |= bigint & 0b1000
         bigint >>= 4
     # convert 4-bit ints into letters
     return "".join(GAME_GENIE_LETTERS[i] for i in encoded)

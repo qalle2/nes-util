@@ -22,6 +22,7 @@ print("trainer size:", fileInfo["trainerSize"])
 print("PRG ROM size:", fileInfo["prgSize"])
 print("CHR ROM size:", fileInfo["chrSize"])
 print("iNES mapper number:", fileInfo["mapper"])
+print("Mapper name:", qneslib.mapper_name(fileInfo["mapper"]))
 print(
     "name table mirroring:",
     {"h": "horizontal", "v": "vertical", "f": "four-screen"}[fileInfo["mirroring"]]
