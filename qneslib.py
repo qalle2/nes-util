@@ -2,6 +2,8 @@
 
 import struct
 
+# --- "Constants" -------------------------------------------------------------
+
 # NES master palette
 # key=index, value=(red, green, blue); source: FCEUX (fceux.pal)
 PALETTE = {
@@ -72,11 +74,12 @@ PALETTE = {
 }
 
 # mapper info
-# key = iNES mapper number, value = (smallest supported PRG ROM bank size, name)
+# key = iNES mapper, value = (smallest supported PRG ROM bank size, name)
 # notes:
 #   - bank size: in KiB; 32 = no bankswitching
 #   - no mappers only used in pirate carts
-# see https://www.nesdev.org/wiki/List_of_mappers and https://www.nesdev.org/wiki/INES_Mapper_xxx
+# see https://www.nesdev.org/wiki/List_of_mappers
+# and https://www.nesdev.org/wiki/INES_Mapper_xxx
 _MAPPER_INFO = {
     0:   (32, "NROM"),
     1:   (16, "SxROM, MMC1"),
@@ -141,9 +144,9 @@ _MAPPER_INFO = {
 _INES_ID = b"NES\x1a"
 
 GAME_GENIE_LETTERS = "APZLGITYEOXUKSVN"
-_GAME_GENIE_DECODE_KEY = (3, 5, 2, 4, 1, 0, 7, 6)  # at 0x0eb6 in Game Genie PRG ROM
+_GAME_GENIE_DECODE_KEY = (3, 5, 2, 4, 1, 0, 7, 6)  # at 0x0eb6 in GG PRG ROM
 
-# -------------------------------------------------------------------------------------------------
+# --- Misc functions ----------------------------------------------------------
 
 def min_prg_bank_size_for_mapper(mapper):
     """Get the smallest PRG ROM bank size supported by the mapper.
@@ -161,8 +164,8 @@ def min_prg_bank_size(prgSize, mapper):
     return min(min_prg_bank_size_for_mapper(mapper), prgSize)
 
 def is_prg_bankswitched(prgSize, mapper):
-    """Does the game use PRG ROM bankswitching? (May give false positives, especially if the
-    mapper is unknown. Should not give false negatives.)
+    """Does the game use PRG ROM bankswitching? (May give false positives,
+    especially if the mapper is unknown. Should not give false negatives.)
     prgSize: PRG ROM size
     mapper:  iNES mapper number (0x00-0xff)
     return:  bool"""
@@ -177,8 +180,8 @@ def mapper_name(mapper):
     return _MAPPER_INFO[mapper][1] if mapper in _MAPPER_INFO else "(unknown)"
 
 def is_mapper_known(mapper):
-    """Is the mapper known by this program? (If not, mapper functions are more likely to return
-    incorrect info.)
+    """Is the mapper known by this program? (If not, mapper functions are more
+    likely to return incorrect info.)
     mapper: iNES mapper number (0x00-0xff)
     return: bool"""
 
@@ -191,7 +194,9 @@ def address_prg_to_cpu(prgAddr, prgBankSize):
     generate:    CPU ROM addresses (0x8000-0xffff)"""
 
     offset = prgAddr & (prgBankSize - 1)  # within each bank
-    yield from (origin | offset for origin in range(0x8000, 0x10000, prgBankSize))
+    yield from (
+        origin | offset for origin in range(0x8000, 0x10000, prgBankSize)
+    )
 
 def address_cpu_to_prg(cpuAddr, prgBankSize, prgSize):
     """Convert a CPU ROM address into possible PRG ROM addresses.
@@ -227,7 +232,7 @@ def tile_slice_encode(pixels):
         hiByte = (hiByte << 1) | (pixel >> 1)
     return (loByte, hiByte)
 
-# -------------------------------------------------------------------------------------------------
+# --- iNES header functions ---------------------------------------------------
 
 def ines_header_decode(handle):
     """Parse the header of an iNES ROM file.
@@ -241,7 +246,8 @@ def ines_header_decode(handle):
         chrStart:     CHR ROM address
         chrSize:      CHR ROM size
         mapper:       iNES mapper number (0x00-0xff)
-        mirroring:    name table mirroring ('h'=horizontal, 'v'=vertical, 'f'=four-screen)
+        mirroring:    name table mirroring ('h'=horizontal, 'v'=vertical,
+                      'f'=four-screen)
         extraRam:     does the game have extra RAM? (bool)"""
 
     # see https://www.nesdev.org/wiki/INES
@@ -253,7 +259,8 @@ def ines_header_decode(handle):
 
     # get fields from header
     handle.seek(0)
-    (id_, prgSize, chrSize, flags6, flags7) = struct.unpack("4s4B8x", handle.read(16))
+    (id_, prgSize, chrSize, flags6, flags7) \
+    = struct.unpack("4s4B8x", handle.read(16))
 
     # PRG ROM / CHR ROM / trainer size in bytes (note: PRG ROM size 0 -> 256)
     prgSize = (prgSize if prgSize else 256) * 16 * 1024
@@ -284,13 +291,16 @@ def ines_header_decode(handle):
         "extraRam":     bool(flags6 & 0b00000010),
     }
 
-def ines_header_encode(prgSize, chrSize, mapper=0, mirroring="h", extraRam=False):
+def ines_header_encode(
+    prgSize, chrSize, mapper=0, mirroring="h", extraRam=False
+):
     """Create an iNES file header.
     Note: does not support VS System or PlayChoice-10 flags or NES 2.0 header.
     prgSize:   PRG ROM size
     chrSize:   CHR ROM size
     mapper:    iNES mapper number (0x00-0xff)
-    mirroring: name table mirroring ('h'=horizontal, 'v'=vertical, 'f'=four-screen)
+    mirroring: name table mirroring ('h'=horizontal, 'v'=vertical,
+               'f'=four-screen)
     extraRam:  does the game have extra RAM? (bool)
     return:    16 bytes or None on error"""
 
@@ -314,9 +324,11 @@ def ines_header_encode(prgSize, chrSize, mapper=0, mirroring="h", extraRam=False
         flags6 |= 0b00000010
     flags7 = mapper & 0b11110000
 
-    return struct.pack("4s4B8s", _INES_ID, prgSize, chrSize, flags6, flags7, 8 * b"\x00")
+    return struct.pack(
+        "4s4B8s", _INES_ID, prgSize, chrSize, flags6, flags7, 8 * b"\x00"
+    )
 
-# -------------------------------------------------------------------------------------------------
+# --- Game Genie functions ----------------------------------------------------
 
 def game_genie_decode(code):
     """Decode a Game Genie code.
@@ -326,23 +338,26 @@ def game_genie_decode(code):
         otherwise:       (cpu_address, replacement_value, compare_value):
             cpu_address:       0x8000-0xffff
             replacement_value: 0x00-0xff
-            compare_value:     None if 6-letter code, 0x00-0xff if 8-letter code"""
+            compare_value:     None if 6-letter code, 0x00-0xff if 8-letter
+                               code"""
 
     # see https://www.nesdev.org/nesgg.txt
 
     # validate
-    if len(code) not in (6, 8) or not set(code.upper()).issubset(set(GAME_GENIE_LETTERS)):
+    if len(code) not in (6, 8) \
+    or not set(code.upper()).issubset(set(GAME_GENIE_LETTERS)):
         return None
     # convert letters into integers (0x0-0xf)
     code = [GAME_GENIE_LETTERS.index(letter) for letter in code.upper()]
-    # combine integers to a 24/32-bit integer according to _GAME_GENIE_DECODE_KEY
-    # (16 bits for CPU address, 8 for replacement value, optionally 8 for compare value)
+    # combine integers to a 24/32-bit integer according to decode key: 16 bits
+    # for CPU address, 8 for replacement value, optionally 8 for compare value
     bigint = 0
     for loPos in _GAME_GENIE_DECODE_KEY[:len(code)]:
         hiPos = (loPos - 1) % len(code)
         bigint = (bigint << 4) | (code[hiPos] & 8) | (code[loPos] & 7)
     # split integer and set MSB of CPU address
-    (bigint, comp) = (bigint, None) if len(code) == 6 else (bigint >> 8, bigint & 0xff)
+    (bigint, comp) \
+    = (bigint, None) if len(code) == 6 else (bigint >> 8, bigint & 0xff)
     (addr, repl) = (bigint >> 8, bigint & 0xff)
     return (addr | 0x8000, repl, comp)
 
@@ -378,8 +393,9 @@ def game_genie_encode(addr, repl, comp=None):
     if not 0 <= addr <= 0xffff or not 0 <= repl <= 0xff \
     or comp is not None and not 0 <= comp <= 0xff:
         return None
-    # combine args into a 24/32-bit integer; clear/set MSB of address to get correct 3rd letter
-    # later (one of APZLGITY for 6-letter codes, one of EOXUKSVN for 8-letter codes)
+    # combine args into 24/32-bit int; clear/set MSB of address to get correct
+    # 3rd letter later (one of APZLGITY for 6-letter codes, one of EOXUKSVN for
+    # 8-letter codes)
     if comp is None:
         codeLen = 6
         addr &= 0x7fff
@@ -388,7 +404,7 @@ def game_genie_encode(addr, repl, comp=None):
         codeLen = 8
         addr |= 0x8000
         bigint = (addr << 16) | (repl << 8) | comp
-    # convert the 24/32-bit int into 4-bit ints according to _GAME_GENIE_DECODE_KEY
+    # convert 24/32-bit int into 4-bit ints according to decode key
     encoded = codeLen * [0]
     for loPos in _GAME_GENIE_DECODE_KEY[codeLen-1::-1]:
         hiPos = (loPos - 1) % codeLen

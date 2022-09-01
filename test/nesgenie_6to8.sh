@@ -27,10 +27,6 @@ echo "=== SMB 1 - AAAAAA (should print a warning) ==="
 python3 ../nesgenie_6to8.py ../test-in/smb1.nes aaaaaa
 echo
 
-echo "=== Videomation - AAAAAA (should print a warning) ==="
-python3 ../nesgenie_6to8.py ../test-in/videomation.nes aaaaaa
-echo
-
 echo "=== These should cause three errors ==="
 python3 ../nesgenie_6to8.py ../test-in/smb1.nes       dddddd
 python3 ../nesgenie_6to8.py ../test-in/smb1.nes       eaeaeaea

@@ -15,10 +15,6 @@ python3 ../nes_cpuaddr.py ../test-in/smb3.nes 0000
 python3 ../nes_cpuaddr.py ../test-in/smb3.nes 3ffff
 echo
 
-echo "=== Videomation (0000; should warn about unknown mapper) ==="
-python3 ../nes_cpuaddr.py ../test-in/videomation.nes 0000
-echo
-
 echo "=== This should cause an error ==="
 python3 ../nes_cpuaddr.py ../test-in/smb1.nes 8000
 echo

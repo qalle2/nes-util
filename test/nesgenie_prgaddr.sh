@@ -27,10 +27,6 @@ echo
 echo "=== SMB3, YEUZUGPA (shouldn't find any) ==="
 python3 ../nesgenie_prgaddr.py ../test-in/smb3.nes yeuzugpa
 
-echo "=== Videomation, AAAAAA (should print a warning) ==="
-python3 ../nesgenie_prgaddr.py ../test-in/videomation.nes aaaaaa
-echo
-
 echo "=== These should cause two errors ==="
 python3 ../nesgenie_prgaddr.py ../test-in/smb1.nes dapapa
 python3 ../nesgenie_prgaddr.py ../test-in/invalid-id.nes sxiopo
