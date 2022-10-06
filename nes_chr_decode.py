@@ -18,17 +18,20 @@ def parse_arguments():
         description="Convert NES CHR (graphics) data into a PNG file."
     )
     parser.add_argument(
-        "-p", "--palette", nargs=4, default=("000000", "555555", "aaaaaa", "ffffff"),
-        help="Output palette (which image colors correspond to CHR colors 0-3). Four hexadecimal "
-        "RRGGBB color codes separated by spaces. Default: 000000 555555 aaaaaa ffffff"
+        "-p", "--palette", nargs=4,
+        default=("000000", "555555", "aaaaaa", "ffffff"),
+        help="Output palette (which image colors correspond to CHR colors "
+        "0-3). Four hexadecimal RRGGBB color codes separated by spaces. "
+        "Default: 000000 555555 aaaaaa ffffff"
     )
     parser.add_argument(
         "input_file",
-        help="File to read. An iNES ROM file (.nes) or raw CHR data. The size of a raw CHR data "
-        "file must be a multiple of 256 bytes (16 tiles)."
+        help="File to read. An iNES ROM file (.nes) or raw CHR data. The size "
+        "of a raw CHR data file must be a multiple of 256 bytes (16 tiles)."
     )
     parser.add_argument(
-        "output_file", help="PNG file to write. Always 128 pixels (16 tiles) wide."
+        "output_file",
+        help="PNG file to write. Always 128 pixels (16 tiles) wide."
     )
     args = parser.parse_args()
 
@@ -52,23 +55,29 @@ def get_chr_addr_and_size(handle):
     else:
         fileSize = handle.seek(0, 2)
         if fileSize == 0 or fileSize % 256:
-            sys.exit("The input file is neither an iNES ROM file nor a raw CHR data file.")
+            sys.exit(
+                "The input file is neither an iNES ROM file nor a raw CHR "
+                "data file."
+            )
         # raw CHR data file
         return (0, fileSize)
 
 def decode_pixel_rows(handle, charRowCount):
     # generate 128*1 pixels (two-bit ints) per call from NES CHR data;
-    # note: a tile is 8*8 pixels and 2 bitplanes, or 16 bytes; first low bitplane from top to
-    # bottom, then high bitplane from top to bottom; 1 byte is 8*1 pixels of one bitplane
+    # note: a tile is 8*8 pixels and 2 bitplanes, or 16 bytes; first low
+    # bitplane from top to bottom, then high bitplane from top to bottom;
+    # 1 byte is 8*1 pixels of one bitplane
 
     pixelRow = []
     for i in range(charRowCount):
-        charRow = handle.read(16 * 16)  # 16*1 tiles (128*8 pixels), 16 bytes/tile
+        charRow = handle.read(16 * 16)  # 16*1 tiles (128*8 px), 16 bytes/tile
         for y in range(8):
             pixelRow.clear()
             for x in range(16):
                 # decode 2 bytes (8 bytes apart) into 8*1 pixels
-                pixelRow.extend(qneslib.tile_slice_decode(charRow[x*16+y], charRow[x*16+y+8]))
+                pixelRow.extend(qneslib.tile_slice_decode(
+                    charRow[x*16+y], charRow[x*16+y+8]
+                ))
             yield pixelRow
 
 def chr_data_to_image(handle, args):
@@ -79,7 +88,9 @@ def chr_data_to_image(handle, args):
 
     # create indexed image; get palette from command line argument
     image = Image.new("P", (16 * 8, charRowCount * 8))
-    image.putpalette(itertools.chain.from_iterable(decode_color_code(c) for c in args.palette))
+    image.putpalette(itertools.chain.from_iterable(
+        decode_color_code(c) for c in args.palette
+    ))
 
     # convert CHR data into image data
     handle.seek(chrAddr)
