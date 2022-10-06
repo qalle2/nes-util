@@ -1,6 +1,5 @@
 import argparse, os, sys
 from PIL import Image  # Pillow, https://python-pillow.org
-import qneslib  # qalle's NES library, https://github.com/qalle2/nes-util
 
 def decode_color_code(color):
     # decode a hexadecimal RRGGBB color code into (red, green, blue)
@@ -67,20 +66,18 @@ def reorder_palette(img, args):
     return img.remap_palette(palette.index(c) for c in mapping)
 
 def encode_image(img):
-    # generate NES CHR data from a Pillow image (256 bytes for every 128*8
-    # pixels or 16*1 tiles); note: a tile is 8*8 pixels and 2 bitplanes, or
-    # 16 bytes; first low bitplane from top to bottom, then high bitplane from
-    # top to bottom; 1 byte is 8*1 pixels of one bitplane
+    # generate NES CHR data from a Pillow image: 8 bytes for each bitplane of
+    # each tile (each tile is 8*8 pixels and 2 bitplanes; less significant
+    # bitplane comes first; each byte is 8*1 pixels of one bitplane)
 
-    data = bytearray(256)
-    for y in range(img.height):
-        for x in range(0, 128, 8):
-            # read 8*1 pixels, convert into 2 bytes, store 8 bytes apart
-            (data[x*2+y%8], data[x*2+y%8+8]) = qneslib.tile_slice_encode(
-                img.getpixel((x2, y)) for x2 in range(x, x + 8)
-            )
-        if y % 8 == 7:
-            yield data
+    for ty in range(0, img.height, 8):  # tile Y
+        for tx in range(0, 128, 8):  # tile X
+            tile = list(img.crop((tx, ty, tx + 8, ty + 8)).getdata())
+            for bp in range(2):  # bitplane
+                yield bytes(
+                    sum(((tile[py+x] >> bp) & 1) << (7 - x) for x in range(8))
+                    for py in range(0, 64, 8)
+                )
 
 def main():
     args = parse_arguments()
