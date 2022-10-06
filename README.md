@@ -239,18 +239,17 @@ usage: nes_chr_decode.py [-h] [-p PALETTE PALETTE PALETTE PALETTE]
 Convert NES CHR (graphics) data into a PNG file.
 
 positional arguments:
-  input_file            File to read. An iNES ROM file (.nes) or raw CHR data.
-                        The size of a raw CHR data file must be a multiple of
-                        256 bytes (16 tiles).
-  output_file           PNG file to write. Always 128 pixels (16 tiles) wide.
+  input_file            File to read. An iNES ROM (.nes) or raw CHR data. Size
+                        of raw CHR data must be a multiple of 256 bytes (16
+                        tiles).
+  output_file           PNG file to write. 128 pixels (16 tiles) wide.
 
 options:
   -h, --help            show this help message and exit
   -p PALETTE PALETTE PALETTE PALETTE, --palette PALETTE PALETTE PALETTE PALETTE
                         Output palette (which image colors correspond to CHR
-                        colors 0-3). Four hexadecimal RRGGBB color codes
-                        separated by spaces. Default: 000000 555555 aaaaaa
-                        ffffff
+                        colors 0-3). Four hexadecimal RRGGBB codes separated
+                        by spaces. Default: 000000 555555 aaaaaa ffffff
 ```
 
 ## nes_chr_encode.py
