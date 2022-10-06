@@ -197,9 +197,9 @@ options:
 
 ## nes_blaster_mapext.py
 ```
-usage: nes_blaster_mapext.py [-h] [-j] [-n MAP_NUMBER]
-                             [-u ULTRA_SUBBLOCK_IMAGE] [-s SUBBLOCK_IMAGE]
-                             [-b BLOCK_IMAGE] [-m MAP_IMAGE] [-v]
+usage: nes_blaster_mapext.py [-h] [-j] [-n MAP_NUMBER] [-u USB_IMAGE]
+                             [-s SB_IMAGE] [-b BLOCK_IMAGE] [-m MAP_IMAGE]
+                             [-v]
                              input_file
 
 Extract world maps from NES Blaster Master to PNG files.
@@ -215,10 +215,10 @@ options:
   -n MAP_NUMBER, --map-number MAP_NUMBER
                         Map to extract: 0-7 = side view of area 1-8, 8-15 =
                         overhead view of area 1-8. Default=0.
-  -u ULTRA_SUBBLOCK_IMAGE, --ultra-subblock-image ULTRA_SUBBLOCK_IMAGE
+  -u USB_IMAGE, --usb-image USB_IMAGE
                         Save ultra-subblocks (16*16 px each) as PNG file (up
                         to 256*256 px).
-  -s SUBBLOCK_IMAGE, --subblock-image SUBBLOCK_IMAGE
+  -s SB_IMAGE, --sb-image SB_IMAGE
                         Save subblocks (32*32 px each) as PNG file (up to
                         512*512 px).
   -b BLOCK_IMAGE, --block-image BLOCK_IMAGE
