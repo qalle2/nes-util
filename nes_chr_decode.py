@@ -62,23 +62,21 @@ def get_chr_addr_and_size(handle):
         # raw CHR data file
         return (0, fileSize)
 
-def decode_pixel_rows(handle, charRowCount):
-    # generate 128*1 pixels (two-bit ints) per call from NES CHR data;
-    # note: a tile is 8*8 pixels and 2 bitplanes, or 16 bytes; first low
-    # bitplane from top to bottom, then high bitplane from top to bottom;
-    # 1 byte is 8*1 pixels of one bitplane
+def generate_tiles(handle, charRowCount):
+    # generate one tile (a tuple of 64 2-bit ints) per call from NES CHR data
+    # (each tile is 8*8 pixels and 2 bitplanes; each byte is 8*1 pixels of one
+    # bitplane)
 
-    pixelRow = []
-    for i in range(charRowCount):
-        charRow = handle.read(16 * 16)  # 16*1 tiles (128*8 px), 16 bytes/tile
-        for y in range(8):
-            pixelRow.clear()
-            for x in range(16):
-                # decode 2 bytes (8 bytes apart) into 8*1 pixels
-                pixelRow.extend(qneslib.tile_slice_decode(
-                    charRow[x*16+y], charRow[x*16+y+8]
+    tile = list()
+    for ty in range(charRowCount):  # tile Y
+        charRow = handle.read(16 * 16)
+        for tx in range(16):  # tile X
+            tile.clear()
+            for py in range(8):  # pixel Y
+                tile.extend(qneslib.tile_slice_decode(
+                    charRow[tx*16+py], charRow[tx*16+py+8]
                 ))
-            yield pixelRow
+            yield tuple(tile)
 
 def chr_data_to_image(handle, args):
     # read CHR data from a file, return a Pillow image
@@ -94,9 +92,10 @@ def chr_data_to_image(handle, args):
 
     # convert CHR data into image data
     handle.seek(chrAddr)
-    for (y, pixelRow) in enumerate(decode_pixel_rows(handle, charRowCount)):
-        for (x, colorIndex) in enumerate(pixelRow):
-            image.putpixel((x, y), colorIndex)
+    tileImg = Image.new("P", (8, 8))
+    for (i, tile) in enumerate(generate_tiles(handle, charRowCount)):
+        tileImg.putdata(tile)
+        image.paste(tileImg, (i % 16 * 8, i // 16 * 8))
 
     return image
 
