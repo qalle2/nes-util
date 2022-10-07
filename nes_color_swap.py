@@ -5,12 +5,14 @@ def parse_arguments():
     # parse command line arguments using argparse
 
     parser = argparse.ArgumentParser(
-        description="Swap colors in the graphics data (CHR ROM) of an iNES ROM file (.nes)."
+        description="Swap colors in the graphics data (CHR ROM) of an iNES "
+        "ROM file (.nes)."
     )
     parser.add_argument(
-        "-c", "--colors", nargs=4, type=int, choices=range(4), default=(0, 2, 3, 1),
-        help="Change original colors 0...3 to these colors. Four colors (each 0...3) "
-        "separated by spaces. Default: 0 2 3 1"
+        "-c", "--colors", nargs=4, type=int, choices=range(4),
+        default=(0, 2, 3, 1),
+        help="Change original colors 0...3 to these colors. Four colors "
+        "(each 0...3) separated by spaces. Default: 0 2 3 1"
     )
     parser.add_argument(
         "-f", "--first-tile", type=int, default=0,
@@ -18,7 +20,8 @@ def parse_arguments():
     )
     parser.add_argument(
         "-n", "--tile-count", type=int, default=0,
-        help="Number of tiles to change. 0 (default) = all starting from --first-tile."
+        help="Number of tiles to change. 0 (default) = all starting from "
+        "--first-tile."
     )
     parser.add_argument(
         "input_file", help="iNES ROM file (.nes) to read."
@@ -47,7 +50,7 @@ def read_file_slice(handle, bytesLeft):
         bytesLeft -= chunkSize
 
 def swap_colors(chunk, colors):
-    # replace colors 0...3 in NES CHR data chunk (16n bytes) with new colors (four ints)
+    # replace colors 0-3 in CHR data chunk (16n bytes) with new colors (4 ints)
 
     chunk = bytearray(chunk)
 
@@ -59,7 +62,8 @@ def swap_colors(chunk, colors):
             hiPos = charPos + 8 + pixelY
             # decode pixels, replace colors, reencode pixels
             (chunk[loPos], chunk[hiPos]) = qneslib.tile_slice_encode(
-                colors[color] for color in qneslib.tile_slice_decode(chunk[loPos], chunk[hiPos])
+                colors[color] for color
+                in qneslib.tile_slice_decode(chunk[loPos], chunk[hiPos])
             )
 
     return chunk
@@ -86,7 +90,9 @@ def main():
                 modifyLen = args.tile_count * 16
                 afterLen = fileInfo["chrSize"] - beforeLen - modifyLen
                 if afterLen < 0:
-                    sys.exit("Sum of --first-tile and --tile-count is too large.")
+                    sys.exit(
+                        "Sum of --first-tile and --tile-count is too large."
+                    )
             else:
                 afterLen = 0
                 modifyLen = fileInfo["chrSize"] - beforeLen - afterLen
@@ -96,7 +102,9 @@ def main():
             with open(args.output_file, "wb") as target:
                 target.seek(0)
                 # copy data before/at/after the tiles to be modified
-                for chunk in read_file_slice(source, fileInfo["chrStart"] + beforeLen):
+                for chunk in read_file_slice(
+                    source, fileInfo["chrStart"] + beforeLen
+                ):
                     target.write(chunk)
                 for chunk in read_file_slice(source, modifyLen):
                     target.write(swap_colors(chunk, args.colors))

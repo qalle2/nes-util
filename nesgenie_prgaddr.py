@@ -4,8 +4,8 @@ import qneslib  # qalle's NES library, https://github.com/qalle2/nes-util
 # read args
 if len(sys.argv) != 3:
     sys.exit(
-        "Find the PRG ROM addresses affected by an NES Game Genie code in an iNES ROM file (.nes). "
-        "Args: file code"
+        "Find the PRG ROM addresses affected by an NES Game Genie code in "
+        "an iNES ROM file (.nes). Args: file code"
     )
 (filename, code) = sys.argv[1:]
 
@@ -29,12 +29,16 @@ try:
         if compareValue is None or compareValue != replaceValue:
             if compareValue is None:
                 # 6-letter code (old value must not equal replace value)
-                validValues = set(range(0x100)) - {replaceValue,}  # 6-letter code
+                validValues = set(range(0x100)) - {replaceValue,}
             else:
                 # 8-letter code (old value must equal compare value)
                 validValues = {compareValue,}
-            prgBankSize = qneslib.min_prg_bank_size(fileInfo["prgSize"], fileInfo["mapper"])
-            for prgAddr in qneslib.address_cpu_to_prg(cpuAddr, prgBankSize, fileInfo["prgSize"]):
+            prgBankSize = qneslib.min_prg_bank_size(
+                fileInfo["prgSize"], fileInfo["mapper"]
+            )
+            for prgAddr in qneslib.address_cpu_to_prg(
+                cpuAddr, prgBankSize, fileInfo["prgSize"]
+            ):
                 handle.seek(fileInfo["prgStart"] + prgAddr)
                 if handle.read(1)[0] in validValues:
                     prgAddresses.append(prgAddr)

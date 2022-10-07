@@ -8,18 +8,22 @@ def parse_arguments():
 
     parser.add_argument(
         "-p", "--prg-rom", required=True,
-        help="PRG ROM data file to read. Required. Size: 16-4096 KiB and a multiple of 16 KiB."
+        help="PRG ROM data file to read. Required. Size: 16-4096 KiB and a "
+        "multiple of 16 KiB."
     )
     parser.add_argument(
         "-c", "--chr-rom",
-        help="CHR ROM data file to read. Size: 0-2040 KiB and a multiple of 8 KiB."
+        help="CHR ROM data file to read. Size: 0-2040 KiB and a multiple of "
+        "8 KiB."
     )
     parser.add_argument(
-        "-m", "--mapper", type=int, default=0, help="iNES mapper number (0-255). Default=0 (NROM)."
+        "-m", "--mapper", type=int, default=0,
+        help="iNES mapper number (0-255). Default=0 (NROM)."
     )
     parser.add_argument(
         "-n", "--mirroring", choices=("h", "v", "f"), default="h",
-        help="Type of name table mirroring: h=horizontal (default), v=vertical, f=four-screen."
+        help="Type of name table mirroring: h=horizontal (default), "
+        "v=vertical, f=four-screen."
     )
     parser.add_argument(
         "-x", "--extra-ram", action="store_true",

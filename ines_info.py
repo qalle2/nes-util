@@ -1,6 +1,8 @@
 import os, sys
 import qneslib  # qalle's NES library, https://github.com/qalle2/nes-util
 
+MIRRORING_TYPES = {"h": "horizontal", "v": "vertical", "f": "four-screen"}
+
 # parse command line arguments
 if len(sys.argv) != 2:
     sys.exit("Print information of an iNES ROM file (.nes).")
@@ -23,8 +25,5 @@ print("PRG ROM size:", fileInfo["prgSize"])
 print("CHR ROM size:", fileInfo["chrSize"])
 print("iNES mapper number:", fileInfo["mapper"])
 print("Mapper name:", qneslib.mapper_name(fileInfo["mapper"]))
-print(
-    "name table mirroring:",
-    {"h": "horizontal", "v": "vertical", "f": "four-screen"}[fileInfo["mirroring"]]
-)
+print("name table mirroring:", MIRRORING_TYPES[fileInfo["mirroring"]])
 print("has extra RAM:", ["no", "yes"][fileInfo["extraRam"]])

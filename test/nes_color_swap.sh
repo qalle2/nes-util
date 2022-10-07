@@ -1,7 +1,5 @@
 clear
-
 rm -f ../test-out/*.nes
-rm -f ../test-out/*.png
 
 echo "=== These should cause four errors ==="
 python3 ../nes_color_swap.py --first-tile 9999 ../test-in/smb1.nes        ../test-out/invalid1.nes
@@ -30,11 +28,11 @@ echo "Should be identical:"
 diff -q ../test-in/smb1.nes          ../test-out/smb1-colors0123.nes
 diff -q ../test-in/blastermaster.nes ../test-out/blastermaster-colors0123.nes
 echo "Only tile 0 changed:"
-diff <(od -Ax -x ../test-in/smb1.nes) <(od -Ax -x ../test-out/smb1-tile_0_only.nes) | grep "^[<>]"
+diff <(od -Ax -tx1 -v ../test-in/smb1.nes) <(od -Ax -tx1 -v ../test-out/smb1-tile_0_only.nes) | grep "^[<>]"
 echo "Only tile 1 changed:"
-diff <(od -Ax -x ../test-in/smb1.nes) <(od -Ax -x ../test-out/smb1-tile_1_only.nes) | grep "^[<>]"
+diff <(od -Ax -tx1 -v ../test-in/smb1.nes) <(od -Ax -tx1 -v ../test-out/smb1-tile_1_only.nes) | grep "^[<>]"
 echo "Only tile 511 changed:"
-diff <(od -Ax -x ../test-in/smb1.nes) <(od -Ax -x ../test-out/smb1-tile_511_only.nes) | grep "^[<>]"
+diff <(od -Ax -tx1 -v ../test-in/smb1.nes) <(od -Ax -tx1 -v ../test-out/smb1-tile_511_only.nes) | grep "^[<>]"
 echo
 
 echo "=== Verify these files yourself ==="

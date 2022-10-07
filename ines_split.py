@@ -3,13 +3,15 @@ import qneslib  # qalle's NES library, https://github.com/qalle2/nes-util
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
-        description="Extract PRG ROM and/or CHR ROM data from an iNES ROM file (.nes)."
+        description="Extract PRG ROM and/or CHR ROM data from an iNES ROM "
+        "file (.nes)."
     )
     parser.add_argument(
         "-p", "--prg", help="File to write PRG ROM data to."
     )
     parser.add_argument(
-        "-c", "--chr", help="File to write CHR ROM data to. Not written if there is no data."
+        "-c", "--chr",
+        help="File to write CHR ROM data to. Not written if there is no data."
     )
     parser.add_argument(
         "input_file", help="iNES ROM file (.nes) to read."

@@ -4,8 +4,8 @@ import qneslib  # qalle's NES library, https://github.com/qalle2/nes-util
 # read args
 if len(sys.argv) != 3:
     sys.exit(
-        "Get byte value at specified PRG ROM address in an iNES ROM file (.nes). Args: file "
-        "address_in_hexadecimal"
+        "Get byte value at specified PRG ROM address in an iNES ROM file "
+        "(.nes). Args: file address_in_hexadecimal"
     )
 (filename, prgAddr) = sys.argv[1:]
 
