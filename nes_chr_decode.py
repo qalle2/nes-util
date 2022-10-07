@@ -1,12 +1,7 @@
 # decode NES CHR data
 
-import argparse, itertools, os, sys
+import argparse, itertools, os, struct, sys
 from PIL import Image  # Pillow, https://python-pillow.org
-try:
-    import qneslib  # qalle's NES library, https://github.com/qalle2/nes-util
-    HAVE_QNESLIB = True
-except ImportError:
-    HAVE_QNESLIB = False
 
 def decode_color(color):
     # decode a hexadecimal RRGGBB color code into (red, green, blue)
@@ -48,24 +43,42 @@ def parse_arguments():
 
     return args
 
+def decode_ines_header(handle):
+    # parse iNES ROM header
+    # (doesn't support VS System or PlayChoice-10 flags or NES 2.0 header)
+    # return: None on error, otherwise (CHR ROM start address, CHR ROM size)
+    # see https://www.nesdev.org/wiki/INES
+
+    fileSize = handle.seek(0, 2)
+    if fileSize < 16:
+        return None
+
+    handle.seek(0)
+    (id_, prgSize, chrSize, flags6) = struct.unpack("4s3B9x", handle.read(16))
+
+    prgSize = (prgSize if prgSize else 256) * 16 * 1024  # 0 = 256
+    chrSize *= 8 * 1024
+    trainerSize = bool(flags6 & 0b00000100) * 512
+
+    if id_ != b"NES\x1a" or fileSize < 16 + trainerSize + prgSize + chrSize:
+        return None
+
+    return (16 + trainerSize + prgSize, chrSize)
+
 def get_chr_info(handle):
     # detect file type and get (address, size) of CHR ROM data
 
     # try as iNES ROM
-    if HAVE_QNESLIB:
-        inesInfo = qneslib.ines_header_decode(handle)
-        if inesInfo is not None:
-            if inesInfo["chrSize"] == 0:
-                sys.exit("iNES ROM file has no CHR ROM.")
-            return (inesInfo["chrStart"], inesInfo["chrSize"])
+    chrInfo = decode_ines_header(handle)
+    if chrInfo is not None:
+        if chrInfo[1] == 0:
+            sys.exit("iNES ROM file has no CHR ROM.")
+        return chrInfo
 
     # try as raw CHR data
     fileSize = handle.seek(0, 2)
     if fileSize == 0 or fileSize % 256:
-        if HAVE_QNESLIB:
-            sys.exit("Not an iNES ROM and invalid size for raw CHR data.")
-        else:
-            sys.exit("Invalid size for raw CHR data.")
+        sys.exit("Not an iNES ROM and invalid size for raw CHR data.")
     return (0, fileSize)
 
 def generate_tiles(handle, tileCount):
@@ -105,12 +118,6 @@ def create_image(handle, args):
     return image
 
 def main():
-    if not HAVE_QNESLIB:
-        print(
-            "Warning: qneslib module not found; iNES ROMs can't be read.",
-            file=sys.stderr
-        )
-
     args = parse_arguments()
 
     try:
