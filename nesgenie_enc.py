@@ -29,7 +29,7 @@ def main():
     if not 3 <= len(sys.argv) <= 4:
         sys.exit(
             "Encode an NES Game Genie code. Arguments: AAAA RR or AAAA RR CC "
-            "(AAAA = address, RR = replacement value, CC = compare value; "
+            "(AAAA = CPU address, RR = replacement value, CC = compare value; "
             "all in hexadecimal)."
         )
 

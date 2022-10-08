@@ -209,7 +209,7 @@ CPU address = 0xacb3, replace value = 0x07, compare value = 0x00
 ```
 
 ## nesgenie_enc.py
-Encode an NES Game Genie code. Arguments: AAAA RR or AAAA RR CC (AAAA = address, RR = replacement value, CC = compare value; all in hexadecimal).
+Encode an NES Game Genie code. Arguments: AAAA RR or AAAA RR CC (AAAA = CPU address, RR = replacement value, CC = compare value; all in hexadecimal).
 
 Example:
 ```
