@@ -16,11 +16,11 @@ python3 ../nes_color_swap.py \
 python3 ../nes_color_swap.py \
     -c 0 1 2 3 ../test-in/smb1.nes ../test-out/smb1-colors0123.nes
 python3 ../nes_color_swap.py \
-    -c 0 2 3 1 ../test-in/smb1.nes ../test-out/smb1-colors0231.nes
+    -c 0 2 3 1 -n 492 ../test-in/smb1.nes ../test-out/smb1-colors0231.nes
 python3 ../nes_color_swap.py \
-    -c 0 3 1 2 ../test-in/smb1.nes ../test-out/smb1-colors0312.nes
+    -c 0 3 1 2 -n 492 ../test-in/smb1.nes ../test-out/smb1-colors0312.nes
 python3 ../nes_color_swap.py \
-    -c 1 2 3 2 ../test-in/smb1.nes ../test-out/smb1-colors1232.nes
+    -c 1 2 3 2 -n 492 ../test-in/smb1.nes ../test-out/smb1-colors1232.nes
 python3 ../nes_color_swap.py \
     -c 1 2 3 0 -n 1 ../test-in/smb1.nes ../test-out/smb1-tile_0_only.nes
 python3 ../nes_color_swap.py \

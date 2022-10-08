@@ -302,6 +302,10 @@ options:
                         from --first-tile.
 ```
 
+An example from *Super Mario Bros.* by Nintendo:
+
+![screenshot](nes_color_swap.png)
+
 ## nes_cpuaddr.py
 Convert an NES PRG ROM address into possible CPU addresses using the iNES ROM file (.nes). Args: file address_in_hexadecimal
 
