@@ -74,7 +74,7 @@ options:
 ```
 
 ## nes_blaster_mapext.py
-Requires [Pillow](https://python-pillow.org) and qneslib.py (see below).
+Requires [Pillow](https://python-pillow.org).
 ```
 usage: nes_blaster_mapext.py [-h] [-j] [-n MAP_NUMBER] [-u USB_IMAGE]
                              [-s SB_IMAGE] [-b BLOCK_IMAGE] [-m MAP_IMAGE]
