@@ -174,9 +174,8 @@ trainer size: 0
 PRG ROM size: 32768
 CHR ROM size: 8192
 iNES mapper number: 0
-Mapper name: NROM
 name table mirroring: vertical
-has extra RAM: no
+has extra RAM at $6000-$7fff: no
 ```
 
 ## ines_split.py
