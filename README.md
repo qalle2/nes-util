@@ -11,7 +11,8 @@ Table of contents:
 * [nes_color_swap.py](#nes_color_swappy)
 * [nes_cpuaddr.py](#nes_cpuaddrpy)
 * [nes_prgbyte.py](#nes_prgbytepy)
-* [nesgenie.py](#nesgeniepy)
+* [nesgenie_dec.py](#nesgenie_decpy)
+* [nesgenie_enc.py](#nesgenie_encpy)
 * [nesgenie_6to8.py](#nesgenie_6to8py)
 * [nesgenie_prgaddr.py](#nesgenie_prgaddrpy)
 * [nesgenie_verconv.py](#nesgenie_verconvpy)
@@ -198,14 +199,22 @@ Requires qneslib.py (see below).
 
 Get byte value at specified PRG ROM address in an iNES ROM file (.nes). Args: file address_in_hexadecimal
 
-## nesgenie.py
-Requires qneslib.py (see below).
-
-Encode and decode NES Game Genie codes. Argument: six-letter code, eight-letter code, AAAA RR or AAAA RR CC (AAAA = address in hexadecimal, RR = replacement value in hexadecimal, CC = compare value in hexadecimal).
+## nesgenie_dec.py
+Decode an NES Game Genie code. Argument: code (6 or 8 letters from AEGIKLNOPSTUVXYZ).
 
 Example:
 ```
-SXIOPO: CPU address = 0x91d9, replace value = 0xad, compare value = none
+$ python3 nesgenie_dec.py yeuzugaa
+CPU address = 0xacb3, replace value = 0x07, compare value = 0x00
+```
+
+## nesgenie_enc.py
+Encode an NES Game Genie code. Arguments: AAAA RR or AAAA RR CC (AAAA = address, RR = replacement value, CC = compare value; all in hexadecimal).
+
+Example:
+```
+$ python3 nesgenie_enc.py acb3 07 00
+YEUZUGAA
 ```
 
 ## nesgenie_6to8.py
