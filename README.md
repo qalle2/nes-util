@@ -1,7 +1,7 @@
 # nes-util
 Various utilities related to the [Nintendo Entertainment System](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System).
 
-**Note**: many programs in this repo require the [Pillow](https://python-pillow.org) module and qneslib.py (immediately below).
+**Note**: some of the programs below require the [Pillow](https://python-pillow.org) module and qneslib.py.
 
 Table of contents:
 * [qneslib.py](#qneslibpy)
