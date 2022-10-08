@@ -1,21 +1,16 @@
-import argparse, os, sys
-import qneslib  # qalle's NES library, https://github.com/qalle2/nes-util
+import argparse, os, struct, sys
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Extract PRG ROM and/or CHR ROM data from an iNES ROM "
         "file (.nes)."
     )
-    parser.add_argument(
-        "-p", "--prg", help="File to write PRG ROM data to."
-    )
+    parser.add_argument("-p", "--prg", help="File to write PRG ROM data to.")
     parser.add_argument(
         "-c", "--chr",
         help="File to write CHR ROM data to. Not written if there is no data."
     )
-    parser.add_argument(
-        "input_file", help="iNES ROM file (.nes) to read."
-    )
+    parser.add_argument("input_file", help="iNES ROM file (.nes) to read.")
     args = parser.parse_args()
 
     if not os.path.isfile(args.input_file):
@@ -29,6 +24,33 @@ def parse_arguments():
 
     return args
 
+def decode_ines_header(handle):
+    # parse iNES ROM header
+    # does not support VS System or PlayChoice-10 flags or NES 2.0 header
+    # return: None on error, otherwise a dict with PRG/CHR ROM address/size
+    # see https://www.nesdev.org/wiki/INES
+
+    fileSize = handle.seek(0, 2)
+    if fileSize < 16:
+        return None
+
+    handle.seek(0)
+    (id_, prgSize, chrSize, flags6) = struct.unpack("4s3B", handle.read(7))
+
+    prgSize = (prgSize if prgSize else 256) * 16 * 1024  # 0 = 256
+    chrSize = chrSize * 8 * 1024
+    trainerSize = bool(flags6 & 0b00000100) * 512
+
+    if id_ != b"NES\x1a" or fileSize < 16 + trainerSize + prgSize + chrSize:
+        return None
+
+    return {
+        "prgStart": 16 + trainerSize,
+        "prgSize":  prgSize,
+        "chrStart": 16 + trainerSize + prgSize,
+        "chrSize":  chrSize,
+    }
+
 def main():
     args = parse_arguments()
 
@@ -36,7 +58,7 @@ def main():
     try:
         with open(args.input_file, "rb") as handle:
             # header
-            inesInfo = qneslib.ines_header_decode(handle)
+            inesInfo = decode_ines_header(handle)
             if inesInfo is None:
                 sys.exit("Invalid iNES ROM file.")
             # PRG ROM

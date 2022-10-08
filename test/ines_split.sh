@@ -1,18 +1,14 @@
 clear
-
 rm -f ../test-out/*.prg
 rm -f ../test-out/*.chr
 
 echo "=== Splitting ==="
 python3 ../ines_split.py \
-    -p ../test-out/smb1.prg -c ../test-out/smb1.chr \
-    ../test-in/smb1.nes
+    -p ../test-out/smb1.prg -c ../test-out/smb1.chr ../test-in/smb1.nes
 python3 ../ines_split.py \
-    -p ../test-out/blastermaster.prg \
-    ../test-in/blastermaster.nes
+    -p ../test-out/blastermaster.prg ../test-in/blastermaster.nes
 python3 ../ines_split.py \
-    -c ../test-out/blastermaster.chr \
-    ../test-in/blastermaster.nes
+    -c ../test-out/blastermaster.chr ../test-in/blastermaster.nes
 echo
 
 echo "=== Validating ==="
