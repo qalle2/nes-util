@@ -102,6 +102,12 @@ NES_PALETTE = {
     0x3f: (0x00, 0x00, 0x00),
 }
 
+def error(msg):
+    sys.exit(f"Error: {msg}.")
+
+def warn(msg):
+    print(f"Warning: {msg}.", file=sys.stderr)
+
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Extract world maps from NES Blaster Master to PNG files."
@@ -134,7 +140,7 @@ def parse_arguments():
     )
     parser.add_argument(
         "-v", "--verbose", action="store_true",
-        help="Print more information. Note: all addresses are hexadecimal."
+        help="Print more information."
     )
     parser.add_argument(
         "input_file",
@@ -144,18 +150,18 @@ def parse_arguments():
     args = parser.parse_args()
 
     if not 0 <= args.map_number <= 15:
-        sys.exit("Invalid map number.")
+        error("invalid map number")
 
     if not os.path.isfile(args.input_file):
-        sys.exit("Input file not found.")
+        error("input file not found")
 
     outputFiles = (
         args.usb_image, args.sb_image, args.block_image, args.map_image
     )
-    if all(file_ is None for file_ in outputFiles):
-        print("Warning: you didn't specify any output files.", file=sys.stderr)
+    if all(f is None for f in outputFiles):
+        warn("no output files specified")
     if any(f is not None and os.path.exists(f) for f in outputFiles):
-        sys.exit("Some of the output files already exist.")
+        error("some of the output files already exist")
 
     return args
 
@@ -187,19 +193,11 @@ def decode_ines_header(handle):
         "mapper":   (flags7 & 0b11110000) | (flags6 >> 4),
     }
 
-def is_blaster_master(fileInfo):
-    # is the file likely Blaster Master? don't validate too accurately because
-    # the file may be a hack; fileInfo: from decode_ines_header()
-    return (
-        fileInfo["prgSize"]     == 128 * 1024
-        and fileInfo["chrSize"] == 128 * 1024
-        and fileInfo["mapper"]  == 1
-    )
-
 def decode_offset(bytes_):
     # decode address, convert into offset within bank
     addr = struct.unpack("<H", bytes_)[0]  # little-endian unsigned short
-    assert 0x8000 <= addr <= 0xbfff
+    if not 0x8000 <= addr <= 0xbfff:
+        error("address not in first CPU PRG bank")
     return addr & 0x3fff
 
 def get_tile_data(handle):
@@ -215,18 +213,26 @@ def get_tile_data(handle):
             )
         yield tuple(pixels)
 
+def world_pal_to_rgb_pal(palette):
+    # NES color numbers -> (R, G, B) tuples
+    return tuple(NES_PALETTE[c] for c in palette)
+
+def rgb_pal_to_img_pal(palette):
+    # (R, G, B) tuples -> sorted unique (R, G, B) tuples
+    return tuple(sorted(set(palette)))
+
 def create_usb_image(usbData, usbAttrData, tileData, worldPal):
     # return image with up to 16*16 USBs
     # worldPal: world palette (16 NES colors)
 
     image = Image.new("P", (16 * 16, (len(usbData) + 15) // 16 * 16), 0)
 
-    # convert world palette into RGB
-    worldPal = [NES_PALETTE[color] for color in worldPal]
-    # set image palette, create palette conversion table
-    imgPal = sorted(set(worldPal))
+    # set image palette, create conversion table
+    worldPal = world_pal_to_rgb_pal(worldPal)
+    imgPal = rgb_pal_to_img_pal(worldPal)
     image.putpalette(itertools.chain.from_iterable(imgPal))
     worldPalToImgPal = tuple(imgPal.index(color) for color in worldPal)
+    del worldPal, imgPal
 
     # for each USB, draw 2*2 tiles with correct palette
     tileImg = Image.new("P", (8, 8))
@@ -243,17 +249,13 @@ def create_usb_image(usbData, usbAttrData, tileData, worldPal):
             image.paste(tileImg, (x, y))
     return image
 
-def world_pal_to_image_pal(worldPal):
-    # 16 NES colors -> generate sorted unique colors as R,G,B,R,G,B,...
-    yield from itertools.chain.from_iterable(
-        sorted(set(NES_PALETTE[color] for color in worldPal))
-    )
-
 def create_sb_image(sbData, usbImg, worldPal):
     # return image with up to 16*16 SBs
 
     outImg = Image.new("P", (16 * 32, (len(sbData) + 15) // 16 * 32), 0)
-    outImg.putpalette(world_pal_to_image_pal(worldPal))
+    outImg.putpalette(itertools.chain.from_iterable(
+        rgb_pal_to_img_pal(world_pal_to_rgb_pal(worldPal))
+    ))
 
     # copy USBs from source image to target image
     for (si, usbs) in enumerate(sbData):
@@ -273,7 +275,9 @@ def create_block_image(blockData, sbData, usbImg, worldPal):
     # return image with up to 16*16 blocks
 
     outImg = Image.new("P", (16 * 64, (len(blockData) + 15) // 16 * 64), 0)
-    outImg.putpalette(world_pal_to_image_pal(worldPal))
+    outImg.putpalette(itertools.chain.from_iterable(
+        rgb_pal_to_img_pal(world_pal_to_rgb_pal(worldPal))
+    ))
 
     # copy USBs from source image to target image
     for (bi, block) in enumerate(blockData):
@@ -294,7 +298,9 @@ def create_map_image(mapData, blockData, sbData, usbImg, worldPal):
     # return image with up to 32*32 blocks
 
     outImg = Image.new("P", (32 * 64, len(mapData) // 32 * 64), 0)
-    outImg.putpalette(world_pal_to_image_pal(worldPal))
+    outImg.putpalette(itertools.chain.from_iterable(
+        rgb_pal_to_img_pal(world_pal_to_rgb_pal(worldPal))
+    ))
 
     # copy USBs from source image to target image
     for (bi, block) in enumerate(mapData):
@@ -317,10 +323,14 @@ def extract_map(source, args):
     # parse iNES header
     fileInfo = decode_ines_header(source)
     if fileInfo is None:
-        sys.exit("Not a valid iNES ROM file.")
+        error("not a valid iNES ROM file")
 
-    if not is_blaster_master(fileInfo):
-        sys.exit("The file doesn't look like Blaster Master.")
+    if min(fileInfo["prgSize"], fileInfo["chrSize"]) < 128 * 1024:
+        error("not Blaster Master (PRG/CHR ROM too small)")
+
+    if fileInfo["mapper"] != 1 \
+    or max(fileInfo["prgSize"], fileInfo["chrSize"]) > 128 * 1024:
+        warn("probably not Blaster Master")
 
     (prgBank, worldPtr, chrBank) = MAP_DATA_ADDRESSES[args.map_number]
     # the only version difference
@@ -336,7 +346,9 @@ def extract_map(source, args):
 
     if args.verbose:
         print(f"Map={args.map_number}, PRG bank={prgBank}, CHR bank={chrBank}")
-        print(f"World data @ {worldAddr:04x}, scroll data @ {scrollAddr:04x}")
+        print(
+            f"World data @ ${worldAddr:04x}, scroll data @ ${scrollAddr:04x}"
+        )
 
     (palAddr, usbAttrAddr, usbAddr, sbAddr, blockAddr, mapAddr) = (
         decode_offset(prgBankData[pos:pos+2])
@@ -344,39 +356,50 @@ def extract_map(source, args):
     )
     if args.verbose:
         print(
-            f"Palette @ {palAddr:04x}, "
-            f"USBs @ {usbAddr:04x}, "
-            f"SBs @ {sbAddr:04x}, "
-            f"blocks @ {blockAddr:04x}, "
-            f"map @ {mapAddr:04x}, "
-            f"USB attributes @ {usbAttrAddr:04x}"
+            f"Palette @ ${palAddr:04x}, "
+            f"USBs @ ${usbAddr:04x}, "
+            f"SBs @ ${sbAddr:04x}, "
+            f"blocks @ ${blockAddr:04x}, "
+            f"map @ ${mapAddr:04x}, "
+            f"USB attributes @ ${usbAttrAddr:04x}"
         )
-    assert worldAddr < palAddr < usbAddr < sbAddr < blockAddr < mapAddr \
-    < min(usbAttrAddr, scrollAddr)
+    if not worldAddr < palAddr < usbAddr < sbAddr < blockAddr < mapAddr \
+    < min(usbAttrAddr, scrollAddr):
+        warn("order of data sections seems wrong")
 
     # palette (4*4 NES color numbers)
     worldPalette = prgBankData[palAddr:palAddr+16]
-    assert max(worldPalette) <= 0x3f
+    if max(worldPalette) > 0x3f:
+        error("invalid color in world palette")
+    if len(set(worldPalette[i] for i in range(0, 16, 4))) > 1:
+        warn("world subpalettes don't have the same background color")
 
     # USB data
-    assert sbAddr - usbAddr in range(4, 257 * 4, 4)
+    if sbAddr - usbAddr not in range(4, 257 * 4, 4):
+        error("invalid USB data size")
     usbData = tuple(prgBankData[i:i+4] for i in range(usbAddr, sbAddr, 4))
 
     # SB data
-    assert blockAddr - sbAddr in range(4, 257 * 4, 4)
+    if blockAddr - sbAddr not in range(4, 257 * 4, 4):
+        error("invalid SB data size")
     sbData = tuple(prgBankData[i:i+4] for i in range(sbAddr, blockAddr, 4))
-    assert max(itertools.chain.from_iterable(sbData)) < len(usbData)
+    if max(itertools.chain.from_iterable(sbData)) >= len(usbData):
+        warn("SB data uses nonexistent USBs")
 
     # block data
-    assert mapAddr - blockAddr in range(4, 257 * 4, 4)
+    if mapAddr - blockAddr not in range(4, 257 * 4, 4):
+        error("invalid block data size")
     blockData = tuple(prgBankData[i:i+4] for i in range(blockAddr, mapAddr, 4))
-    assert max(itertools.chain.from_iterable(blockData)) < len(sbData)
+    if max(itertools.chain.from_iterable(blockData)) >= len(sbData):
+        warn("block data uses nonexistent SBs")
 
     # map data
     mapEnd = min(usbAttrAddr, scrollAddr)
-    assert mapEnd - mapAddr in range(32, 33 * 32, 32)
+    if mapEnd - mapAddr not in range(32, 33 * 32, 32):
+        error("invalid map size")
     mapData = prgBankData[mapAddr:mapEnd]
-    assert max(set(mapData)) < len(blockData)
+    if max(set(mapData)) >= len(blockData):
+        warn("map data uses nonexistent blocks")
 
     # read USB attribute data (1 byte/USB)
     usbAttrData = prgBankData[usbAttrAddr:usbAttrAddr+len(usbData)]
@@ -416,6 +439,6 @@ def main():
         with open(args.input_file, "rb") as handle:
             extract_map(handle, args)
     except OSError:
-        sys.exit("Error reading/writing files.")
+        error("could not read or write a file")
 
 main()

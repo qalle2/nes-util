@@ -107,8 +107,7 @@ options:
   -m MAP_IMAGE, --map-image MAP_IMAGE
                         Save map as PNG file (up to 32*32 blocks or 2048*2048
                         px).
-  -v, --verbose         Print more information. Note: all addresses are
-                        hexadecimal.
+  -v, --verbose         Print more information.
 ```
 
 ## nes_chr_decode.py
@@ -174,7 +173,8 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
-  -c {0,1,2,3} {0,1,2,3} {0,1,2,3} {0,1,2,3}, --colors {0,1,2,3} {0,1,2,3} {0,1,2,3} {0,1,2,3}
+  -c {0,1,2,3} {0,1,2,3} {0,1,2,3} {0,1,2,3},
+  --colors {0,1,2,3} {0,1,2,3} {0,1,2,3} {0,1,2,3}
                         Change original colors 0...3 to these colors. Four
                         colors (each 0...3) separated by spaces. Default: 0 2
                         3 1

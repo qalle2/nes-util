@@ -33,16 +33,13 @@ python3 ../nes_blaster_mapext.py \
     -j -n9 -m ../test-out/map9j.png ../test-in/blastermaster-j.nes
 echo
 
-echo "=== These should cause five errors/warnings ==="
-echo
+echo "=== These should cause some warnings and five errors ==="
 python3 ../nes_blaster_mapext.py ../test-in/nonexistent.nes
+python3 ../nes_blaster_mapext.py ../test-in/smb1.nes
 python3 ../nes_blaster_mapext.py \
     -m ../test-out/default.png ../test-in/blastermaster.nes
-python3 ../nes_blaster_mapext.py ../test-in/blastermaster.nes
-echo
 python3 ../nes_blaster_mapext.py \
     -n9 -m ../test-out/error1.png ../test-in/blastermaster-j.nes
-echo
 python3 ../nes_blaster_mapext.py \
     -j -n9 -m ../test-out/error2.png ../test-in/blastermaster.nes
 echo
