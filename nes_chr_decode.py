@@ -1,5 +1,12 @@
 # decode NES CHR data
 
+# NES CHR data format:
+# - byte = 1 bitplane of 8*1 pixels (most significant bit = leftmost pixel)
+# - tile = 2 bitplanes of 8*8 pixels (first low bitplane top to bottom, then
+#   high bitplane top to bottom)
+# - pattern table = 256 tiles
+# - maximum CHR data without bankswitching = 2 pattern tables
+
 import argparse, itertools, os, struct, sys
 from PIL import Image  # Pillow, https://python-pillow.org
 

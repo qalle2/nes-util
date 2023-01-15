@@ -20,6 +20,12 @@ python3 ../nes_chr_decode.py \
     ../test-in/chr-2color.chr ../test-out/chr-2color.png
 echo
 
+echo "=== Verifying (different PNG encoding may give false positives) ==="
+cd ../test-out/
+md5sum -c --quiet ../test/nes_chr_decode.md5
+cd ../test/
+echo
+
 echo "=== These should cause five errors ==="
 python3 ../nes_chr_decode.py \
     -p 000000 111111 222222 x ../test-in/smb1.chr ../test-out/invalid1.png
@@ -32,7 +38,4 @@ python3 ../nes_chr_decode.py \
     ../test-in/empty.chr ../test-out/invalid4.png
 python3 ../nes_chr_decode.py \
     ../test-in/videomation.nes ../test-out/invalid5.png
-echo
-
-echo "=== Verify the decoded files yourself ==="
 echo

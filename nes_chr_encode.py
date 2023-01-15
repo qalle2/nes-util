@@ -1,6 +1,13 @@
 import argparse, os, sys
 from PIL import Image  # Pillow, https://python-pillow.org
 
+# NES CHR data format:
+# - byte = 1 bitplane of 8*1 pixels (most significant bit = leftmost pixel)
+# - tile = 2 bitplanes of 8*8 pixels (first low bitplane top to bottom, then
+#   high bitplane top to bottom)
+# - pattern table = 256 tiles
+# - maximum CHR data without bankswitching = 2 pattern tables
+
 def decode_color_code(color):
     # decode a hexadecimal RRGGBB color code into (red, green, blue)
 
@@ -48,31 +55,39 @@ def parse_arguments():
 
     return args
 
-def reorder_palette(img, args):
-    # map indexes 0-3 of an indexed image to colors in the command line arg
+def get_color_conv_table(img, args):
+    # get a tuple that converts original color indexes into those specified by
+    # the command line argument
+    # (note: reordering the image palette with remap_palette() used to work;
+    # now doesn't with the 2-color test image)
 
-    palette = img.getpalette()  # [R, G, B, ...]
-    palette = [tuple(palette[i*3:(i+1)*3]) for i in range(256)]  #[(R,G,B),...]
-    mapping = [decode_color_code(c) for c in args.palette]
+    origPal = img.getpalette()  # [R, G, B, ...]
+    origPal = [
+        tuple(origPal[i*3:(i+1)*3]) for i in range(len(origPal) // 3)
+    ]  # [(R, G, B), ...]
+    targetPal = [decode_color_code(c) for c in args.palette]
 
-    usedColors = {palette[c[1]] for c in img.getcolors()}  # {(R, G, B), ...}
-    undefinedColors = usedColors - set(mapping)
+    usedColors = {origPal[c[1]] for c in img.getcolors()}  # {(R, G, B), ...}
+    undefinedColors = usedColors - set(targetPal)
     if undefinedColors:
         sys.exit(
             "Image contains colors not specified by --palette argument: "
             + ", ".join(bytes(c).hex() for c in sorted(undefinedColors))
         )
 
-    return img.remap_palette(palette.index(c) for c in mapping)
+    return tuple(targetPal.index(c) for c in origPal)
 
-def encode_image(img):
+def encode_image(img, colorConvTable):
     # generate NES CHR data from a Pillow image: 8 bytes for each bitplane of
-    # each tile (each tile is 8*8 pixels and 2 bitplanes; less significant
-    # bitplane comes first; each byte is 8*1 pixels of one bitplane)
+    # each tile
+    # colorConvTable: a tuple that converts color indexes
 
     for ty in range(0, img.height, 8):  # tile Y
         for tx in range(0, 128, 8):  # tile X
-            tile = list(img.crop((tx, ty, tx + 8, ty + 8)).getdata())
+            tile = list(
+                colorConvTable[c]
+                for c in img.crop((tx, ty, tx + 8, ty + 8)).getdata()
+            )
             for bp in range(2):  # bitplane
                 yield bytes(
                     sum(((tile[py+x] >> bp) & 1) << (7 - x) for x in range(8))
@@ -97,14 +112,16 @@ def main():
             # convert into indexed color
             if img.mode != "P":
                 img = img.convert(
-                    "P", dither=Image.NONE, palette=Image.ADAPTIVE
+                    "P",
+                    dither=Image.Dither.NONE,
+                    palette=Image.Palette.ADAPTIVE
                 )
             # reorder palette
-            img = reorder_palette(img, args)
+            colorConvTable = get_color_conv_table(img, args)
             # encode into CHR data
             with open(args.output_file, "wb") as target:
                 target.seek(0)
-                for dataRow in encode_image(img):
+                for dataRow in encode_image(img, colorConvTable):
                     target.write(dataRow)
     except OSError:
         sys.exit("Error reading/writing files.")

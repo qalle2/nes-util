@@ -12,14 +12,10 @@ python3 ../ines_split.py \
 echo
 
 echo "=== Validating ==="
-diff -q ../test-in/smb1.prg          ../test-out/smb1.prg
-diff -q ../test-in/smb1.chr          ../test-out/smb1.chr
-diff -q ../test-in/blastermaster.prg ../test-out/blastermaster.prg
-diff -q ../test-in/blastermaster.chr ../test-out/blastermaster.chr
+cd ../test-out/
+md5sum -c --quiet ../test/ines_split.md5
+cd ../test/
 echo
-
-rm -f ../test-out/*.prg
-rm -f ../test-out/*.chr
 
 echo "=== These should cause four errors ==="
 python3 ../ines_split.py -p ../test-out/invalid1.prg ../test-in/invalid-id.nes

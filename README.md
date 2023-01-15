@@ -1,6 +1,8 @@
 # nes-util
 Utilities for [Nintendo Entertainment System](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System) game hacking.
 
+Warning: the test scripts under `test/` delete files. They also need input files listed in `test-in-files.md5`.
+
 Table of contents:
 * [ines_combine.py](#ines_combinepy)
 * [ines_info.py](#ines_infopy)

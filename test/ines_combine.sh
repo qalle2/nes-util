@@ -16,10 +16,9 @@ python3 ../ines_combine.py \
 echo
 
 echo "=== Validating iNES files ==="
-diff -q ../test-in/blastermaster.nes ../test-out/blastermaster.nes
-diff -q ../test-in/smb1.nes          ../test-out/smb1.nes
-diff -q ../test-in/videomation.nes   ../test-out/videomation.nes
-diff -q ../test-in/zelda1.nes        ../test-out/zelda1.nes
+cd ../test-out/
+md5sum -c --quiet ../test/ines_combine.md5
+cd ../test/
 echo
 
 echo "=== These should cause two errors ==="

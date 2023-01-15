@@ -1,6 +1,4 @@
 clear
-
-rm -f ../test-out/*.nes
 rm -f ../test-out/*.png
 
 echo "=== Default settings, US ==="
@@ -31,6 +29,12 @@ echo
 echo "=== Map 9, map only, Japanese ==="
 python3 ../nes_blaster_mapext.py \
     -j -n9 -m ../test-out/map9j.png ../test-in/blastermaster-j.nes
+echo
+
+echo "=== Verifying (different PNG encoding may give false positives) ==="
+cd ../test-out/
+md5sum -c --quiet ../test/nes_blaster_mapext.md5
+cd ../test/
 echo
 
 echo "=== These should cause some warnings and five errors ==="

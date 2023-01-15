@@ -14,18 +14,15 @@ python3 ../nes_chr_encode.py ../test-in/smb1-chr.gif ../test-out/smb1f.chr
 python3 ../nes_chr_encode.py \
     ../test-in/blastermaster-chr.png ../test-out/blastermaster.chr
 python3 ../nes_chr_encode.py \
+    ../test-in/chr-1color.png ../test-out/chr-1color.chr
+python3 ../nes_chr_encode.py \
     ../test-in/chr-2color.png ../test-out/chr-2color.chr
 echo
 
 echo "=== Verifying ==="
-diff -q ../test-in/smb1.chr          ../test-out/smb1a.chr
-diff -q ../test-in/smb1.chr          ../test-out/smb1b.chr
-diff -q ../test-in/smb1.chr          ../test-out/smb1c.chr
-diff -q ../test-in/smb1.chr          ../test-out/smb1d.chr
-diff -q ../test-in/smb1.chr          ../test-out/smb1e.chr
-diff -q ../test-in/smb1.chr          ../test-out/smb1f.chr
-diff -q ../test-in/blastermaster.chr ../test-out/blastermaster.chr
-diff -q ../test-in/chr-2color.chr    ../test-out/chr-2color.chr
+cd ../test-out/
+md5sum -c --quiet ../test/nes_chr_encode.md5
+cd ../test/
 echo
 
 echo "=== These should cause five errors ==="
