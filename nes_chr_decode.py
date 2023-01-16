@@ -7,8 +7,27 @@
 # - pattern table = 256 tiles
 # - maximum CHR data without bankswitching = 2 pattern tables
 
-import argparse, itertools, os, struct, sys
-from PIL import Image  # Pillow, https://python-pillow.org
+import itertools, os, struct, sys
+try:
+    from PIL import Image
+except ImportError:
+    sys.exit("Pillow module required. See https://python-pillow.org")
+
+DEFAULT_PALETTE = "000000,555555,aaaaaa,ffffff"
+
+HELP_TEXT = f"""\
+Convert NES CHR (graphics) data into a PNG file.
+Arguments: IN OUT PALETTE (PALETTE is optional)
+    IN:
+        File to read. An iNES ROM (.nes) or raw CHR data.
+        Size of raw CHR data must be a multiple of 256 bytes (16 tiles).
+    OUT:
+        PNG file to write. 128 pixels (16 tiles) wide.
+    PALETTE:
+        Output palette (which image colors correspond to CHR colors 0-3).
+        Four hexadecimal RRGGBB codes (000000-ffffff) separated by commas.
+        Default: {DEFAULT_PALETTE}\
+"""
 
 def decode_color(color):
     # decode a hexadecimal RRGGBB color code into (red, green, blue)
@@ -18,37 +37,27 @@ def decode_color(color):
         if not 0 <= color <= 0xffffff:
             raise ValueError
     except ValueError:
-        sys.exit("Each color code must be 6 hexadecimal digits.")
+        sys.exit("Unrecognized color code.")
     return (color >> 16, (color >> 8) & 0xff, color & 0xff)
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(
-        description="Convert NES CHR (graphics) data into a PNG file."
-    )
-    parser.add_argument(
-        "-p", "--palette", nargs=4,
-        default=("000000", "555555", "aaaaaa", "ffffff"),
-        help="Output palette (which image colors correspond to CHR colors "
-        "0-3). Four hexadecimal RRGGBB codes separated by spaces. Default: "
-        "000000 555555 aaaaaa ffffff"
-    )
-    parser.add_argument(
-        "input_file",
-        help="File to read. An iNES ROM (.nes) or raw CHR data. Size of raw "
-        "CHR data must be a multiple of 256 bytes (16 tiles)."
-    )
-    parser.add_argument(
-        "output_file", help="PNG file to write. 128 pixels (16 tiles) wide."
-    )
-    args = parser.parse_args()
+    if not 3 <= len(sys.argv) <= 4:
+        sys.exit(HELP_TEXT)
 
-    [decode_color(c) for c in args.palette]  # validate
-    if not os.path.isfile(args.input_file):
+    (inputFile, outputFile) = sys.argv[1:3]
+    palette = sys.argv[3] if len(sys.argv) == 4 else DEFAULT_PALETTE
+    palette = tuple(decode_color(c) for c in palette.split(","))
+
+    if not os.path.isfile(inputFile):
         sys.exit("Input file not found.")
-    if os.path.exists(args.output_file):
+    if os.path.exists(outputFile):
         sys.exit("Output file already exists.")
 
-    return args
+    return {
+        "inputFile": inputFile,
+        "outputFile": outputFile,
+        "palette": palette,
+    }
 
 def decode_ines_header(handle):
     # parse iNES ROM header
@@ -61,11 +70,11 @@ def decode_ines_header(handle):
         return None
 
     handle.seek(0)
-    (id_, prgSize, chrSize, flags6) = struct.unpack("4s3B9x", handle.read(16))
+    (id_, prgSize, chrSize, flags6) = struct.unpack("4s3B", handle.read(7))
 
-    prgSize = (prgSize if prgSize else 256) * 16 * 1024  # 0 = 256
+    prgSize *= 16 * 1024
     chrSize *= 8 * 1024
-    trainerSize = bool(flags6 & 0b00000100) * 512
+    trainerSize = bool(flags6 & 0b0000_0100) * 512
 
     if id_ != b"NES\x1a" or fileSize < 16 + trainerSize + prgSize + chrSize:
         return None
@@ -85,42 +94,47 @@ def get_chr_info(handle):
     # try as raw CHR data
     fileSize = handle.seek(0, 2)
     if fileSize == 0 or fileSize % 256:
-        sys.exit("Not an iNES ROM and invalid size for raw CHR data.")
+        sys.exit("Unrecognized input file format.")
     return (0, fileSize)
 
-def generate_tiles(handle, tileCount):
+def generate_tiles(handle):
     # read NES CHR data, generate tiles (tuples of 64 2-bit ints)
+
+    (chrAddr, chrSize) = get_chr_info(handle)
+    tileCount = chrSize // 16  # 16 bytes/tile
+    handle.seek(chrAddr)
 
     decodedTile = []
     for i in range(tileCount):
         tile = handle.read(16)
         decodedTile.clear()
         for y in range(8):
+            lowBits = tile[y]
+            highBits = tile[y+8] << 1
             decodedTile.extend(
-                ((tile[y] >> s) & 1) | (((tile[y+8] >> s) & 1) << 1)
+                ((lowBits >> s) & 1) | ((highBits >> s) & 2)
                 for s in range(7, -1, -1)
             )
         yield tuple(decodedTile)
 
-def create_image(handle, args):
+def create_image(handle, palette):
     # read CHR data from file, return image
 
     (chrAddr, chrSize) = get_chr_info(handle)
-    tileCount = chrSize // 16  # 16 bytes/tile
-    imgHeight = tileCount // 2  # 16 tiles/row, height 8 pixels/tile
 
-    # create indexed image; get palette from command line argument
-    image = Image.new("P", (16 * 8, imgHeight))
-    image.putpalette(itertools.chain.from_iterable(
-        decode_color(c) for c in args.palette
-    ))
+    # chrSize // 16 bytes/tile // 16 tiles/row * 8 px/row
+    imageHeight = chrSize // 32
+
+    # create image with palette from command line argument
+    image = Image.new("P", (16 * 8, imageHeight))
+    image.putpalette(itertools.chain.from_iterable(palette))
 
     # convert CHR data into image data
-    handle.seek(chrAddr)
-    tileImg = Image.new("P", (8, 8))
-    for (i, tile) in enumerate(generate_tiles(handle, tileCount)):
-        tileImg.putdata(tile)
-        image.paste(tileImg, (i % 16 * 8, i // 16 * 8))
+    tileImage = Image.new("P", (8, 8))
+    for (i, tile) in enumerate(generate_tiles(handle)):
+        tileImage.putdata(tile)
+        (y, x) = divmod(i, 16)
+        image.paste(tileImage, (x * 8, y * 8))
 
     return image
 
@@ -128,16 +142,12 @@ def main():
     args = parse_arguments()
 
     try:
-        with open(args.input_file, "rb") as handle:
-            image = create_image(handle, args)
-    except OSError:
-        sys.exit("File read error.")
-
-    try:
-        with open(args.output_file, "wb") as handle:
+        with open(args["inputFile"], "rb") as handle:
+            image = create_image(handle, args["palette"])
+        with open(args["outputFile"], "wb") as handle:
             handle.seek(0)
             image.save(handle, "png")
     except OSError:
-        sys.exit("File write error.")
+        sys.exit("File read/write error.")
 
 main()
