@@ -25,15 +25,17 @@ md5sum -c --quiet ../test/nes_chr_decode.md5
 cd ../test/
 echo
 
-echo "=== These should cause five errors ==="
+echo "=== These should cause six errors ==="
 python3 ../nes_chr_decode.py \
-    ../test-in/smb1.chr ../test-out/test1.png 000000,111111,222222,x
+    ../test-in/smb1.chr ../test-out/test1.png 000000,111111,222222
 python3 ../nes_chr_decode.py \
-    ../test-in/smb1.chr ../test-out/test2.png 000000,111111,222222,1234567
+    ../test-in/smb1.chr ../test-out/test2.png 000000,111111,222222,x
 python3 ../nes_chr_decode.py \
-    ../test-in/invalid-id.nes ../test-out/test3.png
+    ../test-in/smb1.chr ../test-out/test3.png 000000,111111,222222,1234567
 python3 ../nes_chr_decode.py \
-    ../test-in/empty.chr ../test-out/test4.png
+    ../test-in/invalid-id.nes ../test-out/test4.png
 python3 ../nes_chr_decode.py \
-    ../test-in/videomation.nes ../test-out/test5.png
+    ../test-in/empty.chr ../test-out/test5.png
+python3 ../nes_chr_decode.py \
+    ../test-in/videomation.nes ../test-out/test6.png
 echo
