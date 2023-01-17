@@ -49,7 +49,7 @@ def parse_arguments():
     palette = sys.argv[3] if len(sys.argv) == 4 else DEFAULT_PALETTE
     palette = tuple(decode_color(c) for c in palette.split(","))
     if len(palette) != 4:
-        sys.exit("Incorrect format of palette argument.")
+        sys.exit("Incorrect number of colors in palette argument.")
 
     if not os.path.isfile(inputFile):
         sys.exit("Input file not found.")
