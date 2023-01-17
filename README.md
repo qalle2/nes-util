@@ -191,15 +191,25 @@ Requires qneslib.py (see below).
 Get byte value at specified PRG ROM address in an iNES ROM file (.nes). Args: file address_in_hexadecimal
 
 ## nes_smb_mapext.py
-**Note:** This program is at a very early stage. The results probably aren't
+**Note:** This program is at an early stage. The results probably aren't
 useful for anyone.
 
 Requires [Pillow](https://python-pillow.org).
 
-Extract map data from NES Super Mario Bros. Args: INPUTFILE OUTPUTFILE AREATYPE
-AREA. INPUTFILE: iNES format, US version. OUTPUTFILE: PNG file, will be
-overwritten! AREATYPE: 0=water, 1=ground, 2=underground, 3=castle. AREA: 0 or
-greater; max. value depends on AREATYPE. E.g. 1 5 = level 1-1.
+```
+Extract map data from NES Super Mario Bros. by Nintendo.
+Argument syntax:
+    Short summary of all areas:
+        INPUTFILE
+    All data and image of one area:
+        INPUTFILE OUTPUTFILE AREATYPE AREA
+Arguments:
+    INPUTFILE: iNES format, US version.
+    OUTPUTFILE: PNG, will be overwritten!
+    AREATYPE: 0=water, 1=ground, 2=underground, 3=castle.
+    AREA: 0 or greater; max. value depends on AREATYPE.
+E.g. AREATYPE 1, AREA 5 = level 1-1.
+```
 
 ## nesgenie_dec.py
 Decode an NES Game Genie code. Argument: code (6 or 8 letters from AEGIKLNOPSTUVXYZ).
