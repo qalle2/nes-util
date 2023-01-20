@@ -35,6 +35,7 @@ AREA_TYPES = ("water", "ground", "underground", "castle")
 # PRG ROM addresses (not CPU addresses)
 METATILE_DATA          = 0x0b08
 FLOOR_PATTERNS         = 0x13dc
+CASTLE_METATILES       = 0x17cf
 AREA_DATA_OFFSETS      = 0x1d28
 AREA_DATA_ADDRESSES_LO = 0x1d2c
 AREA_DATA_ADDRESSES_HI = 0x1d4e
@@ -280,7 +281,6 @@ METATILES_TYPE_Y_SIZE = {
     3: 0x61,  # 3D block
     6: 0x61,  # 3D block
     4: 0xc2,  # coin
-    # vertical pipe is special
 }
 
 AREA_BLK_TYPES_Y_NO_SIZE = {
@@ -310,7 +310,7 @@ METATILES_TYPE_Y_NO_SIZE = {
     7:  0x47,  # brick
     8:  0x47,  # brick
     9:  0xc4,  # used question block
-    13: 0x24,  # flagpole
+    13: 0x24,  # flagpole ball
 }
 
 AREA_BLK_TYPES_SIZE_NO_Y = {
@@ -333,14 +333,14 @@ METATILES_TYPE_SIZE_NO_Y = {
     5:  0x86,  # water
     6:  0xc0,  # question block
     7:  0xc0,  # question block
+    8:  0x25,  # vertical pulley rope
     9:  0x25,  # vertical pulley rope
-    10: 0x45,  # castle
     11: 0x61,  # 3D block
 }
 
 AREA_BLK_TYPES_NO_Y_NO_SIZE = {
     0:  "pipe left & up (variant 2?)",
-    1:  "flagpole 2",
+    1:  "flagpole 2",  # e.g. 1-1
     2:  "axe",
     3:  "diagonal chain",
     4:  "Bowser's bridge",
@@ -353,12 +353,14 @@ AREA_BLK_TYPES_NO_Y_NO_SIZE = {
     11: "loop command",
 }
 METATILES_TYPE_NO_Y_NO_SIZE = {
-    1: 0x24,  # flagpole
+    1: 0x24,  # flagpole ball
+    2: 0xc5,  # axe
+    4: 0x89,  # Bowser's bridge
 }
 
 REPL_MTILE = 0x88  # replacement metatile (smiling cloud)
 
-def parse_area_block(block, screen, areaImage, mtileImage):
+def parse_area_block(block, screen, areaImage, mtileImage, prgData):
     # parse area data block (object) except terminator
     # (2 bytes, bits XXXXYYYY NTTTSSSS)
     # screen: current screen
@@ -433,7 +435,19 @@ def parse_area_block(block, screen, areaImage, mtileImage):
         mtile = get_mtile_from_image(
             METATILES_TYPE_SIZE_NO_Y.get(objType, REPL_MTILE), mtileImage
         )
-        if objType in (6, 7):
+        if objType == 10:
+            # castle
+            for i in range(5):
+                for j in range(size + 1):
+                    mti = prgData[CASTLE_METATILES+j*5+i]
+                    mtile = get_mtile_from_image(mti, mtileImage)
+                    areaImage.paste(mtile, (imageX + i * 16, (j + 4) * 16))
+        elif objType == 11:
+            # ascending staircase
+            for i in range(size + 1):
+                for j in range(max(10 - i, 3), 10 + 1):
+                    areaImage.paste(mtile, (imageX + i * 16, j * 16))
+        elif objType in (6, 7):
             # question block row at Y=3/7
             j = 3 + (objType - 6) * 4
             for i in range(size + 1):
@@ -448,8 +462,24 @@ def parse_area_block(block, screen, areaImage, mtileImage):
         mtile = get_mtile_from_image(
             METATILES_TYPE_NO_Y_NO_SIZE.get(objType, REPL_MTILE), mtileImage
         )
-        for i in range(13):
-            areaImage.paste(mtile, (imageX, i * 16))
+        if objType == 1:
+            # flagpole
+            areaImage.paste(mtile, (imageX, 0 * 16))
+            mtile = get_mtile_from_image(0x25, mtileImage)  # shaft
+            for i in range(1, 9 + 1):
+                areaImage.paste(mtile, (imageX, i * 16))
+            mtile = get_mtile_from_image(0x61, mtileImage)  # base
+            areaImage.paste(mtile, (imageX, 10 * 16))
+        elif objType == 2:
+            # axe
+            areaImage.paste(mtile, (imageX, 6 * 16))
+        elif objType == 4:
+            # Bowser's bridge
+            for i in range(13):
+                areaImage.paste(mtile, (imageX + i * 16, 8 * 16))
+        else:
+            for i in range(13):
+                areaImage.paste(mtile, (imageX, i * 16))
 
     elif blockType == AB_SCREEN:
         screen = block[1] & 0b11111
@@ -517,7 +547,7 @@ def extract_map(areaType, area, prgData, bgTileImage):
     screen = 0
     for block in generate_area_blocks(areaDataAddr, prgData):
         (screen, areaImage) \
-        = parse_area_block(block, screen, areaImage, mtileImage)
+        = parse_area_block(block, screen, areaImage, mtileImage, prgData)
 
     return areaImage
 
