@@ -34,6 +34,7 @@ AREA_TYPES = ("water", "ground", "underground", "castle")
 
 # PRG ROM addresses (not CPU addresses)
 METATILE_DATA          = 0x0b08
+TERRAIN_METATILES      = 0x13d8  # floor metatile for water etc.
 FLOOR_PATTERNS         = 0x13dc
 CASTLE_METATILES       = 0x17cf
 AREA_DATA_OFFSETS      = 0x1d28
@@ -126,6 +127,14 @@ def get_area_data_addr(areaType, area, prgData):
 
 def print_summary(prgData):
     # print a summary of all areas
+
+    print("Floor patterns (*=brick, .=blank):")
+    patterns = get_floor_patterns(prgData)
+    print(" ".join(f"{x:2}" for x in range(16)))
+    print(" ".join("--" for x in range(16)))
+    for y in range(13):
+        print(" ".join(" " + (".", "*")[patterns[x][y]] for x in range(16)))
+    print()
 
     print(
         "AT = area type, A# = area number, Addr = PRG address, Wi = width in "
@@ -236,12 +245,16 @@ def get_floor_patterns(prgData):
         patternsList.append(tuple(patternList))
     return patternsList
 
-def draw_floor_patterns(areaImage, areaDataAddr, mtileImage, prgData):
+def draw_floor_patterns(areaImage, areaType, area, mtileImage, prgData):
     # draw floor patterns on area image
 
+    areaDataAddr = get_area_data_addr(areaType, area, prgData)
     areaWidth = get_area_width(areaDataAddr, prgData)
     floorPatterns = get_floor_patterns(prgData)
-    mtile = get_mtile_from_image(0x54, mtileImage)
+
+    # get metatile
+    mti = prgData[TERRAIN_METATILES+areaType]
+    mtile = get_mtile_from_image(mti, mtileImage)
 
     # find out where floor pattern changes
     patternChanges = {}  # key = screen * 16 + X, value = pattern
@@ -294,7 +307,7 @@ AREA_BLK_TYPES_Y_NO_SIZE = {
     7:  "brick with multiple coins",
     8:  "brick with 1-up",
     9:  "used question block",
-    10: "horizontal end of pipe",
+    10: "horizontal end of pipe",  # also firebar block?
     11: "jumpspring",
     12: "pipe left & up (variant 1?)",
     13: "flagpole 1",
@@ -310,6 +323,7 @@ METATILES_TYPE_Y_NO_SIZE = {
     7:  0x47,  # brick
     8:  0x47,  # brick
     9:  0xc4,  # used question block
+    10: 0xc4,  # used question block
     13: 0x24,  # flagpole ball
 }
 
@@ -319,7 +333,7 @@ AREA_BLK_TYPES_SIZE_NO_Y = {
     2:  "bridge at Y=7",
     3:  "bridge at Y=8",
     4:  "bridge at Y=10",
-    5:  "water hole in ground",
+    5:  "water/lava hole in ground",
     6:  "question block row at Y=3",
     7:  "question block row at Y=7",
     8:  "vertical pulley rope 1",
@@ -330,7 +344,7 @@ AREA_BLK_TYPES_SIZE_NO_Y = {
 }
 METATILES_TYPE_SIZE_NO_Y = {
     0:  0x00,  # solid black
-    5:  0x86,  # water
+    5:  0x00,  # solid black
     6:  0xc0,  # question block
     7:  0xc0,  # question block
     8:  0x25,  # vertical pulley rope
@@ -355,6 +369,7 @@ AREA_BLK_TYPES_NO_Y_NO_SIZE = {
 METATILES_TYPE_NO_Y_NO_SIZE = {
     1: 0x24,  # flagpole ball
     2: 0xc5,  # axe
+    3: 0x0c,  # diagonal chain
     4: 0x89,  # Bowser's bridge
 }
 
@@ -370,8 +385,8 @@ def parse_area_block(block, screen, areaImage, mtileImage, prgData):
 
     blockType = get_area_block_type(block)
 
-    x = block[0] >> 4
-    y = block[0] & 0b1111  # only meaningful for AB_Y_SIZE, AB_Y_NO_SIZE
+    blkX = block[0] >> 4
+    blkY = block[0] & 0b1111  # only meaningful for AB_Y_SIZE, AB_Y_NO_SIZE
     nextScreen = block[1] >> 7
 
     # get type of object, if any
@@ -380,82 +395,96 @@ def parse_area_block(block, screen, areaImage, mtileImage, prgData):
     elif blockType == AB_Y_SIZE:
         objType = (block[1] >> 4) & 0b111
     elif blockType == AB_SIZE_NO_Y:
-        objType = ((block[1] >> 4) & 0b111) + (8 if y == 15 else 0)
+        objType = ((block[1] >> 4) & 0b111) + (8 if blkY == 15 else 0)
     elif blockType == AB_NO_Y_NO_SIZE:
         objType = block[1] & 0b111111
 
     # get other properties of object, if any
     if blockType == AB_Y_SIZE and objType == 7:  # vertical pipe
         enterable = (block[1] >> 3) & 0b1
-        size = block[1] & 0b111
+        size = (block[1] & 0b111) + 1
     elif blockType in (AB_Y_SIZE, AB_SIZE_NO_Y):
-        size = block[1] & 0b1111
+        size = (block[1] & 0b1111) + 1
 
     if nextScreen:
         screen += 1
 
-    print(f"screen={screen:2}, x={x:2}: ", end="")
-    imageX = (screen * 16 + x) * 16
+    print(f"screen={screen:2}, X={blkX:2}: ", end="")
+    imageX = (screen * 16 + blkX) * 16
 
     if blockType == AB_Y_NO_SIZE:
-        print(f"{AREA_BLK_TYPES_Y_NO_SIZE[objType]}, {y=}")
+        print(f"{AREA_BLK_TYPES_Y_NO_SIZE[objType]}, Y={blkY}")
         mtile = get_mtile_from_image(
             METATILES_TYPE_Y_NO_SIZE.get(objType, REPL_MTILE), mtileImage
         )
-        areaImage.paste(mtile, (imageX, y * 16))
+        areaImage.paste(mtile, (imageX, blkY * 16))
 
     elif blockType == AB_Y_SIZE:
         if objType == 7:
             # vertical pipe
             print(
-                f"{AREA_BLK_TYPES_Y_SIZE[objType]}, {y=}, {enterable=}, "
+                f"{AREA_BLK_TYPES_Y_SIZE[objType]}, Y={blkY}, {enterable=}, "
                 f"{size=}"
             )
-            for i in range(2):
-                for j in range(size + 1):
-                    mti = 0x10 + i + (0 if j == 0 else 4)
+            for x in range(2):
+                for y in range(size):
+                    mti = 0x10 + x + (0 if y == 0 else 4)
                     mtile = get_mtile_from_image(mti, mtileImage)
-                    areaImage.paste(mtile, (imageX + i * 16, (y + j) * 16))
+                    areaImage.paste(mtile, (imageX + x * 16, (blkY + y) * 16))
         else:
-            print(f"{AREA_BLK_TYPES_Y_SIZE[objType]}, {y=}, {size=}")
+            print(f"{AREA_BLK_TYPES_Y_SIZE[objType]}, Y={blkY}, {size=}")
             mtile = get_mtile_from_image(
                 METATILES_TYPE_Y_SIZE[objType], mtileImage
             )
             if objType <= 4:
                 # row
-                for i in range(size + 1):
-                    areaImage.paste(mtile, (imageX + i * 16, y * 16))
+                for x in range(size):
+                    areaImage.paste(mtile, (imageX + x * 16, blkY * 16))
             else:
                 # column
-                for i in range(size + 1):
-                    areaImage.paste(mtile, (imageX, (y + i) * 16))
+                for y in range(size):
+                    areaImage.paste(mtile, (imageX, (blkY + y) * 16))
 
     elif blockType == AB_SIZE_NO_Y:
         print(f"{AREA_BLK_TYPES_SIZE_NO_Y[objType]}, {size=}")
         mtile = get_mtile_from_image(
             METATILES_TYPE_SIZE_NO_Y.get(objType, REPL_MTILE), mtileImage
         )
-        if objType == 10:
-            # castle
-            for i in range(5):
-                for j in range(size + 1):
-                    mti = prgData[CASTLE_METATILES+j*5+i]
+        if objType == 0:
+            # hole in ground
+            for x in range(size):
+                for y in range(8, 12 + 1):
+                    areaImage.paste(mtile, (imageX + x * 16, y * 16))
+        elif objType == 5:
+            # water/lava hole in ground
+            for x in range(size):
+                for y in range(8, 9 + 1):
+                    areaImage.paste(mtile, (imageX + x * 16, y * 16))
+            mtile = get_mtile_from_image(0x86, mtileImage)  # water/lava
+            for x in range(size):
+                for y in range(10, 12 + 1):
+                    areaImage.paste(mtile, (imageX + x * 16, y * 16))
+        elif objType == 10:
+            # castle (looks wrong)
+            for x in range(5):
+                for y in range(size):
+                    mti = prgData[CASTLE_METATILES+y*5+x]
                     mtile = get_mtile_from_image(mti, mtileImage)
-                    areaImage.paste(mtile, (imageX + i * 16, (j + 4) * 16))
+                    areaImage.paste(mtile, (imageX + x * 16, (y + 4) * 16))
         elif objType == 11:
             # ascending staircase
-            for i in range(size + 1):
-                for j in range(max(10 - i, 3), 10 + 1):
-                    areaImage.paste(mtile, (imageX + i * 16, j * 16))
+            for x in range(size):
+                for y in range(max(10 - x, 3), 10 + 1):
+                    areaImage.paste(mtile, (imageX + x * 16, y * 16))
         elif objType in (6, 7):
             # question block row at Y=3/7
-            j = 3 + (objType - 6) * 4
-            for i in range(size + 1):
-                areaImage.paste(mtile, (imageX + i * 16, j * 16))
+            y = 3 + (objType - 6) * 4
+            for x in range(size):
+                areaImage.paste(mtile, (imageX + x * 16, y * 16))
         else:
-            for i in range(size + 1):
-                for j in range(13):
-                    areaImage.paste(mtile, (imageX + i * 16, j * 16))
+            for x in range(size):
+                for y in range(13):
+                    areaImage.paste(mtile, (imageX + x * 16, y * 16))
 
     elif blockType == AB_NO_Y_NO_SIZE:
         print(f"{AREA_BLK_TYPES_NO_Y_NO_SIZE[objType]}")
@@ -466,20 +495,27 @@ def parse_area_block(block, screen, areaImage, mtileImage, prgData):
             # flagpole
             areaImage.paste(mtile, (imageX, 0 * 16))
             mtile = get_mtile_from_image(0x25, mtileImage)  # shaft
-            for i in range(1, 9 + 1):
-                areaImage.paste(mtile, (imageX, i * 16))
+            for y in range(1, 9 + 1):
+                areaImage.paste(mtile, (imageX, y * 16))
             mtile = get_mtile_from_image(0x61, mtileImage)  # base
             areaImage.paste(mtile, (imageX, 10 * 16))
         elif objType == 2:
             # axe
             areaImage.paste(mtile, (imageX, 6 * 16))
+        elif objType == 3:
+            # diagonal chain
+            areaImage.paste(mtile, (imageX, 7 * 16))
         elif objType == 4:
             # Bowser's bridge
-            for i in range(13):
-                areaImage.paste(mtile, (imageX + i * 16, 8 * 16))
+            for x in range(13):
+                areaImage.paste(mtile, (imageX + x * 16, 8 * 16))
+            mtile = get_mtile_from_image(0x86, mtileImage)  # lava
+            for x in range(13):
+                for y in range(11, 12 + 1):
+                    areaImage.paste(mtile, (imageX + x * 16, y * 16))
         else:
-            for i in range(13):
-                areaImage.paste(mtile, (imageX, i * 16))
+            for y in range(13):
+                areaImage.paste(mtile, (imageX, y * 16))
 
     elif blockType == AB_SCREEN:
         screen = block[1] & 0b11111
@@ -492,7 +528,7 @@ def parse_area_block(block, screen, areaImage, mtileImage, prgData):
     elif blockType == AB_SCENERY_FLOOR:
         scenery = (block[1] >> 4) & 0b11
         floor = block[1] & 0b1111
-        print(f"use scenery {scenery} & floor pattern {floor}")
+        print(f"use scenery {scenery}, floor pattern {floor}")
 
     else:
         sys.exit("Error: this should never happen.")
@@ -539,7 +575,7 @@ def extract_map(areaType, area, prgData, bgTileImage):
 
     # draw floor patterns
     areaImage = draw_floor_patterns(
-        areaImage, areaDataAddr, mtileImage, prgData
+        areaImage, areaType, area, mtileImage, prgData
     )
 
     # print and draw area data blocks
