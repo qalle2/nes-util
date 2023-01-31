@@ -12,9 +12,7 @@ python3 ../ines_split.py \
 echo
 
 echo "=== Validating ==="
-cd ../test-out/
-md5sum -c --quiet ../test/ines_split.md5
-cd ../test/
+md5sum -c --quiet ines_split.md5
 echo
 
 echo "=== These should cause four errors ==="

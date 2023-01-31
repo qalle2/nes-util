@@ -16,9 +16,7 @@ python3 ../ines_combine.py \
 echo
 
 echo "=== Validating iNES files ==="
-cd ../test-out/
-md5sum -c --quiet ../test/ines_combine.md5
-cd ../test/
+md5sum -c --quiet ines_combine.md5
 echo
 
 echo "=== These should cause two errors ==="

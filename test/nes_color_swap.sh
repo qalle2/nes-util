@@ -26,9 +26,7 @@ python3 ../nes_color_swap.py \
 echo
 
 echo "=== Validating ==="
-cd ../test-out/
-md5sum -c --quiet ../test/nes_color_swap.md5
-cd ../test/
+md5sum -c --quiet nes_color_swap.md5
 echo
 
 rm -f ../test-out/*.nes

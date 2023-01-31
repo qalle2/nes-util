@@ -24,9 +24,7 @@ python3 ../nes_chr_encode.py \
 echo
 
 echo "=== Verifying ==="
-cd ../test-out/
-md5sum -c --quiet ../test/nes_chr_encode.md5
-cd ../test/
+md5sum -c --quiet nes_chr_encode.md5
 echo
 
 echo "=== These should cause six errors ==="

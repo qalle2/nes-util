@@ -32,9 +32,7 @@ python3 ../nes_blaster_mapext.py \
 echo
 
 echo "=== Verifying (different PNG encoding may give false positives) ==="
-cd ../test-out/
-md5sum -c --quiet ../test/nes_blaster_mapext.md5
-cd ../test/
+md5sum -c --quiet nes_blaster_mapext.md5
 echo
 
 echo "=== These should cause some warnings and five errors ==="

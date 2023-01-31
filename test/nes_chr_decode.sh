@@ -20,9 +20,7 @@ python3 ../nes_chr_decode.py \
 echo
 
 echo "=== Verifying (different PNG encoding may give false positives) ==="
-cd ../test-out/
-md5sum -c --quiet ../test/nes_chr_decode.md5
-cd ../test/
+md5sum -c --quiet nes_chr_decode.md5
 echo
 
 echo "=== These should cause six errors ==="
