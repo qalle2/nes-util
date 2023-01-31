@@ -7,25 +7,29 @@ Warning: the test scripts under `test/` delete files. They also need input
 files listed in `test-in-files.md5`.
 
 Table of contents:
-* [ines_combine.py](#ines_combinepy)
-* [ines_info.py](#ines_infopy)
-* [ines_split.py](#ines_splitpy)
-* [nes_blaster_mapext.py](#nes_blaster_mapextpy)
-* [nes_chr_decode.py](#nes_chr_decodepy)
-* [nes_chr_encode.py](#nes_chr_encodepy)
-* [nes_color_swap.py](#nes_color_swappy)
-* [nes_cpuaddr.py](#nes_cpuaddrpy)
-* [nes_irriship_mapext.py](#nes_irriship_mapextpy)
-* [nes_prgbyte.py](#nes_prgbytepy)
-* [nes_smb_mapext.py](#nes_smb_mapextpy)
-* [nesgenie_dec.py](#nesgenie_decpy)
-* [nesgenie_enc.py](#nesgenie_encpy)
-* [nesgenie_6to8.py](#nesgenie_6to8py)
-* [nesgenie_prgaddr.py](#nesgenie_prgaddrpy)
-* [nesgenie_verconv.py](#nesgenie_verconvpy)
-* [qneslib.py](#qneslibpy)
+* [Non-game-specific](#non-game-specific)
+  * [ines_combine.py](#ines_combinepy)
+  * [ines_info.py](#ines_infopy)
+  * [ines_split.py](#ines_splitpy)
+  * [nes_chr_decode.py](#nes_chr_decodepy)
+  * [nes_chr_encode.py](#nes_chr_encodepy)
+  * [nes_color_swap.py](#nes_color_swappy)
+  * [nes_cpuaddr.py](#nes_cpuaddrpy)
+  * [nes_prgbyte.py](#nes_prgbytepy)
+  * [nesgenie_dec.py](#nesgenie_decpy)
+  * [nesgenie_enc.py](#nesgenie_encpy)
+  * [nesgenie_6to8.py](#nesgenie_6to8py)
+  * [nesgenie_prgaddr.py](#nesgenie_prgaddrpy)
+  * [nesgenie_verconv.py](#nesgenie_verconvpy)
+  * [qneslib.py](#qneslibpy)
+* [Game-specific](#game-specific)
+  * [nes_blaster_mapext.py](#nes_blaster_mapextpy)
+  * [nes_irriship_mapext.py](#nes_irriship_mapextpy)
+  * [nes_smb_mapext.py](#nes_smb_mapextpy)
 
-## ines_combine.py
+## Non-game-specific
+
+### ines_combine.py
 ```
 usage: ines_combine.py [-h] -p PRG_ROM [-c CHR_ROM] [-m MAPPER] [-n {h,v,f}]
                        [-x]
@@ -52,7 +56,7 @@ options:
   -x, --extra-ram       The game contains extra RAM at $6000-$7fff.
 ```
 
-## ines_info.py
+### ines_info.py
 Print information of an iNES ROM file (.nes).
 
 Example:
@@ -65,7 +69,7 @@ name table mirroring: vertical
 has extra RAM at $6000-$7fff: no
 ```
 
-## ines_split.py
+### ines_split.py
 ```
 usage: ines_split.py [-h] [-p PRG] [-c CHR] input_file
 
@@ -81,43 +85,7 @@ options:
                      data.
 ```
 
-## nes_blaster_mapext.py
-Requires [Pillow](https://python-pillow.org).
-```
-usage: nes_blaster_mapext.py [-h] [-j] [-n MAP_NUMBER] [-u USB_IMAGE]
-                             [-s SB_IMAGE] [-b BLOCK_IMAGE] [-m MAP_IMAGE]
-                             [-v]
-                             input_file
-
-Extract world maps from NES Blaster Master to PNG files.
-
-positional arguments:
-  input_file            Blaster Master ROM file in iNES format (.nes, US/US
-                        prototype/EUR/JP; see also --japan).
-
-options:
-  -h, --help            show this help message and exit
-  -j, --japan           Input file is Japanese version (Chou-Wakusei Senki -
-                        MetaFight).
-  -n MAP_NUMBER, --map-number MAP_NUMBER
-                        Map to extract: 0-7 = side view of area 1-8, 8-15 =
-                        overhead view of area 1-8. Default=0.
-  -u USB_IMAGE, --usb-image USB_IMAGE
-                        Save ultra-subblocks (16*16 px each) as PNG file (up
-                        to 256*256 px).
-  -s SB_IMAGE, --sb-image SB_IMAGE
-                        Save subblocks (32*32 px each) as PNG file (up to
-                        512*512 px).
-  -b BLOCK_IMAGE, --block-image BLOCK_IMAGE
-                        Save blocks (64*64 px each) as PNG file (up to
-                        1024*1024 px).
-  -m MAP_IMAGE, --map-image MAP_IMAGE
-                        Save map as PNG file (up to 32*32 blocks or 2048*2048
-                        px).
-  -v, --verbose         Print more information.
-```
-
-## nes_chr_decode.py
+### nes_chr_decode.py
 Requires [Pillow](https://python-pillow.org).
 ```
 Convert NES CHR (graphics) data into a PNG file.
@@ -133,7 +101,7 @@ Arguments: IN OUT PALETTE (PALETTE is optional)
         Default: 000000,555555,aaaaaa,ffffff
 ```
 
-## nes_chr_encode.py
+### nes_chr_encode.py
 Requires [Pillow](https://python-pillow.org).
 ```
 Convert an image file into an NES CHR (graphics) data file.
@@ -153,7 +121,7 @@ Arguments: IN OUT PALETTE (PALETTE is optional)
              Default: 000000,555555,aaaaaa,ffffff
 ```
 
-## nes_color_swap.py
+### nes_color_swap.py
 Requires qneslib.py (see below).
 ```
 usage: nes_color_swap.py [-h] [-c {0,1,2,3} {0,1,2,3} {0,1,2,3} {0,1,2,3}]
@@ -184,46 +152,19 @@ An example from *Super Mario Bros.* by Nintendo:
 
 ![screenshot](nes_color_swap.png)
 
-## nes_cpuaddr.py
+### nes_cpuaddr.py
 Requires qneslib.py (see below).
 
 Convert an NES PRG ROM address into possible CPU addresses using the iNES ROM
 file (.nes). Args: file address_in_hexadecimal
 
-## nes_irriship_mapext.py
-Requires [Pillow](https://python-pillow.org).
-
-Extract map data from NES Irritating Ship. Arguments: inputFile outputFile
-(inputFile = iNES ROM, outputFile = PNG (will be overwritten)).
-
-## nes_prgbyte.py
+### nes_prgbyte.py
 Requires qneslib.py (see below).
 
 Get byte value at specified PRG ROM address in an iNES ROM file (.nes). Args:
 file address_in_hexadecimal
 
-## nes_smb_mapext.py
-**Note:** This program is at an early stage. The results probably aren't
-useful for anyone.
-
-Requires [Pillow](https://python-pillow.org).
-
-```
-Extract map data from NES Super Mario Bros. by Nintendo.
-Argument syntax:
-    Short summary of all areas:
-        INPUTFILE
-    All data and image of one area:
-        INPUTFILE OUTPUTFILE AREATYPE AREA
-Arguments:
-    INPUTFILE: iNES format, US version.
-    OUTPUTFILE: PNG, will be overwritten!
-    AREATYPE: 0=water, 1=ground, 2=underground, 3=castle.
-    AREA: 0 or greater; max. value depends on AREATYPE.
-E.g. AREATYPE 1, AREA 5 = level 1-1.
-```
-
-## nesgenie_dec.py
+### nesgenie_dec.py
 Decode an NES Game Genie code. Argument: code (6 or 8 letters from
 AEGIKLNOPSTUVXYZ).
 
@@ -233,7 +174,7 @@ $ python3 nesgenie_dec.py yeuzugaa
 CPU address = 0xacb3, replace value = 0x07, compare value = 0x00
 ```
 
-## nesgenie_enc.py
+### nesgenie_enc.py
 Encode an NES Game Genie code. Arguments: AAAA RR or AAAA RR CC (AAAA =
 CPU address, RR = replacement value, CC = compare value; all in hexadecimal).
 
@@ -243,20 +184,20 @@ $ python3 nesgenie_enc.py acb3 07 00
 YEUZUGAA
 ```
 
-## nesgenie_6to8.py
+### nesgenie_6to8.py
 Requires qneslib.py (see below).
 
 Convert a 6-letter NES Game Genie code into 8 letters using the iNES ROM file
 (.nes). Can be useful if the 6-letter code has unintended side effects. Args:
 file code
 
-## nesgenie_prgaddr.py
+### nesgenie_prgaddr.py
 Requires qneslib.py (see below).
 
 Find the PRG ROM addresses affected by an NES Game Genie code in an iNES ROM
 file (.nes). Args: file code
 
-## nesgenie_verconv.py
+### nesgenie_verconv.py
 Requires qneslib.py (see below).
 ```
 usage: nesgenie_verconv.py [-h] [-s SLICE_LENGTH] [-d MAX_DIFFERENT_BYTES]
@@ -297,7 +238,7 @@ options:
                         hexadecimal.
 ```
 
-## qneslib.py
+### qneslib.py
 Does not do anything by itself but is needed by some other programs in this
 repo. Just copy this file to the same directory. Formerly known as neslib.py,
 ineslib.py and nesgenielib.py.
@@ -415,3 +356,68 @@ DATA
 NES Game Genie code format:
 
 ![NES Game Genie code format](nesgenieformat.png)
+
+## Game-specific
+
+### nes_blaster_mapext.py
+Requires [Pillow](https://python-pillow.org).
+```
+usage: nes_blaster_mapext.py [-h] [-j] [-n MAP_NUMBER] [-u USB_IMAGE]
+                             [-s SB_IMAGE] [-b BLOCK_IMAGE] [-m MAP_IMAGE]
+                             [-v]
+                             input_file
+
+Extract world maps from NES Blaster Master to PNG files.
+
+positional arguments:
+  input_file            Blaster Master ROM file in iNES format (.nes, US/US
+                        prototype/EUR/JP; see also --japan).
+
+options:
+  -h, --help            show this help message and exit
+  -j, --japan           Input file is Japanese version (Chou-Wakusei Senki -
+                        MetaFight).
+  -n MAP_NUMBER, --map-number MAP_NUMBER
+                        Map to extract: 0-7 = side view of area 1-8, 8-15 =
+                        overhead view of area 1-8. Default=0.
+  -u USB_IMAGE, --usb-image USB_IMAGE
+                        Save ultra-subblocks (16*16 px each) as PNG file (up
+                        to 256*256 px).
+  -s SB_IMAGE, --sb-image SB_IMAGE
+                        Save subblocks (32*32 px each) as PNG file (up to
+                        512*512 px).
+  -b BLOCK_IMAGE, --block-image BLOCK_IMAGE
+                        Save blocks (64*64 px each) as PNG file (up to
+                        1024*1024 px).
+  -m MAP_IMAGE, --map-image MAP_IMAGE
+                        Save map as PNG file (up to 32*32 blocks or 2048*2048
+                        px).
+  -v, --verbose         Print more information.
+```
+
+### nes_irriship_mapext.py
+Requires [Pillow](https://python-pillow.org).
+
+Extract map data from NES Irritating Ship. Arguments: inputFile outputFile
+(inputFile = iNES ROM, outputFile = PNG (will be overwritten)).
+
+### nes_smb_mapext.py
+**Note:** This program is at an early stage. The results probably aren't
+useful for anyone.
+
+Requires [Pillow](https://python-pillow.org).
+
+```
+Extract map data from NES Super Mario Bros. by Nintendo.
+Argument syntax:
+    Short summary of all areas:
+        INPUTFILE
+    All data and image of one area:
+        INPUTFILE OUTPUTFILE AREATYPE AREA
+Arguments:
+    INPUTFILE: iNES format, US version.
+    OUTPUTFILE: PNG, will be overwritten!
+    AREATYPE: 0=water, 1=ground, 2=underground, 3=castle.
+    AREA: 0 or greater; max. value depends on AREATYPE.
+E.g. AREATYPE 1, AREA 5 = level 1-1.
+```
