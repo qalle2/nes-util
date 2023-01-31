@@ -1,7 +1,10 @@
 # nes-util
-Utilities for [Nintendo Entertainment System](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System) game hacking.
+Utilities for
+[Nintendo Entertainment System](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System)
+game hacking.
 
-Warning: the test scripts under `test/` delete files. They also need input files listed in `test-in-files.md5`.
+Warning: the test scripts under `test/` delete files. They also need input
+files listed in `test-in-files.md5`.
 
 Table of contents:
 * [ines_combine.py](#ines_combinepy)
@@ -12,6 +15,7 @@ Table of contents:
 * [nes_chr_encode.py](#nes_chr_encodepy)
 * [nes_color_swap.py](#nes_color_swappy)
 * [nes_cpuaddr.py](#nes_cpuaddrpy)
+* [nes_irriship_mapext.py](#nes_irriship_mapextpy)
 * [nes_prgbyte.py](#nes_prgbytepy)
 * [nes_smb_mapext.py](#nes_smb_mapextpy)
 * [nesgenie_dec.py](#nesgenie_decpy)
@@ -183,12 +187,20 @@ An example from *Super Mario Bros.* by Nintendo:
 ## nes_cpuaddr.py
 Requires qneslib.py (see below).
 
-Convert an NES PRG ROM address into possible CPU addresses using the iNES ROM file (.nes). Args: file address_in_hexadecimal
+Convert an NES PRG ROM address into possible CPU addresses using the iNES ROM
+file (.nes). Args: file address_in_hexadecimal
+
+## nes_irriship_mapext.py
+Requires [Pillow](https://python-pillow.org).
+
+Extract map data from NES Irritating Ship. Arguments: inputFile outputFile
+(inputFile = iNES ROM, outputFile = PNG (will be overwritten)).
 
 ## nes_prgbyte.py
 Requires qneslib.py (see below).
 
-Get byte value at specified PRG ROM address in an iNES ROM file (.nes). Args: file address_in_hexadecimal
+Get byte value at specified PRG ROM address in an iNES ROM file (.nes). Args:
+file address_in_hexadecimal
 
 ## nes_smb_mapext.py
 **Note:** This program is at an early stage. The results probably aren't
@@ -212,7 +224,8 @@ E.g. AREATYPE 1, AREA 5 = level 1-1.
 ```
 
 ## nesgenie_dec.py
-Decode an NES Game Genie code. Argument: code (6 or 8 letters from AEGIKLNOPSTUVXYZ).
+Decode an NES Game Genie code. Argument: code (6 or 8 letters from
+AEGIKLNOPSTUVXYZ).
 
 Example:
 ```
@@ -221,7 +234,8 @@ CPU address = 0xacb3, replace value = 0x07, compare value = 0x00
 ```
 
 ## nesgenie_enc.py
-Encode an NES Game Genie code. Arguments: AAAA RR or AAAA RR CC (AAAA = CPU address, RR = replacement value, CC = compare value; all in hexadecimal).
+Encode an NES Game Genie code. Arguments: AAAA RR or AAAA RR CC (AAAA =
+CPU address, RR = replacement value, CC = compare value; all in hexadecimal).
 
 Example:
 ```
@@ -232,12 +246,15 @@ YEUZUGAA
 ## nesgenie_6to8.py
 Requires qneslib.py (see below).
 
-Convert a 6-letter NES Game Genie code into 8 letters using the iNES ROM file (.nes). Can be useful if the 6-letter code has unintended side effects. Args: file code
+Convert a 6-letter NES Game Genie code into 8 letters using the iNES ROM file
+(.nes). Can be useful if the 6-letter code has unintended side effects. Args:
+file code
 
 ## nesgenie_prgaddr.py
 Requires qneslib.py (see below).
 
-Find the PRG ROM addresses affected by an NES Game Genie code in an iNES ROM file (.nes). Args: file code
+Find the PRG ROM addresses affected by an NES Game Genie code in an iNES ROM
+file (.nes). Args: file code
 
 ## nesgenie_verconv.py
 Requires qneslib.py (see below).
@@ -281,9 +298,9 @@ options:
 ```
 
 ## qneslib.py
-Does not do anything by itself but is needed by some other programs in this repo.
-Just copy this file to the same directory.
-Formerly known as neslib.py, ineslib.py and nesgenielib.py.
+Does not do anything by itself but is needed by some other programs in this
+repo. Just copy this file to the same directory. Formerly known as neslib.py,
+ineslib.py and nesgenielib.py.
 ```
 NAME
     qneslib - qalle's NES library (Nintendo Entertainment System stuff).
