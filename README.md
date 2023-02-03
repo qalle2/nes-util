@@ -25,6 +25,7 @@ Table of contents:
 * [Game-specific](#game-specific)
   * [nes_blaster_mapext.py](#nes_blaster_mapextpy)
   * [nes_irriship_mapext.py](#nes_irriship_mapextpy)
+  * [nes_irriship_tasgen.py](#nes_irriship_tasgenpy)
   * [nes_smb_mapext.py](#nes_smb_mapextpy)
 
 ## Non-game-specific
@@ -400,6 +401,9 @@ Requires [Pillow](https://python-pillow.org).
 
 Extract map data from NES Irritating Ship. Arguments: inputFile outputFile
 (inputFile = iNES ROM, outputFile = PNG (will be overwritten)).
+
+### nes_irriship_tasgen.py
+Generate an FCEUX movie that plays Irritating Ship. Under construction.
 
 ### nes_smb_mapext.py
 **Note:** This program is at an early stage. The results probably aren't
