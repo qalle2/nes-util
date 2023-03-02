@@ -1,4 +1,4 @@
-# generate an FCEUX movie that plays Irritating Ship
+# generate an FCEUX movie that plays Irritating Ship;
 # under construction
 
 import sys
@@ -23,11 +23,15 @@ RAMInitOption 0
 RAMInitSeed 569937536"""
 
 CIRCLE_STEPS = 48  # how many increments in a full turn
-(N, NE, E, SE, S, SW, W, NW) = range(0, CIRCLE_STEPS, 6)
+(N, NE, E, SE, S, SW, W, NW) = range(0, CIRCLE_STEPS, 6)  # ship's headings
 
-# look up coordinates in irriship-map.png
-# use e.g. (-2, 20) to turn ship to point left, accelerate for 20 frames,
-# turn ship around and decelerate for 20 frames
+# headings and number of frames to accelerate and decelerate;
+# e.g. (NW, 20) = turn ship to northwest, accelerate for 20 frames, turn 180
+# degrees and accelerate for 20 frames;
+# i.e., after each command, the ship is stationary and faces the opposite
+# direction;
+# use irriship-map.png as a rough guide;
+# this movie only plays the first three checkpoints
 SCRIPT = (
     (N,  54),
     (NW, 35),
@@ -42,6 +46,10 @@ SCRIPT = (
     (NW, 46),
     (S,  42),
     (W,  40),
+    (N,  35),
+    (NE, 50),
+    (W,  47),
+    (NE, 43),
 )
 
 def fm2_line(buttons=""):
@@ -62,16 +70,16 @@ def main():
 
     # ship's current heading in increments of 360/CIRCLE_STEPS degrees,
     # clockwise from north
-    shipHeading = 0
+    currHeading = 0
 
-    for (heading, frames) in SCRIPT:
-        if not -CIRCLE_STEPS // 2 <= heading < CIRCLE_STEPS:
+    for (targetHeading, frames) in SCRIPT:
+        if not -CIRCLE_STEPS // 2 <= targetHeading < CIRCLE_STEPS:
             sys.exit("invalid heading")
         if frames < 1:
             sys.exit("invalid number of frames")
 
-        # -CIRCLE_STEPS // 2 ... CIRCLE_STEPS // 2
-        headingDelta = (heading - shipHeading) % CIRCLE_STEPS
+        # how much to turn (-CIRCLE_STEPS // 2 ... CIRCLE_STEPS // 2)
+        headingDelta = (targetHeading - currHeading) % CIRCLE_STEPS
         if headingDelta > CIRCLE_STEPS // 2:
             headingDelta -= CIRCLE_STEPS
 
@@ -88,6 +96,6 @@ def main():
         for i in range(frames):
             print(fm2_line("A"))
 
-        shipHeading = (heading + CIRCLE_STEPS // 2) % CIRCLE_STEPS
+        currHeading = (targetHeading + CIRCLE_STEPS // 2) % CIRCLE_STEPS
 
 main()
