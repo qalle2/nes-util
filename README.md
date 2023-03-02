@@ -423,5 +423,6 @@ Arguments:
     OUTPUTFILE: PNG, will be overwritten!
     AREATYPE: 0=water, 1=ground, 2=underground, 3=castle.
     AREA: 0 or greater; max. value depends on AREATYPE.
-E.g. AREATYPE 1, AREA 5 = level 1-1.
+E.g. AREATYPE 1, AREA 5 = above-ground part of level 1-1.
+Note: looping castle areas look totally wrong.
 ```

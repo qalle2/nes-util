@@ -7,12 +7,13 @@
 # area = 1-32 screens horizontally (ground area 9 is 1 screen, ground area 16
 #        is 24 screens)
 # level = 1 or more areas, connected by pipes/vines/falling/other?
+# "doppelganger's" = doppelganger's SMB disassembly
 
 # for area/enemy data, see
 # https://www.youtube.com/watch?v=1ysdUajrhL8
 # (5:50-18:20 for area data, 18:20-22:00 for enemy data)
 
-import os, struct, sys
+import itertools, os, struct, sys
 from PIL import Image  # Pillow, https://python-pillow.org
 
 HELP_TEXT = """\
@@ -27,19 +28,22 @@ Arguments:
     OUTPUTFILE: PNG, will be overwritten!
     AREATYPE: 0=water, 1=ground, 2=underground, 3=castle.
     AREA: 0 or greater; max. value depends on AREATYPE.
-E.g. AREATYPE 1, AREA 5 = level 1-1.\
+E.g. AREATYPE 1, AREA 5 = above-ground part of level 1-1.
+Note: looping castle areas look totally wrong.\
 """
 
 AREA_TYPES = ("water", "ground", "underground", "castle")
 
-# PRG ROM addresses (not CPU addresses)
-METATILE_DATA          = 0x0b08
-TERRAIN_METATILES      = 0x13d8  # floor metatile for water etc.
-FLOOR_PATTERNS         = 0x13dc
-CASTLE_METATILES       = 0x17cf
-AREA_DATA_OFFSETS      = 0x1d28
-AREA_DATA_ADDRESSES_LO = 0x1d2c
-AREA_DATA_ADDRESSES_HI = 0x1d4e
+# PRG ROM addresses (not CPU or .nes file addresses)
+BACKGROUND_COLORS      = 0x05cf  # "BackgroundColors"     in doppelganger's
+METATILE_DATA          = 0x0b08  # "MetatileGraphics_Low" in doppelganger's
+PALETTE_DATA           = 0x0ca4  # "WaterPaletteData"     in doppelganger's
+FLOOR_METATILES        = 0x13d8  # "TerrainMetatiles"     in doppelganger's
+FLOOR_PATTERNS         = 0x13dc  # "TerrainRenderBits"    in doppelganger's
+CASTLE_METATILES       = 0x17cf  # "CastleMetatiles"      in doppelganger's
+AREA_DATA_OFFSETS      = 0x1d28  # "AreaDataHOffsets"     in doppelganger's
+AREA_DATA_ADDRESSES_LO = 0x1d2c  # "AreaDataAddrLow"      in doppelganger's
+AREA_DATA_ADDRESSES_HI = 0x1d4e  # "AreaDataAddrHigh"     in doppelganger's
 
 # enumerate types of area data blocks
 (
@@ -51,6 +55,75 @@ AREA_DATA_ADDRESSES_HI = 0x1d4e
     AB_BACKGROUND,     # switch background
     AB_SCENERY_FLOOR,  # switch scenery & floor pattern
 ) = range(7)
+
+# NES master palette;
+# key=index, value=(red, green, blue); source: FCEUX (fceux.pal)
+NES_COLORS = {
+    0x00: (0x74, 0x74, 0x74),
+    0x01: (0x24, 0x18, 0x8c),
+    0x02: (0x00, 0x00, 0xa8),
+    0x03: (0x44, 0x00, 0x9c),
+    0x04: (0x8c, 0x00, 0x74),
+    0x05: (0xa8, 0x00, 0x10),
+    0x06: (0xa4, 0x00, 0x00),
+    0x07: (0x7c, 0x08, 0x00),
+    0x08: (0x40, 0x2c, 0x00),
+    0x09: (0x00, 0x44, 0x00),
+    0x0a: (0x00, 0x50, 0x00),
+    0x0b: (0x00, 0x3c, 0x14),
+    0x0c: (0x18, 0x3c, 0x5c),
+    0x0d: (0x00, 0x00, 0x00),
+    0x0e: (0x00, 0x00, 0x00),
+    0x0f: (0x00, 0x00, 0x00),
+    0x10: (0xbc, 0xbc, 0xbc),
+    0x11: (0x00, 0x70, 0xec),
+    0x12: (0x20, 0x38, 0xec),
+    0x13: (0x80, 0x00, 0xf0),
+    0x14: (0xbc, 0x00, 0xbc),
+    0x15: (0xe4, 0x00, 0x58),
+    0x16: (0xd8, 0x28, 0x00),
+    0x17: (0xc8, 0x4c, 0x0c),
+    0x18: (0x88, 0x70, 0x00),
+    0x19: (0x00, 0x94, 0x00),
+    0x1a: (0x00, 0xa8, 0x00),
+    0x1b: (0x00, 0x90, 0x38),
+    0x1c: (0x00, 0x80, 0x88),
+    0x1d: (0x00, 0x00, 0x00),
+    0x1e: (0x00, 0x00, 0x00),
+    0x1f: (0x00, 0x00, 0x00),
+    0x20: (0xfc, 0xfc, 0xfc),
+    0x21: (0x3c, 0xbc, 0xfc),
+    0x22: (0x5c, 0x94, 0xfc),
+    0x23: (0xcc, 0x88, 0xfc),
+    0x24: (0xf4, 0x78, 0xfc),
+    0x25: (0xfc, 0x74, 0xb4),
+    0x26: (0xfc, 0x74, 0x60),
+    0x27: (0xfc, 0x98, 0x38),
+    0x28: (0xf0, 0xbc, 0x3c),
+    0x29: (0x80, 0xd0, 0x10),
+    0x2a: (0x4c, 0xdc, 0x48),
+    0x2b: (0x58, 0xf8, 0x98),
+    0x2c: (0x00, 0xe8, 0xd8),
+    0x2d: (0x78, 0x78, 0x78),
+    0x2e: (0x00, 0x00, 0x00),
+    0x2f: (0x00, 0x00, 0x00),
+    0x30: (0xfc, 0xfc, 0xfc),
+    0x31: (0xa8, 0xe4, 0xfc),
+    0x32: (0xc4, 0xd4, 0xfc),
+    0x33: (0xd4, 0xc8, 0xfc),
+    0x34: (0xfc, 0xc4, 0xfc),
+    0x35: (0xfc, 0xc4, 0xd8),
+    0x36: (0xfc, 0xbc, 0xb0),
+    0x37: (0xfc, 0xd8, 0xa8),
+    0x38: (0xfc, 0xe4, 0xa0),
+    0x39: (0xe0, 0xfc, 0xa0),
+    0x3a: (0xa8, 0xf0, 0xbc),
+    0x3b: (0xb0, 0xfc, 0xcc),
+    0x3c: (0x9c, 0xfc, 0xf0),
+    0x3d: (0xc4, 0xc4, 0xc4),
+    0x3e: (0x00, 0x00, 0x00),
+    0x3f: (0x00, 0x00, 0x00),
+}
 
 # --- used by print_summary() and possibly extract_map() ----------------------
 
@@ -253,7 +326,7 @@ def draw_floor_patterns(areaImage, areaType, area, mtileImage, prgData):
     floorPatterns = get_floor_patterns(prgData)
 
     # get metatile
-    mti = prgData[TERRAIN_METATILES+areaType]
+    mti = prgData[FLOOR_METATILES+areaType]
     mtile = get_mtile_from_image(mti, mtileImage)
 
     # find out where floor pattern changes
@@ -569,9 +642,16 @@ def extract_map(areaType, area, prgData, bgTileImage):
     areaWidth = get_area_width(areaDataAddr, prgData)
     print("area width in screens:", areaWidth)
 
+    # background/foreground colors
+    bgColor = prgData[BACKGROUND_COLORS+areaType]
+    subpal = (1, 3, 1, 0)[areaType]  # temporary hack
+    fgColorAddr = PALETTE_DATA + areaType * 36 + subpal * 4 + 4
+    fgColors = prgData[fgColorAddr:fgColorAddr+3]
+
     # create indexed image
     areaImage = Image.new("P", (areaWidth * 16 * 16, 13 * 16))
-    areaImage.putpalette((0,0,0, 85,85,85, 170,170,170, 255,255,255))
+    palette = [NES_COLORS[c] for c in (bgColor, *fgColors)]
+    areaImage.putpalette(itertools.chain.from_iterable(palette))
 
     # draw floor patterns
     areaImage = draw_floor_patterns(
