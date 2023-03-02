@@ -1,4 +1,4 @@
-# extract map data from NES Super Mario Bros. by Nintendo
+# extract map data from NES Super Mario Bros. by Nintendo;
 # under construction
 
 # tile = 8*8 pixels with 2 bitplanes
@@ -17,7 +17,7 @@ import itertools, os, struct, sys
 from PIL import Image  # Pillow, https://python-pillow.org
 
 HELP_TEXT = """\
-Extract map data from NES Super Mario Bros. by Nintendo.
+Extract map data (excluding enemies) from NES Super Mario Bros. by Nintendo.
 Argument syntax:
     Short summary of all areas:
         INPUTFILE
@@ -29,7 +29,8 @@ Arguments:
     AREATYPE: 0=water, 1=ground, 2=underground, 3=castle.
     AREA: 0 or greater; max. value depends on AREATYPE.
 E.g. AREATYPE 1, AREA 5 = above-ground part of level 1-1.
-Note: looping castle areas look totally wrong.\
+Note: looping castle areas look totally wrong; all other areas look more or
+less wrong too.\
 """
 
 AREA_TYPES = ("water", "ground", "underground", "castle")
@@ -777,9 +778,6 @@ def main():
         print_summary(prgData)
     else:
         areaImage = extract_map(areaType, area, prgData, bgTileImage)
-
-    # write output file
-    if not summary:
         with open(outputFile, "wb") as handle:
             handle.seek(0)
             areaImage.save(handle, "png")

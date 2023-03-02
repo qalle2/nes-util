@@ -406,13 +406,14 @@ Extract map data from NES Irritating Ship. Arguments: inputFile outputFile
 Generate an FCEUX movie that plays Irritating Ship. Under construction.
 
 ### nes_smb_mapext.py
-**Note:** This program is at an early stage. The results probably aren't
-useful for anyone.
+**Note:** This program is at an early stage.
+[VGMaps](https://vgmaps.com/Atlas/NES/index.htm#SuperMarioBros) has much better
+maps of *Super Mario Bros.*
 
 Requires [Pillow](https://python-pillow.org).
 
 ```
-Extract map data from NES Super Mario Bros. by Nintendo.
+Extract map data (excluding enemies) from NES Super Mario Bros. by Nintendo.
 Argument syntax:
     Short summary of all areas:
         INPUTFILE
@@ -424,5 +425,6 @@ Arguments:
     AREATYPE: 0=water, 1=ground, 2=underground, 3=castle.
     AREA: 0 or greater; max. value depends on AREATYPE.
 E.g. AREATYPE 1, AREA 5 = above-ground part of level 1-1.
-Note: looping castle areas look totally wrong.
+Note: looping castle areas look totally wrong; all other areas look more or
+less wrong too.
 ```
