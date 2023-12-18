@@ -1,11 +1,4 @@
-# decode NES CHR data
-
-# NES CHR data format:
-# - byte = 1 bitplane of 8*1 pixels (most significant bit = leftmost pixel)
-# - tile = 2 bitplanes of 8*8 pixels (first low bitplane top to bottom, then
-#   high bitplane top to bottom)
-# - pattern table = 256 tiles
-# - maximum CHR data without bankswitching = 2 pattern tables
+# convert NES CHR data into an image
 
 import itertools, os, struct, sys
 try:
@@ -13,34 +6,40 @@ try:
 except ImportError:
     sys.exit("Pillow module required. See https://python-pillow.org")
 
+TILES_PER_ROW = 16  # output image width in tiles
+TILE_WIDTH    = 8   # in pixels; don't change
+TILE_HEIGHT   = 8   # in pixels; don't change
+BITS_PER_BYTE = 8   # don't change
+
+BYTES_PER_TILE = TILE_WIDTH * TILE_HEIGHT * 2 // BITS_PER_BYTE  # 2 bits/pixel
+
 DEFAULT_PALETTE = "000000,555555,aaaaaa,ffffff"
 
 HELP_TEXT = f"""\
 Convert NES CHR (graphics) data into a PNG file.
-Arguments: IN OUT PALETTE (PALETTE is optional)
-    IN:
-        File to read. An iNES ROM (.nes) or raw CHR data.
-        Size of raw CHR data must be a multiple of 256 bytes (16 tiles).
-    OUT:
-        PNG file to write. 128 pixels (16 tiles) wide.
-    PALETTE:
-        Output palette (which image colors correspond to CHR colors 0-3).
-        Four hexadecimal RRGGBB codes (000000-ffffff) separated by commas.
-        Default: {DEFAULT_PALETTE}\
+Arguments: inputFile outputFile palette
+    inputFile: File to read. An iNES ROM (.nes) or raw CHR data. Size of raw
+        CHR data must be a multiple of {TILES_PER_ROW*BYTES_PER_TILE} bytes.
+    outputFile: PNG file to write. {TILES_PER_ROW} tiles wide.
+    palette: Optional. Output palette or which colors will correspond to CHR
+        colors 0-3. Four hexadecimal RRGGBB codes (000000-ffffff) separated by
+        commas. Default: {DEFAULT_PALETTE}\
 """
 
-def decode_color(color):
+def decode_color(colorStr):
     # decode a hexadecimal RRGGBB color code into (red, green, blue)
 
     try:
-        color = int(color, 16)
+        color = int(colorStr, 16)
         if not 0 <= color <= 0xffffff:
             raise ValueError
     except ValueError:
-        sys.exit("Unrecognized color code.")
-    return (color >> 16, (color >> 8) & 0xff, color & 0xff)
+        sys.exit("Unrecognized color code: " + colorStr)
+    return tuple((color >> s) & 0xff for s in (16, 8, 0))
 
 def parse_arguments():
+    # return (inputFile, outputFile, palette)
+
     if not 3 <= len(sys.argv) <= 4:
         sys.exit(HELP_TEXT)
 
@@ -56,11 +55,7 @@ def parse_arguments():
     if os.path.exists(outputFile):
         sys.exit("Output file already exists.")
 
-    return {
-        "inputFile": inputFile,
-        "outputFile": outputFile,
-        "palette": palette,
-    }
+    return (inputFile, outputFile, palette)
 
 def decode_ines_header(handle):
     # parse iNES ROM header
@@ -96,61 +91,69 @@ def get_chr_info(handle):
 
     # try as raw CHR data
     fileSize = handle.seek(0, 2)
-    if fileSize == 0 or fileSize % 256:
+    if fileSize == 0 or fileSize % (TILES_PER_ROW * BYTES_PER_TILE):
         sys.exit("Unrecognized input file format.")
     return (0, fileSize)
 
 def generate_tiles(handle):
-    # read NES CHR data, generate tiles (tuples of 64 2-bit ints)
+    # read NES CHR data, generate tiles (tuples of 64 2-bit ints);
+    # CHR data format:
+    #     - tile = 16 bytes = 2 bitplanes (first low, then high)
+    #     - bitplane = 8 bytes (first = topmost)
+    #     - byte = 8*1 pixels of 1 bitplane (MSB = leftmost pixel)
 
+    bytesPerBitplane = TILE_WIDTH * TILE_HEIGHT // BITS_PER_BYTE
     (chrAddr, chrSize) = get_chr_info(handle)
-    tileCount = chrSize // 16  # 16 bytes/tile
+    tileCount = chrSize // BYTES_PER_TILE
     handle.seek(chrAddr)
 
     decodedTile = []
     for i in range(tileCount):
-        tile = handle.read(16)
+        tile = handle.read(BYTES_PER_TILE)
         decodedTile.clear()
-        for y in range(8):
+        for y in range(TILE_HEIGHT):
             lowBits = tile[y]
-            highBits = tile[y+8] << 1
+            highBits = tile[bytesPerBitplane+y] << 1
             decodedTile.extend(
                 ((lowBits >> s) & 1) | ((highBits >> s) & 2)
-                for s in range(7, -1, -1)
+                for s in range(TILE_WIDTH - 1, -1, -1)
             )
         yield tuple(decodedTile)
 
 def create_image(handle, palette):
     # read CHR data from file, return image
 
+    # get height of output image
     (chrAddr, chrSize) = get_chr_info(handle)
+    imageHeight = chrSize // (TILES_PER_ROW * BYTES_PER_TILE) * TILE_HEIGHT
 
-    # chrSize // 16 bytes/tile // 16 tiles/row * 8 px/row
-    imageHeight = chrSize // 32
-
-    # create image with palette from command line argument
-    image = Image.new("P", (16 * 8, imageHeight))
+    # create image
+    image = Image.new("P", (TILES_PER_ROW * TILE_WIDTH, imageHeight))
     image.putpalette(itertools.chain.from_iterable(palette))
 
-    # convert CHR data into image data
-    tileImage = Image.new("P", (8, 8))
+    # decode CHR data and copy it to the image, one tile at a time
+    tileImage = Image.new("P", (TILE_WIDTH, TILE_HEIGHT))
     for (i, tile) in enumerate(generate_tiles(handle)):
         tileImage.putdata(tile)
-        (y, x) = divmod(i, 16)
-        image.paste(tileImage, (x * 8, y * 8))
+        (y, x) = divmod(i, TILES_PER_ROW)
+        image.paste(tileImage, (x * TILE_WIDTH, y * TILE_HEIGHT))
 
     return image
 
 def main():
-    args = parse_arguments()
+    (inputFile, outputFile, palette) = parse_arguments()
 
     try:
-        with open(args["inputFile"], "rb") as handle:
-            image = create_image(handle, args["palette"])
-        with open(args["outputFile"], "wb") as handle:
+        with open(inputFile, "rb") as handle:
+            image = create_image(handle, palette)
+    except OSError:
+        sys.exit("Error reading input file.")
+
+    try:
+        with open(outputFile, "wb") as handle:
             handle.seek(0)
             image.save(handle, "png")
     except OSError:
-        sys.exit("File read/write error.")
+        sys.exit("Error writing output file.")
 
 main()
