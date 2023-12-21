@@ -103,20 +103,19 @@ Arguments: inputFile outputFile palette
 Requires [Pillow](https://python-pillow.org).
 ```
 Convert an image file into an NES CHR (graphics) data file.
-Arguments: IN OUT PALETTE (PALETTE is optional)
-    IN: Image file to read (e.g. PNG).
-        Width must be 128 pixels (16 tiles).
-        Height must be a multiple of 8 pixels (1 tile).
-        No more than 4 unique colors.
-    OUT: NES CHR data file to write.
-         The size will be a multiple of 256 bytes (16 tiles).
-    PALETTE: Input palette (which image colors correspond to CHR colors 0-3).
-             Four hexadecimal RRGGBB color codes (000000-ffffff) separated by
-             commas.
-             All colors must be distinct.
-             Palette may contain colors not present in input file.
-             Palette must include every unique color in input file.
-             Default: 000000,555555,aaaaaa,ffffff
+Arguments: inputFile outputFile palette
+    inputFile: Image file to read (e.g. PNG). Width must be
+        128 pixels (16 tiles). Height must
+        be a multiple of 8 pixels (1 tile). No more than 4 unique
+        colors.
+    outputFile: NES CHR data file to write. The size will be a multiple of
+        256 bytes (16 tiles).
+    palette: Optional. Input palette (which image colors correspond to CHR
+        colors 0-3). Four hexadecimal RRGGBB color codes (000000-ffffff)
+        separated by commas. All colors must be distinct. Palette must include
+        every unique color in input file. Palette may contain colors not
+        present in input file.
+        Default: 000000,555555,aaaaaa,ffffff
 ```
 
 ### nes_color_swap.py
