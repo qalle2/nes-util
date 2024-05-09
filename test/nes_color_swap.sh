@@ -29,16 +29,15 @@ echo "=== Validating ==="
 md5sum -c --quiet nes_color_swap.md5
 echo
 
-rm -f ../test-out/*.nes
+rm -f ../test-out/error*.nes
 echo "" > ../test-out/already-exists.nes
 
 echo "=== These should cause seven errors ==="
-python3 ../nes_color_swap.py -f 512 ../test-in/smb1.nes ../test-out/test1.nes
-python3 ../nes_color_swap.py -n 513 ../test-in/smb1.nes ../test-out/test2.nes
-python3 ../nes_color_swap.py \
-    -f 511 -n 2 ../test-in/smb1.nes ../test-out/test3.nes
-python3 ../nes_color_swap.py nonexistent ../test-out/test4.nes
-python3 ../nes_color_swap.py ../test-in/smb1.nes ../test-out/already-exists.nes
-python3 ../nes_color_swap.py ../test-in/invalid-id.nes ../test-out/test5.nes
-python3 ../nes_color_swap.py ../test-in/videomation.nes ../test-out/test6.nes
+python3 ../nes_color_swap.py ../test-in/smb1.nes        ../test-out/error1.nes -f 512
+python3 ../nes_color_swap.py ../test-in/smb1.nes        ../test-out/error2.nes -n 513
+python3 ../nes_color_swap.py ../test-in/smb1.nes        ../test-out/error3.nes -f 511 -n 2
+python3 ../nes_color_swap.py nonexistent                ../test-out/error4.nes
+python3 ../nes_color_swap.py ../test-in/smb1.nes        ../test-out/already-exists.nes
+python3 ../nes_color_swap.py ../test-in/invalid-id.nes  ../test-out/error5.nes
+python3 ../nes_color_swap.py ../test-in/videomation.nes ../test-out/error6.nes
 echo
