@@ -1,5 +1,4 @@
-import argparse, os, sys
-import qneslib  # qalle's NES library, https://github.com/qalle2/nes-util
+import argparse, os, struct, sys
 
 def parse_arguments():
     # parse command line arguments using argparse
@@ -35,6 +34,7 @@ def parse_arguments():
         sys.exit("--first-tile must be 0 or greater.")
     if args.tile_count < 0:
         sys.exit("--tile-count must be 0 or greater.")
+
     if not os.path.isfile(args.input_file):
         sys.exit("Input file not found.")
     if os.path.exists(args.output_file):
@@ -42,12 +42,66 @@ def parse_arguments():
 
     return args
 
+def ines_header_decode(handle):
+    # Parse the header of an iNES ROM file.
+    # See https://www.nesdev.org/wiki/INES
+    # Note: doesn't support VS System or PlayChoice-10 flags or NES 2.0 header.
+    # handle: iNES ROM file
+    # return: tuple: (CHR_ROM_address, CHR_ROM_size)
+
+    fileSize = handle.seek(0, 2)
+
+    if fileSize < 16:
+        sys.exit("Not an iNES ROM file.")
+
+    # get fields from header
+    handle.seek(0)
+    (id_, prgSize, chrSize, flags6, flags7) = struct.unpack(
+        "4s4B8x", handle.read(16)
+    )
+
+    if id_ != b"NES\x1a":
+        sys.exit("Not an iNES ROM file.")
+
+    # PRG ROM / CHR ROM / trainer size in bytes (PRG ROM size 0 -> 256)
+    prgSize = (prgSize if prgSize else 256) * 16 * 1024
+    chrSize = chrSize * 8 * 1024
+    trainerSize = bool(flags6 & 0b00000100) * 512
+
+    # validate id and file size (accept files that are too large)
+    if fileSize < 16 + trainerSize + prgSize + chrSize:
+        sys.exit("Unexpected end of iNES ROM file.")
+
+    chrStart = 16 + trainerSize + prgSize
+    return (chrStart, chrSize)
+
 def read_file_slice(handle, bytesLeft):
     # generate bytesLeft bytes from file
     while bytesLeft:
         chunkSize = min(bytesLeft, 2 ** 20)
         yield handle.read(chunkSize)
         bytesLeft -= chunkSize
+
+def tile_slice_decode(loByte, hiByte):
+    # decode 8*1 pixels of one tile of CHR data;
+    # loByte, hiByte: low/high bitplane (both 8-bit ints);
+    # return: eight 2-bit ints
+    pixels = []
+    for i in range(8):
+        pixels.append((loByte & 1) | ((hiByte & 1) << 1))
+        loByte >>= 1
+        hiByte >>= 1
+    return pixels[::-1]
+
+def tile_slice_encode(pixels):
+    # encode 8*1 pixels of one tile of CHR data;
+    # pixels: eight 2-bit ints
+    # return: (low_bitplane, high_bitplane); both 8-bit ints
+    loByte = hiByte = 0
+    for pixel in pixels:
+        loByte = (loByte << 1) | (pixel &  1)
+        hiByte = (hiByte << 1) | (pixel >> 1)
+    return (loByte, hiByte)
 
 def swap_colors(chunk, colors):
     # replace colors 0-3 in CHR data chunk (16n bytes) with new colors (4 ints)
@@ -61,9 +115,9 @@ def swap_colors(chunk, colors):
             loPos = charPos + pixelY
             hiPos = charPos + 8 + pixelY
             # decode pixels, replace colors, reencode pixels
-            (chunk[loPos], chunk[hiPos]) = qneslib.tile_slice_encode(
+            (chunk[loPos], chunk[hiPos]) = tile_slice_encode(
                 colors[color] for color
-                in qneslib.tile_slice_decode(chunk[loPos], chunk[hiPos])
+                in tile_slice_decode(chunk[loPos], chunk[hiPos])
             )
 
     return chunk
@@ -74,28 +128,26 @@ def main():
     try:
         with open(args.input_file, "rb") as source:
             # get file info
-            fileInfo = qneslib.ines_header_decode(source)
-            if fileInfo is None:
-                sys.exit("Invalid iNES ROM file.")
-            if fileInfo["chrSize"] == 0:
+            (chrStart, chrSize) = ines_header_decode(source)
+            if chrSize == 0:
                 sys.exit("Input file has no CHR ROM.")
 
             # length of CHR data before the tiles to modify
             beforeLen = args.first_tile * 16
-            if beforeLen >= fileInfo["chrSize"]:
+            if beforeLen >= chrSize:
                 sys.exit("--first-tile is too large.")
 
             # length of CHR data at/after the tiles to modify
             if args.tile_count:
                 modifyLen = args.tile_count * 16
-                afterLen = fileInfo["chrSize"] - beforeLen - modifyLen
+                afterLen = chrSize - beforeLen - modifyLen
                 if afterLen < 0:
                     sys.exit(
                         "Sum of --first-tile and --tile-count is too large."
                     )
             else:
                 afterLen = 0
-                modifyLen = fileInfo["chrSize"] - beforeLen - afterLen
+                modifyLen = chrSize - beforeLen - afterLen
 
             # copy input file to output file
             source.seek(0)
@@ -103,7 +155,7 @@ def main():
                 target.seek(0)
                 # copy data before/at/after the tiles to be modified
                 for chunk in read_file_slice(
-                    source, fileInfo["chrStart"] + beforeLen
+                    source, chrStart + beforeLen
                 ):
                     target.write(chunk)
                 for chunk in read_file_slice(source, modifyLen):

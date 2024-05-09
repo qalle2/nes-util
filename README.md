@@ -119,7 +119,6 @@ Arguments: inputFile outputFile palette
 ```
 
 ### nes_color_swap.py
-Requires qneslib.py (see below).
 ```
 usage: nes_color_swap.py [-h] [-c {0,1,2,3} {0,1,2,3} {0,1,2,3} {0,1,2,3}]
                          [-f FIRST_TILE] [-n TILE_COUNT]
