@@ -155,10 +155,8 @@ Convert an NES PRG ROM address into possible CPU addresses using the iNES ROM
 file (.nes). Args: file address_in_hexadecimal
 
 ### nes_prgbyte.py
-Requires qneslib.py (see below).
-
-Get byte value at specified PRG ROM address in an iNES ROM file (.nes). Args:
-file address_in_hexadecimal
+Get byte value at specified PRG ROM address in an iNES ROM file (.nes).
+Arguments: file address-in-hexadecimal
 
 ### nesgenie_dec.py
 Decode an NES Game Genie code. Argument: code (6 or 8 letters from
