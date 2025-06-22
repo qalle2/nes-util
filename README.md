@@ -1,4 +1,6 @@
 # nes-util
+*Note: this project has been moved to [Codeberg](https://codeberg.org/qalle/nes-util). It will no longer be updated here on GitHub.*
+
 Utilities for
 [Nintendo Entertainment System](https://en.wikipedia.org/wiki/Nintendo_Entertainment_System)
 game hacking.
